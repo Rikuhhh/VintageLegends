@@ -1,0 +1,19 @@
+{
+    "name": "Mage",
+    "hp": 110,
+    "max_hp": 110,
+    "atk": 18,
+    "defense": 5,
+    "gold": 71,
+    "xp": 54,
+    "level": 2,
+    "inventory": {
+        "coin": 4,
+        "potion": 1
+    },
+    "equipment": {
+        "weapon": null,
+        "armor": null
+    },
+    "highest_wave": 0
+}

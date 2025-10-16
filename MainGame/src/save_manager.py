@@ -16,7 +16,10 @@ class SaveManager:
             "defense": player.defense,
             "gold": player.gold,
             "xp": player.xp,
-            "level": player.level
+            "level": player.level,
+            "inventory": player.inventory,
+            "equipment": player.equipment,
+            "highest_wave": getattr(player, 'highest_wave', 0),
         }
         with open(self.save_dir / "save.json", "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)

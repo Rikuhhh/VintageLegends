@@ -11,6 +11,9 @@
       "name": "Potion de soin",
       "type": "consumable",
       "cost": 20,
+      "droppable": true,
+      "dropped_by": "beast",
+      "drop_chance": 0.12,
       "effect": {
         "heal": 40
       },
@@ -20,19 +23,45 @@
       "id": "iron_core",
       "name": "Noyau de fer",
       "type": "material",
+      "droppable": true,
+      "dropped_by": "construct",
+      "drop_chance": 0.6,
       "description": "Matériau pour améliorer l'équipement."
     },
     {
       "id": "ember_shard",
       "name": "Éclat de braise",
       "type": "material",
+      "droppable": true,
+      "dropped_by": "demon",
+      "drop_chance": 0.08,
       "description": "Matériau rare."
+    },
+    {
+      "id": "dragon_scale",
+      "name": "Écaille de dragon",
+      "type": "material",
+      "droppable": true,
+      "dropped_by": "dragon",
+      "drop_chance": 0.45,
+      "description": "Écaille précieuse provenant d'un dragon."
     },
     {
       "id": "legendary_fragment",
       "name": "Fragment légendaire",
       "type": "material",
-      "description": "Très rare, utilisé pour objets haut niveau."
+      "droppable": true,
+      "dropped_by": "dragon",
+      "drop_chance": 0.03,
+      "description": "Un fragment très rare."
+    },
+    {
+      "id": "legendary_staff",
+      "name": "Sceptre légendaire",
+      "type": "weapon",
+      "attack": 100,
+      "cost": 100,
+      "description": "Très rare."
     }
   ]
 }
