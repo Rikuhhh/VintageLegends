@@ -61,6 +61,8 @@
       "type": "weapon",
       "attack": 100,
       "cost": 100,
+      "shopchance": 0.20,
+      "goldvariation": [0.8, 1.2],
       "description": "Très rare."
     }
   ]

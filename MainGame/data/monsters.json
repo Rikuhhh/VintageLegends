@@ -96,8 +96,8 @@
       "classification": "boss",
       "min_wave": 10,
       "spawn_on_wave_multiple_of": 10,
-      "hp_base": 420,
-      "atk_base": 28,
+      "hp_base": 150,
+      "atk_base": 25,
       "def_base": 10,
       "xp_base": 450,
       "gold_base": 200,
@@ -119,6 +119,28 @@
         "atk_fireball",
         "atk_slash",
         "atk_roar"
+      ]
+    },
+    {
+      "id": "skeleton_archer",
+      "name": "Skeleton Archer",
+      "classification": "normal",
+      "min_wave": 10,
+      "hp_base": 15,
+      "atk_base": 5,
+      "def_base": 1,
+      "xp_base": 10,
+      "gold_base": 4,
+      "drops": [
+        {
+          "item_id": "arrow_bundle",
+          "chance": 0.25,
+          "qty_min": 1,
+          "qty_max": 3
+        }
+      ],
+      "attacks": [
+        "atk_arrow_shot"
       ]
     }
   ],

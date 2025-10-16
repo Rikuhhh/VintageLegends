@@ -1,0 +1,36 @@
+{
+  "upgrades": [
+    {
+      "id": "atk_boost",
+      "name": "Offensive Training",
+      "desc": "+2 base ATK per level",
+      "cost": 1,
+      "max_level": 10,
+      "effect": { "type": "add", "stat": "base_atk", "value": 2 }
+    },
+    {
+      "id": "hp_boost",
+      "name": "Sturdy Constitution",
+      "desc": "+10 max HP per level",
+      "cost": 1,
+      "max_level": 10,
+      "effect": { "type": "add", "stat": "max_hp", "value": 10 }
+    },
+    {
+      "id": "crit_chance",
+      "name": "Sharpened Instinct",
+      "desc": "+2% Crit Chance per level",
+      "cost": 2,
+      "max_level": 10,
+      "effect": { "type": "add", "stat": "critchance", "value": 0.02 }
+    },
+    {
+      "id": "crit_damage",
+      "name": "Deadly Precision",
+      "desc": "+0.1x Crit Damage per level",
+      "cost": 3,
+      "max_level": 5,
+      "effect": { "type": "add", "stat": "critdamage", "value": 0.1 }
+    }
+  ]
+}

@@ -4,6 +4,7 @@ try:
     from enemy import Enemy
 except Exception:
     from .enemy import Enemy
+import random
 
 class BattleSystem:
     def __init__(self, player):
@@ -12,18 +13,47 @@ class BattleSystem:
         self.enemy = Enemy.random_enemy(self.wave)
         self.turn = "player"
         self.last_action_time = 0
-        self.action_delay = 0.5  # petit délai visuel
+        self.action_delay = 0.9  # petit délai visuel — make turns less instant
         # Whether the next wave is a shop instead of a fight
         self.in_shop = False
+        # Queue of recent damage events for UI (list of dicts: target, amount, time, is_crit)
+        self.damage_events = []
 
     def player_attack(self):
         """Action du joueur via un bouton."""
         if self.turn != "player":
             return  # ignore si ce n’est pas ton tour
 
-        dmg = self.player.atk
+        # base damage
+        base_dmg = getattr(self.player, 'atk', 0)
+        # roll for critical hit using player's crit chance (0.0 - 1.0)
+        try:
+            is_crit = random.random() < float(getattr(self.player, 'critchance', 0.0))
+        except Exception:
+            is_crit = False
+
+        if is_crit:
+            crit_mult = float(getattr(self.player, 'critdamage', 1.5))
+            dmg = int(round(base_dmg * crit_mult))
+        else:
+            dmg = int(base_dmg)
+
+        # apply damage to enemy
         self.enemy.take_damage(dmg)
-        print(f"{self.player.name} inflige {dmg} à {self.enemy.name} !")
+        # register damage event for UI
+        try:
+            self.damage_events.append({
+                'target': 'enemy',
+                'amount': int(dmg),
+                'time': time.time(),
+                'is_crit': bool(is_crit),
+            })
+        except Exception:
+            pass
+        if is_crit:
+            print(f"CRIT! {self.player.name} inflige {dmg} (x{crit_mult}) à {self.enemy.name} !")
+        else:
+            print(f"{self.player.name} inflige {dmg} à {self.enemy.name} !")
 
         if self.enemy.is_dead():
             print(f"{self.enemy.name} est vaincu !")
@@ -41,8 +71,19 @@ class BattleSystem:
         if self.turn == "enemy":
             if time.time() - self.last_action_time >= self.action_delay:
                 dmg = self.enemy.atk
-                self.player.take_damage(dmg)
-                print(f"{self.enemy.name} inflige {dmg} à {self.player.name} !")
+                # apply damage and capture the actual damage taken after defense
+                dmg_taken = self.player.take_damage(dmg)
+                # register damage event for UI with post-defense damage
+                try:
+                    self.damage_events.append({
+                        'target': 'player',
+                        'amount': int(dmg_taken),
+                        'time': time.time(),
+                        'is_crit': False,
+                    })
+                except Exception:
+                    pass
+                print(f"{self.enemy.name} inflige {dmg_taken} à {self.player.name} !")
 
                 if self.player.is_dead():
                     print(f"{self.player.name} est vaincu... 💀")
@@ -52,6 +93,22 @@ class BattleSystem:
 
     def next_wave(self):
         self.wave += 1
+        # Award challenge coins: +1 every 10 waves, +1 extra every 20 waves
+        try:
+            reward = 0
+            if self.wave % 10 == 0:
+                reward += 1
+            if self.wave % 20 == 0:
+                reward += 1
+            if reward > 0 and hasattr(self.player, 'challenge_coins'):
+                self.player.challenge_coins = getattr(self.player, 'challenge_coins', 0) + reward
+                # Add a short notification event to be displayed by UI
+                try:
+                    self.damage_events.append({'type': 'coin_reward', 'amount': reward, 'time': time.time()})
+                except Exception:
+                    pass
+        except Exception:
+            pass
         # Decide whether next wave is a shop — guaranteed every 10th wave, otherwise 10% chance
         import random
         if self.wave % 10 == 0:

@@ -1,19 +1,21 @@
 {
     "name": "Mage",
-    "hp": 110,
-    "max_hp": 110,
-    "atk": 18,
-    "defense": 5,
-    "gold": 71,
-    "xp": 54,
-    "level": 2,
-    "inventory": {
-        "coin": 4,
-        "potion": 1
-    },
+    "hp": 99,
+    "max_hp": 100,
+    "base_atk": 15,
+    "base_defense": 5,
+    "gold": 3,
+    "xp": 8,
+    "level": 1,
+    "inventory": {},
     "equipment": {
         "weapon": null,
         "armor": null
     },
-    "highest_wave": 0
+    "highest_wave": 0,
+    "challenge_coins": 0,
+    "permanent_upgrades": {},
+    "wave": 2,
+    "enemy_hp": 5,
+    "enemy_id": "wolf"
 }
