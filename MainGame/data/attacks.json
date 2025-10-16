@@ -1,0 +1,55 @@
+{
+  "attacks": [
+    {
+      "id": "atk_slash",
+      "name": "Slash",
+      "type": "physical",
+      "power": 10,
+      "cost": 0,
+      "target": "single",
+      "description": "Attaque physique basique."
+    },
+    {
+      "id": "atk_fireball",
+      "name": "Fireball",
+      "type": "magic",
+      "power": 18,
+      "cost": 6,
+      "target": "single",
+      "element": "fire",
+      "description": "Boule de feu. Inflige des dégâts magiques."
+    },
+    {
+      "id": "atk_heal",
+      "name": "Heal",
+      "type": "support",
+      "power": 20,
+      "cost": 8,
+      "target": "self",
+      "description": "Soigne le lanceur."
+    },
+    {
+      "id": "atk_multi_stab",
+      "name": "Multi Stab",
+      "type": "physical",
+      "power": 6,
+      "hits": 3,
+      "cost": 4,
+      "target": "single",
+      "description": "Frappe multiple, 3 coups faibles."
+    },
+    {
+      "id": "atk_roar",
+      "name": "Intimidation",
+      "type": "debuff",
+      "power": 0,
+      "cost": 3,
+      "target": "all_enemies",
+      "effect": {
+        "def_down_pct": 0.15,
+        "turns": 2
+      },
+      "description": "Réduit la défense des ennemis pour 2 tours."
+    }
+  ]
+}

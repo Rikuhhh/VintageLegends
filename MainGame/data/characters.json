@@ -1,0 +1,47 @@
+{
+  "characters": [
+    {
+      "id": "warrior",
+      "name": "Guerrier",
+      "base_hp": 120,
+      "base_atk": 14,
+      "base_def": 4,
+      "base_crit_chance": 0.05,
+      "base_crit_mult": 1.5,
+      "starting_attacks": [
+        "atk_slash"
+      ],
+      "skill_tree_points_per_level": 1,
+      "description": "Personnage tank, facile à prendre en main."
+    },
+    {
+      "id": "mage",
+      "name": "Frieren",
+      "base_hp": 80,
+      "base_atk": 8,
+      "base_def": 2,
+      "base_crit_chance": 0.07,
+      "base_crit_mult": 1.8,
+      "starting_attacks": [
+        "atk_fireball",
+        "atk_heal"
+      ],
+      "skill_tree_points_per_level": 1,
+      "description": "Forte puissance magique, fragile en HP."
+    },
+    {
+      "id": "rogue",
+      "name": "Rôdeur",
+      "base_hp": 90,
+      "base_atk": 12,
+      "base_def": 2,
+      "base_crit_chance": 0.12,
+      "base_crit_mult": 2.0,
+      "starting_attacks": [
+        "atk_multi_stab"
+      ],
+      "skill_tree_points_per_level": 1,
+      "description": "Dégâts critiques élevés."
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "enemies": [
+    {
+      "id": "grunt_basic",
+      "name": "Grunt",
+      "classification": "normal",
+      "min_wave": 1,
+      "hp_base": 12,
+      "atk_base": 4,
+      "def_base": 1,
+      "xp_base": 8,
+      "gold_base": 3,
+      "drops": [
+        {
+          "item_id": "coin",
+          "chance": 0.35,
+          "qty_min": 1,
+          "qty_max": 4
+        }
+      ],
+      "attacks": [
+        "atk_slash"
+      ]
+    },
+    {
+      "id": "wolf",
+      "name": "Wolf",
+      "classification": "normal",
+      "min_wave": 2,
+      "hp_base": 18,
+      "atk_base": 6,
+      "def_base": 1,
+      "xp_base": 12,
+      "gold_base": 5,
+      "drops": [
+        {
+          "item_id": "potion",
+          "chance": 0.12,
+          "qty_min": 1,
+          "qty_max": 1
+        }
+      ],
+      "attacks": [
+        "atk_multi_stab"
+      ]
+    },
+    {
+      "id": "fire_imp",
+      "name": "Fire Imp",
+      "classification": "elite",
+      "min_wave": 4,
+      "hp_base": 25,
+      "atk_base": 8,
+      "def_base": 2,
+      "xp_base": 20,
+      "gold_base": 10,
+      "drops": [
+        {
+          "item_id": "ember_shard",
+          "chance": 0.08,
+          "qty_min": 1,
+          "qty_max": 2
+        }
+      ],
+      "attacks": [
+        "atk_fireball"
+      ]
+    },
+    {
+      "id": "miniboss_golem",
+      "name": "Golem (MiniBoss)",
+      "classification": "miniboss",
+      "min_wave": 5,
+      "spawn_on_wave_multiple_of": 5,
+      "hp_base": 80,
+      "atk_base": 12,
+      "def_base": 6,
+      "xp_base": 80,
+      "gold_base": 40,
+      "drops": [
+        {
+          "item_id": "iron_core",
+          "chance": 0.6,
+          "qty_min": 1,
+          "qty_max": 1
+        }
+      ],
+      "attacks": [
+        "atk_slash",
+        "atk_roar"
+      ]
+    },
+    {
+      "id": "boss_dragon",
+      "name": "Ancient Dragon",
+      "classification": "boss",
+      "min_wave": 10,
+      "spawn_on_wave_multiple_of": 10,
+      "hp_base": 420,
+      "atk_base": 28,
+      "def_base": 10,
+      "xp_base": 450,
+      "gold_base": 200,
+      "drops": [
+        {
+          "item_id": "dragon_scale",
+          "chance": 0.45,
+          "qty_min": 1,
+          "qty_max": 2
+        },
+        {
+          "item_id": "legendary_fragment",
+          "chance": 0.03,
+          "qty_min": 1,
+          "qty_max": 1
+        }
+      ],
+      "attacks": [
+        "atk_fireball",
+        "atk_slash",
+        "atk_roar"
+      ]
+    }
+  ],
+  "scaling_notes": {
+    "hp_scale_per_wave_pct": 0.06,
+    "atk_scale_per_wave_pct": 0.025,
+    "gold_scale_formula": "gold = round(gold_base * (1 + wave * 0.05))",
+    "xp_scale_formula": "xp = round(xp_base * (1 + wave * 0.06))"
+  }
+}

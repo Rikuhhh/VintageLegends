@@ -1,0 +1,46 @@
+{
+  "skills": [
+    {
+      "id": "str_power",
+      "name": "Force accrue",
+      "type": "stat",
+      "stat_bonus": {
+        "atk": 3
+      },
+      "cost_points": 1,
+      "description": "Augmente l'attaque."
+    },
+    {
+      "id": "vitality_boost",
+      "name": "Vitalité",
+      "type": "stat",
+      "stat_bonus": {
+        "hp": 20
+      },
+      "cost_points": 1,
+      "description": "Augmente les PV max."
+    },
+    {
+      "id": "crit_training",
+      "name": "Entraînement critique",
+      "type": "stat",
+      "stat_bonus": {
+        "crit_chance": 0.03
+      },
+      "cost_points": 1,
+      "description": "Augmente la chance de coup critique."
+    },
+    {
+      "id": "flame_mastery",
+      "name": "Maîtrise du feu",
+      "type": "skill_unlock",
+      "requires": {
+        "class": "mage",
+        "level": 5
+      },
+      "grants_attack_id": "atk_fireball",
+      "cost_points": 2,
+      "description": "Débloque Fireball pour le mage."
+    }
+  ]
+}

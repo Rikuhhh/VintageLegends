@@ -1,0 +1,28 @@
+{
+  "game": {
+    "title": "Vintage Legends",
+    "version": "0.0.1",
+    "author": "Rikuh",
+    "versionabout": "first-alpha-release",
+    "save_version": 1,
+    "max_party_size": 1,
+    "starting_wave": 1
+  },
+  "scaling": {
+    "hp_scale_per_wave_pct": 0.06,
+    "atk_scale_per_wave_pct": 0.025,
+    "gold_scale_per_wave": 0.05,
+    "xp_scale_per_wave": 0.06
+  },
+  "combat": {
+    "base_crit_chance": 0.02,
+    "base_crit_multiplier": 1.5
+  },
+  "files": {
+    "attacks_file": "attacks.json",
+    "enemies_file": "enemies.json",
+    "items_file": "items.json",
+    "characters_file": "characters.json",
+    "skills_file": "skills.json"
+  }
+}

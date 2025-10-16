@@ -1,0 +1,19 @@
+{
+    "fullscreen": false,
+    "resolution": {
+        "width" : 1280,
+        "height": 720
+    },
+    "volume": {
+        "music": 0.8,
+        "effects": 0.8,
+        "interface": 0.8
+    },
+    "language": "fr",
+    "gamesettings": {
+        "fps": 60,
+        "autosave": true,
+        "ram_usage_limit_mb": 512,
+        "text speed": 50
+    }
+}

@@ -1,0 +1,38 @@
+{
+  "items": [
+    {
+      "id": "coin",
+      "name": "Pièces",
+      "type": "currency",
+      "description": "Monnaie du jeu."
+    },
+    {
+      "id": "potion",
+      "name": "Potion de soin",
+      "type": "consumable",
+      "cost": 20,
+      "effect": {
+        "heal": 40
+      },
+      "description": "Restaure des PV."
+    },
+    {
+      "id": "iron_core",
+      "name": "Noyau de fer",
+      "type": "material",
+      "description": "Matériau pour améliorer l'équipement."
+    },
+    {
+      "id": "ember_shard",
+      "name": "Éclat de braise",
+      "type": "material",
+      "description": "Matériau rare."
+    },
+    {
+      "id": "legendary_fragment",
+      "name": "Fragment légendaire",
+      "type": "material",
+      "description": "Très rare, utilisé pour objets haut niveau."
+    }
+  ]
+}

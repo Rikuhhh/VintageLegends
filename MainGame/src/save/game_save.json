@@ -1,0 +1,9 @@
+{
+  "wave": 4,
+  "gold": 88,
+  "inventory": {
+    "potion": 1,
+    "chop": 1
+  },
+  "player": "mage"
+}
