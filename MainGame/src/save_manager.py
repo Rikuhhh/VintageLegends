@@ -15,13 +15,6 @@ class SaveManager:
             # save base stats (not transient equipped-modified stats)
             "base_atk": getattr(player, 'base_atk', getattr(player, 'atk', 0)),
             "base_defense": getattr(player, 'base_defense', getattr(player, 'defense', 0)),
-            # critical base stats
-            "base_critchance": getattr(player, 'base_critchance', getattr(player, 'critchance', 0.0)),
-            "base_critdamage": getattr(player, 'base_critdamage', getattr(player, 'critdamage', 1.5)),
-            # canonical base max HP
-            "base_max_hp": getattr(player, 'base_max_hp', getattr(player, 'max_hp', 100)),
-            # unspent skill points
-            "unspent_points": getattr(player, 'unspent_points', 0),
             "gold": player.gold,
             "xp": player.xp,
             "level": player.level,
@@ -31,8 +24,6 @@ class SaveManager:
             # challenge progression
             "challenge_coins": getattr(player, 'challenge_coins', 0),
             "permanent_upgrades": getattr(player, 'permanent_upgrades', {}),
-            # selected character id (if the game uses character chooser)
-            "selected_character": getattr(player, 'selected_character', None),
         }
         # include current battle state if provided
         try:

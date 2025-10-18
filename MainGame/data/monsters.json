@@ -146,7 +146,7 @@
   ],
   "scaling_notes": {
     "hp_scale_per_wave_pct": 0.06,
-    "atk_scale_per_wave_pct": 0.025,
+    "atk_scale_per_wave_pct": 0.25,
     "gold_scale_formula": "gold = round(gold_base * (1 + wave * 0.05))",
     "xp_scale_formula": "xp = round(xp_base * (1 + wave * 0.06))"
   }

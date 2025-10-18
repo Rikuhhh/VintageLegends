@@ -15,9 +15,17 @@ class Player:
         self.base_defense = data.get("def", 5)
         self.atk = self.base_atk
         self.defense = self.base_defense
-        # critical stats: base values (base_critchance stored as probability 0.0-1.0)
-        self.base_critchance = float(data.get('critchance', 0.0))
-        self.base_critdamage = float(data.get('critdamage', 1.5))
+        # critical stats: accept multiple possible keys from data sources
+        # prefer explicit 'critchance'/'critdamage', fall back to 'base_crit_chance'/'base_crit_mult' used in data files
+        try:
+            self.base_critchance = float(data.get('critchance', data.get('base_crit_chance', 0.0)))
+        except Exception:
+            self.base_critchance = 0.0
+        try:
+            # some data files call it 'base_crit_mult' or 'base_critdamage'
+            self.base_critdamage = float(data.get('critdamage', data.get('base_crit_mult', data.get('base_critdamage', 1.5))))
+        except Exception:
+            self.base_critdamage = 1.5
         # current effective crit stats (after equipment)
         self.critchance = self.base_critchance
         self.critdamage = self.base_critdamage
