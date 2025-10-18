@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "characters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "base_hp": {"type": "number"},
+          "base_atk": {"type": "number"},
+          "base_def": {"type": "number"},
+          "base_crit_chance": {"type": "number"},
+          "base_crit_mult": {"type": "number"},
+          "starting_attacks": {"type": "array", "items": {"type": "string"}},
+          "skill_tree_points_per_level": {"type": "integer"},
+          "description": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}

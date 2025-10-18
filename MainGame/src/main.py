@@ -5,20 +5,27 @@ import sys
 import json
 from pathlib import Path
 
-# Import interne
-from player import Player
-from enemy import Enemy
-from ui_manager import UIManager
-from battle_system import BattleSystem
-from save_manager import SaveManager
-from shop import Shop
+# Internal imports: try package-style (src.*) first, then fall back to direct module imports
+try:
+    from src.player import Player
+    from src.enemy import Enemy
+    from src.ui_manager import UIManager
+    from src.battle_system import BattleSystem
+    from src.save_manager import SaveManager
+    from src.shop import Shop
+except Exception:
+    from player import Player
+    from enemy import Enemy
+    from ui_manager import UIManager
+    from battle_system import BattleSystem
+    from save_manager import SaveManager
+    from shop import Shop
 
 # --- CONFIGURATION DE BASE ---
 BASE_PATH = Path(__file__).resolve().parent.parent
 ASSETS_PATH = BASE_PATH / "assets"
 DATA_PATH = BASE_PATH / "data"
 SAVE_PATH = BASE_PATH / "saves"
-
 # --- CHARGEMENT DES PARAMÈTRES ---
 def load_json(file_name, default=None):
     """Charge un fichier JSON en toute sécurité"""
@@ -62,56 +69,147 @@ else:
 mage_path = ASSETS_PATH / "images" / "characters" / "mage.png"
 player_sprite = pygame.image.load(mage_path).convert_alpha() if mage_path.exists() else None
 
-# --- INSTANCIATION DU JEU ---
-player_data = load_json("characters.json").get("mage", {"name": "Mage", "hp": 100, "atk": 15})
-player = Player(player_data)
-battle = BattleSystem(player)
-ui = UIManager(screen, assets_path=ASSETS_PATH, data_path=DATA_PATH)
-ui.set_actions(battle)
-save_manager = SaveManager(SAVE_PATH)
-shop = Shop(DATA_PATH)
+# --- CHARACTER SELECTION ---
+def choose_character(screen, background, data_path, assets_path):
+    """Display a simple character selection screen and return a player data dict.
 
-# Load save if present
+    Characters are loaded from data/characters.json and mapped to the shape expected by Player.
+    """
+    chars = load_json('characters.json', {}).get('characters', [])
+    font = pygame.font.Font(None, 36)
+    small = pygame.font.Font(None, 24)
+
+    if not chars:
+        # fallback to a default mage-like template
+        return {"name": "Mage", "hp": 100, "atk": 15, "def": 5, 'critchance': 0.05, 'critdamage': 1.5}
+
+    # Simple interactive chooser: show a list of characters and let the player click one
+    selected = None
+    while selected is None:
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                mx, my = ev.pos
+                for i, ch in enumerate(chars):
+                    r = pygame.Rect(120, 120 + i * 72, 600, 56)
+                    if r.collidepoint((mx, my)):
+                        selected = ch
+                        break
+
+        screen.blit(background, (0, 0))
+        title = font.render("Choose your character", True, (255, 255, 255))
+        screen.blit(title, (120, 60))
+
+        for i, ch in enumerate(chars):
+            r = pygame.Rect(120, 120 + i * 72, 600, 56)
+            pygame.draw.rect(screen, (30, 30, 40), r, border_radius=6)
+            name = small.render(ch.get('name', 'Unnamed'), True, (220, 220, 220))
+            screen.blit(name, (r.x + 8, r.y + 8))
+            desc = small.render(ch.get('description', ''), True, (180, 180, 180))
+            screen.blit(desc, (r.x + 8, r.y + 28))
+
+        pygame.display.flip()
+        clock.tick(30)
+
+    # Map character JSON fields to the Player constructor shape
+    return {
+        'name': selected.get('name'),
+        'hp': selected.get('base_hp', selected.get('hp', 100)),
+        'atk': selected.get('base_atk', selected.get('atk', 10)),
+        # characters.json uses 'base_def' for defense
+        'def': selected.get('base_def', selected.get('base_defense', selected.get('def', 5))),
+        # characters.json uses 'base_crit_chance' and 'base_crit_mult'
+        'critchance': selected.get('base_crit_chance', selected.get('base_critchance', selected.get('critchance', 0.0))),
+        'critdamage': selected.get('base_crit_mult', selected.get('base_critdamage', selected.get('critdamage', 1.5))),
+    }
+    
+
+# --- INITIALISATION DU JEU : load save or show chooser ---
+save_manager = SaveManager(SAVE_PATH)
 saved = save_manager.load()
+
 if saved:
-    # apply simple fields
-    player.gold = saved.get('gold', player.gold)
-    player.xp = saved.get('xp', player.xp)
-    player.level = saved.get('level', player.level)
-    inv = saved.get('inventory', {})
-    player.inventory = inv
-    # restore base stats and hp/max_hp
-    player.base_atk = saved.get('base_atk', getattr(player, 'base_atk', player.base_atk))
-    player.base_defense = saved.get('base_defense', getattr(player, 'base_defense', player.base_defense))
+    # Reconstruct a player from saved data and restore persistent fields
+    player_template = {
+        'name': saved.get('name', 'Player'),
+        'hp': saved.get('max_hp', saved.get('hp', 100)),
+        'atk': saved.get('base_atk', 10),
+        'def': saved.get('base_defense', 5),
+        'critchance': saved.get('base_critchance', 0.0),
+        'critdamage': saved.get('base_critdamage', 1.5),
+    }
+    player = Player(player_template)
+    # restore persistent fields
+    player.gold = saved.get('gold', getattr(player, 'gold', 0))
+    player.xp = saved.get('xp', getattr(player, 'xp', 0))
+    player.level = saved.get('level', getattr(player, 'level', 1))
+    player.inventory = saved.get('inventory', {})
+    player.equipment = saved.get('equipment', {'weapon': None, 'armor': None})
+    player.base_atk = saved.get('base_atk', getattr(player, 'base_atk', 0))
+    player.base_defense = saved.get('base_defense', getattr(player, 'base_defense', 0))
+    player.base_critchance = saved.get('base_critchance', getattr(player, 'base_critchance', 0.0))
+    player.base_critdamage = saved.get('base_critdamage', getattr(player, 'base_critdamage', 1.5))
+    # restore canonical base max HP (used for deterministic recalculation)
+    player.base_max_hp = saved.get('base_max_hp', getattr(player, 'base_max_hp', getattr(player, 'max_hp', 100)))
+    player.unspent_points = saved.get('unspent_points', getattr(player, 'unspent_points', 0))
+    player.permanent_upgrades = saved.get('permanent_upgrades', getattr(player, 'permanent_upgrades', {}))
+    player.challenge_coins = saved.get('challenge_coins', getattr(player, 'challenge_coins', 0))
+    player.highest_wave = saved.get('highest_wave', getattr(player, 'highest_wave', 0))
+    player.selected_character = saved.get('selected_character')
+    # restore hp/max_hp
     player.max_hp = saved.get('max_hp', getattr(player, 'max_hp', player.max_hp))
     player.hp = saved.get('hp', getattr(player, 'hp', player.max_hp))
-    # load equipment if present
-    equip = saved.get('equipment', {})
-    if equip:
-        player.equipment = equip
-        # Reapply equipment bonuses correctly by recalculating stats
-        from shop import Shop
-        shop_loader = Shop(DATA_PATH)
-        # ensure base stats exist
-        if not hasattr(player, 'base_atk'):
-            player.base_atk = getattr(player, 'atk', 0)
-        if not hasattr(player, 'base_defense'):
-            player.base_defense = getattr(player, 'defense', 0)
-        # recalc stats from base + equipment
+    # If loaded base_max_hp is implausibly larger than saved max_hp (from older corrupted saves),
+    # prefer the saved max_hp as the canonical base to avoid sudden jumps when recalculating.
+    try:
+        bmh = getattr(player, 'base_max_hp', None)
+        if bmh is not None and player.max_hp is not None:
+            if bmh > max(1000, int(player.max_hp) * 4):
+                print('[WARN] Saved base_max_hp unusually large; using saved max_hp as base_max_hp')
+                player.base_max_hp = int(player.max_hp)
+    except Exception:
+        pass
+    # Recalculate stats after restoring persistent data
+    try:
         player._recalc_stats()
-    # highest wave
-    player.highest_wave = saved.get('highest_wave', 0)
-    # restore saved wave and enemy hp if present
+    except Exception:
+        pass
+    # If there was a saved wave, restore battle state
+    battle = BattleSystem(player)
     saved_wave = saved.get('wave')
     if saved_wave:
-        # set battle to saved wave and create enemy with matching HP if possible
-        battle.wave = int(saved_wave)
         try:
+            battle.wave = int(saved_wave)
             battle.enemy = Enemy.random_enemy(battle.wave)
             if 'enemy_hp' in saved:
                 battle.enemy.hp = int(saved.get('enemy_hp', battle.enemy.hp))
         except Exception:
             pass
+else:
+    # No save — show chooser and create a fresh player
+    player_template = choose_character(screen, background, DATA_PATH, ASSETS_PATH)
+    # map chosen template back to an id if possible
+    try:
+        chs = load_json('characters.json', {}).get('characters', [])
+        sel_id = None
+        for ch in chs:
+            if ch.get('name') == player_template.get('name'):
+                sel_id = ch.get('id') or ch.get('name')
+                break
+        if not sel_id and chs:
+            sel_id = player_template.get('name')
+    except Exception:
+        sel_id = player_template.get('name')
+
+    player = Player(player_template)
+    player.selected_character = sel_id
+    battle = BattleSystem(player)
+
+# Create shared UI and shop instances
+ui = UIManager(screen, assets_path=ASSETS_PATH, data_path=DATA_PATH)
+ui.set_actions(battle)
+shop = Shop(DATA_PATH)
 
 # --- BOUCLE PRINCIPALE ---
 def main():
@@ -380,14 +478,25 @@ def main():
                             continue
                         # normal retry/quit handling
                         if retry_rect.collidepoint((mx, my)):
-                            # Reinitialize player and battle
-                            # save before retry
+                            # Reinitialize player and battle; allow player to choose character again
+                            # Preserve persistent challenge progression before reinitializing
+                            old_perms = getattr(player, 'permanent_upgrades', {}).copy()
+                            old_coins = getattr(player, 'challenge_coins', 0)
                             try:
                                 player.highest_wave = max(getattr(player, 'highest_wave', 0), battle.wave)
                                 save_manager.save(player, battle=battle)
                             except Exception:
                                 pass
-                            player = Player(player_data)
+                            # ask for character choice
+                            new_template = choose_character(screen, background, DATA_PATH, ASSETS_PATH)
+                            player = Player(new_template)
+                            # restore persistent challenge data so permanent upgrades carry to the new run
+                            player.permanent_upgrades = old_perms.copy()
+                            player.challenge_coins = old_coins
+                            try:
+                                player._recalc_stats()
+                            except Exception:
+                                pass
                             battle = BattleSystem(player)
                             ui.set_actions(battle)
                             game_over = False

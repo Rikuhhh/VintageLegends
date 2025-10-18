@@ -1,10 +1,10 @@
 {
   "items": [
     {
-      "id": "coin",
-      "name": "Pièces",
-      "type": "currency",
-      "description": "Monnaie du jeu."
+      "id": "broken_tool",
+      "name": "Outil cassé",
+      "type": "material",
+      "description": "Un outil cassé, peut être réparé."
     },
     {
       "id": "potion",
@@ -60,10 +60,20 @@
       "name": "Sceptre légendaire",
       "type": "weapon",
       "attack": 100,
-      "cost": 100,
+      "cost": 300,
       "shopchance": 0.20,
       "goldvariation": [0.8, 1.2],
       "description": "Très rare."
+    },
+    {
+      "id": "dull_sword",
+      "name": "Épée terne",
+      "type": "weapon",
+      "attack": 5,
+      "cost": 10,
+      "shopchance": 1,
+      "goldvariation": [0.5, 3],
+      "description": "Une épée basique."
     }
   ]
 }

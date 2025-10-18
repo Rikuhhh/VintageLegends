@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "type"],
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "type": {"type": "string"},
+          "description": {"type": "string"},
+          "cost": {"type": "number"},
+          "attack": {"type": "number"},
+          "defense": {"type": "number"},
+          "droppable": {"type": "boolean"},
+          "drop_chance": {"type": "number"},
+          "dropped_by": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+          "shopchance": {"type": "number"},
+          "goldvariation": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+          "effect": {"type": "object"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}

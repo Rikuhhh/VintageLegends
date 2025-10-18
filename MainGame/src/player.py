@@ -6,7 +6,9 @@ import json
 class Player:
     def __init__(self, data):
         self.name = data.get("name", "Inconnu")
-        self.max_hp = data.get("hp", 100)
+        # keep a canonical base max HP so upgrades are idempotent
+        self.base_max_hp = data.get("hp", 100)
+        self.max_hp = self.base_max_hp
         self.hp = self.max_hp
         # keep base stats separately so equipment application is idempotent
         self.base_atk = data.get("atk", 10)
@@ -51,10 +53,17 @@ class Player:
     def level_up(self):
         self.level += 1
         # Accorde un boost de vie de base et soigne le joueur
-        self.max_hp += 10
+        # increase the canonical base max hp so recalculation is deterministic
+        self.base_max_hp = getattr(self, 'base_max_hp', self.max_hp) + 10
+        self.max_hp = self.base_max_hp
         self.hp = self.max_hp
         # Accord de points de compétence à dépenser manuellement (via l'UI)
         self.unspent_points += 3
+        # Recalculate derived stats (equipment, permanent upgrades) so level HP stacks with them
+        try:
+            self._recalc_stats()
+        except Exception:
+            pass
         print(f"{self.name} est maintenant niveau {self.level} ! (+3 points non dépensés)")
 
     def spend_point(self, stat: str) -> bool:
@@ -66,15 +75,38 @@ class Player:
         elif stat == "def":
             self.base_defense += 1
         elif stat == "hp":
-            self.max_hp += 5
-            self.hp += 5
+            # increase canonical base max HP and heal proportionally by the delta
+            self.base_max_hp = getattr(self, 'base_max_hp', self.max_hp) + 5
+            self.max_hp = self.base_max_hp
+            # give the player the +5 HP as immediate heal
+            try:
+                self.hp = min(self.max_hp, self.hp + 5)
+            except Exception:
+                self.hp = self.max_hp
         else:
             return False
 
         self.unspent_points -= 1
         print(f"{self.name} dépense 1 point sur {stat}. Points restants: {self.unspent_points}")
         # recalc current stats after base change
+        # Protect against unintended modifications to base_max_hp when
+        # spending points on non-HP stats: remember canonical base and
+        # restore it after recalculation.
+        prev_base_max = getattr(self, 'base_max_hp', None)
+        prev_hp = getattr(self, 'hp', None)
+        prev_max = getattr(self, 'max_hp', None)
         self._recalc_stats()
+        if stat != 'hp' and prev_base_max is not None:
+            try:
+                # restore canonical base and derived max_hp
+                self.base_max_hp = int(prev_base_max)
+                self.max_hp = int(prev_base_max)
+                # restore HP fraction relative to previous max if possible
+                if prev_max and prev_hp is not None and prev_max > 0:
+                    frac = float(prev_hp) / float(prev_max)
+                    self.hp = min(self.max_hp, int(frac * self.max_hp))
+            except Exception:
+                pass
         return True
 
     def add_item(self, item: dict, auto_equip: bool = True):
@@ -185,9 +217,34 @@ class Player:
 
     def _recalc_stats(self):
         """Recalculate current atk/def based on base stats and equipped items."""
-        # start from base
+        # remember previous max and hp so we can preserve the hp fraction when max changes
+        prev_max = getattr(self, 'max_hp', None)
+        prev_hp = getattr(self, 'hp', None)
+
+        # start from base (reset derived stats)
         self.atk = getattr(self, 'base_atk', 0)
         self.defense = getattr(self, 'base_defense', 0)
+        # reset max_hp to canonical base before applying equipment/upgrades
+        # but guard against a corrupted or implausibly large base_max_hp by
+        # clamping it relative to the previous max to avoid large jumps.
+        bmh = getattr(self, 'base_max_hp', None)
+        if bmh is None:
+            self.max_hp = getattr(self, 'max_hp', 0)
+        else:
+            try:
+                if prev_max and prev_max > 0 and bmh > prev_max * 4:
+                    # base_max_hp is suspiciously large; clamp to previous max
+                    self.base_max_hp = int(prev_max)
+                    self.max_hp = int(prev_max)
+                elif bmh > 10000:
+                    # absolute safety cap
+                    cap = max(1000, prev_max or 1000)
+                    self.base_max_hp = int(cap)
+                    self.max_hp = int(cap)
+                else:
+                    self.max_hp = int(bmh)
+            except Exception:
+                self.max_hp = int(getattr(self, 'max_hp', 0))
         # reset crit stats to base
         self.critchance = getattr(self, 'base_critchance', 0.0)
         self.critdamage = getattr(self, 'base_critdamage', 1.5)
@@ -226,7 +283,8 @@ class Player:
                 except Exception:
                     pass
 
-        # Apply permanent upgrades (data-driven). Load definitions from data/upgrades.json if present.
+        # Apply permanent upgrades (data-driven) to derived stats only.
+        # This avoids mutating the canonical base_* attributes repeatedly when _recalc_stats is called.
         try:
             base = Path(__file__).resolve().parents[1]
             up_path = base / 'data' / 'upgrades.json'
@@ -245,10 +303,53 @@ class Player:
                         val = eff.get('value', 0)
                         try:
                             if etype == 'add':
-                                # apply additive effect per level
-                                setattr(self, stat, getattr(self, stat, 0) + val * int(lvl))
+                                # map base_* stat names to derived fields
+                                s = stat
+                                # canonical mapping: base_atk -> atk, base_defense -> defense, base_critchance -> critchance, base_critdamage -> critdamage
+                                if s.startswith('base_'):
+                                    s = s[len('base_'):]
+                                # Apply to the appropriate derived stat
+                                if s in ('atk', 'attack'):
+                                    self.atk += val * int(lvl)
+                                elif s in ('def', 'defense', 'base_def'):
+                                    self.defense += val * int(lvl)
+                                elif s in ('max_hp', 'hp'):
+                                    # increase max_hp by computed delta on top of base
+                                    try:
+                                        delta = int(val) * int(lvl)
+                                    except Exception:
+                                        try:
+                                            delta = int(float(val) * int(lvl))
+                                        except Exception:
+                                            delta = 0
+                                    self.max_hp = getattr(self, 'max_hp', 0) + delta
+                                elif s in ('critchance',):
+                                    self.critchance += float(val) * int(lvl)
+                                elif s in ('critdamage', 'crit_mult'):
+                                    self.critdamage += float(val) * int(lvl)
+                                else:
+                                    # fallback: apply to attribute if exists (but don't mutate base_* names)
+                                    try:
+                                        cur = getattr(self, s, 0)
+                                        setattr(self, s, cur + val * int(lvl))
+                                    except Exception:
+                                        pass
                         except Exception:
                             pass
+        except Exception:
+            pass
+
+        # If max_hp changed, preserve the player's current HP proportionally.
+        try:
+            if prev_max and prev_hp is not None:
+                # if player was at full HP before, keep them full
+                if prev_max > 0 and prev_hp >= prev_max:
+                    self.hp = getattr(self, 'max_hp', prev_hp)
+                elif prev_max > 0:
+                    frac = float(prev_hp) / float(prev_max)
+                    # apply fraction to new max and clamp
+                    new_hp = int(frac * float(getattr(self, 'max_hp', prev_max)))
+                    self.hp = min(getattr(self, 'max_hp', new_hp), new_hp)
         except Exception:
             pass
 

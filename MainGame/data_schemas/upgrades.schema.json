@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "upgrades": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "effect"],
+        "properties": {
+          "id": {"type": "string"},
+          "name": {"type": "string"},
+          "desc": {"type": "string"},
+          "cost": {"type": "number"},
+          "max_level": {"type": "integer"},
+          "effect": {"type": "object"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}

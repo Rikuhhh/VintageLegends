@@ -46,10 +46,19 @@
       "cost": 3,
       "target": "all_enemies",
       "effect": {
-        "def_down_pct": 0.15,
-        "turns": 2
+        "def_down_pct": 0.50,
+        "turns": 5
       },
-      "description": "Réduit la défense des ennemis pour 2 tours."
+      "description": "Réduit la défense des ennemis pour 5 tours."
+    },
+    {
+      "id": "atk_arrow_shot",
+      "name": "Arrow Shot",
+      "type": "physical",
+      "power": 8,
+      "cost": 2,
+      "target": "single",
+      "description": "Tire une flèche sur un ennemi."
     }
   ]
 }

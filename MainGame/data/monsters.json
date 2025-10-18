@@ -12,7 +12,7 @@
       "gold_base": 3,
       "drops": [
         {
-          "item_id": "coin",
+          "item_id": "broken_tool",
           "chance": 0.35,
           "qty_min": 1,
           "qty_max": 4
@@ -72,11 +72,11 @@
       "classification": "miniboss",
       "min_wave": 5,
       "spawn_on_wave_multiple_of": 5,
-      "hp_base": 80,
-      "atk_base": 12,
+      "hp_base": 40,
+      "atk_base": 8,
       "def_base": 6,
-      "xp_base": 80,
-      "gold_base": 40,
+      "xp_base": 100,
+      "gold_base": 70,
       "drops": [
         {
           "item_id": "iron_core",
@@ -97,7 +97,7 @@
       "min_wave": 10,
       "spawn_on_wave_multiple_of": 10,
       "hp_base": 150,
-      "atk_base": 25,
+      "atk_base": 10,
       "def_base": 10,
       "xp_base": 450,
       "gold_base": 200,

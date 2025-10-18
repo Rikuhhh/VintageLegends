@@ -1,21 +1,33 @@
 {
-    "name": "Mage",
-    "hp": 99,
-    "max_hp": 100,
-    "base_atk": 15,
-    "base_defense": 5,
-    "gold": 3,
-    "xp": 8,
-    "level": 1,
-    "inventory": {},
+    "name": "Module Assassin",
+    "hp": 166,
+    "max_hp": 170,
+    "base_atk": 4,
+    "base_defense": 2,
+    "base_critchance": 0.25,
+    "base_critdamage": 2.5,
+    "base_max_hp": 120,
+    "unspent_points": 9,
+    "gold": 422,
+    "xp": 343,
+    "level": 4,
+    "inventory": {
+        "broken_tool": 5,
+        "dragon_scale": 1
+    },
     "equipment": {
         "weapon": null,
         "armor": null
     },
     "highest_wave": 0,
-    "challenge_coins": 0,
-    "permanent_upgrades": {},
-    "wave": 2,
-    "enemy_hp": 5,
-    "enemy_id": "wolf"
+    "challenge_coins": 9,
+    "permanent_upgrades": {
+        "cheat_boost": 2,
+        "atk_boost": 5,
+        "hp_boost": 5
+    },
+    "selected_character": null,
+    "wave": 11,
+    "enemy_hp": 11,
+    "enemy_id": "skeleton_archer"
 }
