@@ -89,8 +89,10 @@ def open_in_editor(initial: str) -> str:
         # fallback to system default
         if sys.platform == 'win32':
             os.startfile(tmp)
-        else:
+        elif sys.platform == 'darwin':
             subprocess.run(['open', tmp])
+        else:
+            subprocess.run(['xdg-open', tmp])
     with open(tmp, 'r', encoding='utf-8') as f:
         out = f.read()
     os.remove(tmp)
