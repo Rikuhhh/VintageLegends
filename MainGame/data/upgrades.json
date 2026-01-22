@@ -31,6 +31,22 @@
       "cost": 3,
       "max_level": 5,
       "effect": { "type": "add", "stat": "critdamage", "value": 0.1 }
+    },
+    {
+      "id": "penetration_boost",
+      "name": "Armor Piercing",
+      "desc": "+5 Penetration per level",
+      "cost": 2,
+      "max_level": 10,
+      "effect": { "type": "add", "stat": "penetration", "value": 5 }
+    },
+    {
+      "id": "agility_boost",
+      "name": "Swift Reflexes",
+      "desc": "+1 Agility per level (improves crit chance and dodge)",
+      "cost": 3,
+      "max_level": 20,
+      "effect": { "type": "add", "stat": "agility", "value": 1 }
     }
   ]
 }

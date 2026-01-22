@@ -5,50 +5,206 @@ import json
 
 class Player:
     def __init__(self, data):
-        self.name = data.get("name", "Inconnu")
+        # Validate and sanitize input data
+        if not isinstance(data, dict):
+            data = {}
+        
+        self.name = str(data.get("name", "Inconnu"))
         # keep a canonical base max HP so upgrades are idempotent
-        self.base_max_hp = data.get("hp", 100)
+        try:
+            self.base_max_hp = max(1, int(data.get("hp", 100)))
+        except (ValueError, TypeError):
+            self.base_max_hp = 100
         self.max_hp = self.base_max_hp
         self.hp = self.max_hp
         # keep base stats separately so equipment application is idempotent
-        self.base_atk = data.get("atk", 10)
-        self.base_defense = data.get("def", 5)
+        try:
+            self.base_atk = max(0, int(data.get("atk", 10)))
+        except (ValueError, TypeError):
+            self.base_atk = 10
+        try:
+            self.base_defense = max(0, int(data.get("def", 5)))
+        except (ValueError, TypeError):
+            self.base_defense = 5
         self.atk = self.base_atk
         self.defense = self.base_defense
         # critical stats: base values (base_critchance stored as probability 0.0-1.0)
-        self.base_critchance = float(data.get('critchance', 0.0))
-        self.base_critdamage = float(data.get('critdamage', 1.5))
+        try:
+            self.base_critchance = max(0.0, min(1.0, float(data.get('critchance', 0.0))))
+        except (ValueError, TypeError):
+            self.base_critchance = 0.0
+        try:
+            self.base_critdamage = max(1.0, float(data.get('critdamage', 1.5)))
+        except (ValueError, TypeError):
+            self.base_critdamage = 1.5
         # current effective crit stats (after equipment)
         self.critchance = self.base_critchance
         self.critdamage = self.base_critdamage
-        self.gold = 0
-        self.xp = 0
-        self.level = 1
+        # Penetration stat (reduces enemy defense effectiveness)
+        try:
+            self.base_penetration = max(0.0, float(data.get('penetration', 0.0)))
+        except (ValueError, TypeError):
+            self.base_penetration = 0.0
+        self.penetration = self.base_penetration
+        # Agility stat (increases crit chance and dodge chance)
+        try:
+            self.base_agility = max(0, int(data.get('agility', 0)))
+        except (ValueError, TypeError):
+            self.base_agility = 0
+        self.agility = self.base_agility
+        # Dodge chance (computed from agility)
+        self.dodge_chance = 0.0
+        try:
+            self.gold = max(0, int(data.get('gold', 0)))
+        except (ValueError, TypeError):
+            self.gold = 0
+        try:
+            self.xp = max(0, int(data.get('xp', 0)))
+        except (ValueError, TypeError):
+            self.xp = 0
+        try:
+            self.level = max(1, int(data.get('level', 1)))
+        except (ValueError, TypeError):
+            self.level = 1
         # Challenge progression (persistent)
-        self.challenge_coins = int(data.get('challenge_coins', 0))
+        try:
+            self.challenge_coins = max(0, int(data.get('challenge_coins', 0)))
+        except (ValueError, TypeError):
+            self.challenge_coins = 0
         # dict of upgrade_id -> level
         self.permanent_upgrades = data.get('permanent_upgrades', {})
+        if not isinstance(self.permanent_upgrades, dict):
+            self.permanent_upgrades = {}
         # Points non dépensés à attribuer lors d'un level-up
-        self.unspent_points = 0
+        try:
+            self.unspent_points = max(0, int(data.get('unspent_points', 0)))
+        except (ValueError, TypeError):
+            self.unspent_points = 0
         # Inventaire simple: dict of item_id -> count
-        self.inventory = {}
+        self.inventory = data.get('inventory', {})
+        if not isinstance(self.inventory, dict):
+            self.inventory = {}
         # Equipment slots store item ids
-        self.equipment = {
+        default_equipment = {
             "weapon": None,
             "armor": None,
+            "offhand": None,
+            "relic1": None,
+            "relic2": None,
+            "relic3": None
         }
+        self.equipment = data.get('equipment', default_equipment)
+        if not isinstance(self.equipment, dict):
+            self.equipment = default_equipment.copy()
+        # Ensure all slots exist (for backward compatibility with old saves)
+        for slot in default_equipment:
+            if slot not in self.equipment:
+                self.equipment[slot] = None
+        
+        # Apply agility bonuses on initialization
+        self._apply_agility_bonuses()
 
-    def take_damage(self, dmg):
-        dmg_taken = max(1, dmg - self.defense)
+    @staticmethod
+    def _calculate_effective_stat(raw_value, soft_cap, hard_cap):
+        """Calculate effective stat with soft and hard caps.
+        Below soft_cap: 1:1 ratio
+        Between soft_cap and hard_cap: diminishing returns (2:1 ratio)
+        Above hard_cap: capped at hard_cap
+        """
+        if raw_value <= soft_cap:
+            return raw_value
+        elif raw_value <= hard_cap:
+            # Diminishing returns: every 2 points gives 1% after soft cap
+            excess = raw_value - soft_cap
+            return soft_cap + (excess * 0.5)
+        else:
+            # Hard capped
+            excess = hard_cap - soft_cap
+            return soft_cap + (excess * 0.5)
+    
+    def get_effective_defense_percent(self):
+        """Get effective defense as percentage (0-75) with soft cap at 30."""
+        return self._calculate_effective_stat(self.defense, 30, 75)
+    
+    def get_effective_penetration_percent(self):
+        """Get effective penetration as percentage (0-75) with soft cap at 50."""
+        return self._calculate_effective_stat(self.penetration, 50, 75)
+
+    def take_damage(self, dmg, attacker_penetration=0):
+        """Take damage with percentage-based defense reduction.
+        
+        Args:
+            dmg: Raw damage amount
+            attacker_penetration: Attacker's penetration stat (reduces defense effectiveness)
+        
+        Returns:
+            Actual damage taken after defense
+        """
+        # Calculate effective defense percentage (0-75%)
+        defense_percent = self.get_effective_defense_percent()
+        
+        # Calculate effective penetration from attacker (0-75%)
+        if attacker_penetration > 0:
+            pen_percent = self._calculate_effective_stat(attacker_penetration, 50, 75)
+        else:
+            pen_percent = 0
+        
+        # Penetration reduces defense effectiveness
+        # Example: 50% pen vs 80% defense = 80% * (1 - 0.50) = 40% effective defense
+        effective_defense = defense_percent * (1.0 - (pen_percent / 100.0))
+        
+        # Apply damage reduction
+        damage_multiplier = 1.0 - (effective_defense / 100.0)
+        dmg_taken = max(1, int(dmg * damage_multiplier))  # Minimum 1 damage
+        
         self.hp = max(0, self.hp - dmg_taken)
         return dmg_taken
+
+    def _apply_agility_bonuses(self):
+        """Apply bonuses from agility stat: crit chance and dodge chance with soft/hard caps."""
+        if not hasattr(self, 'agility'):
+            self.agility = 0
+        
+        # Crit chance bonus: 0.05% per point (0.0005 as decimal)
+        agility_crit_bonus = self.agility * 0.0005
+        self.critchance += agility_crit_bonus
+        
+        # Dodge chance calculation with soft cap at 30% and hard cap at 40%
+        # Balanced scaling: starts meaningful but slows down
+        if self.agility > 0:
+            soft_cap = 0.30  # 30%
+            hard_cap = 0.40  # 40%
+            
+            import math
+            # Better early-game scaling while maintaining caps
+            # At 10 agility: ~2.3% dodge
+            # At 50 agility: ~11% dodge
+            # At 150 agility: ~25% dodge
+            # At 300 agility: ~30% dodge (soft cap)
+            if self.agility <= 300:
+                # Exponential growth to soft cap
+                self.dodge_chance = soft_cap * (1 - math.exp(-self.agility / 100))
+            else:
+                # Past soft cap: very slow growth from 30% to 40% hard cap
+                excess_agility = self.agility - 300
+                # Approaches hard cap asymptotically (needs ~500+ more agility to get close to 40%)
+                bonus_dodge = (hard_cap - soft_cap) * (1 - math.exp(-excess_agility / 500))
+                self.dodge_chance = soft_cap + bonus_dodge
+            
+            # Ensure we never exceed hard cap
+            self.dodge_chance = min(hard_cap, self.dodge_chance)
+        else:
+            self.dodge_chance = 0.0
 
     def gain_xp(self, amount):
         self.xp += amount
         # Supporte plusieurs niveaux d'un coup
-        while self.xp >= self.level * 100:
-            self.xp -= self.level * 100
+        # Exponential scaling: level^1.5 * 100 (more XP needed each level)
+        xp_required = int((self.level ** 1.5) * 100)
+        while self.xp >= xp_required:
+            self.xp -= xp_required
             self.level_up()
+            xp_required = int((self.level ** 1.5) * 100)
 
     def level_up(self):
         self.level += 1
@@ -59,6 +215,17 @@ class Player:
         self.hp = self.max_hp
         # Accord de points de compétence à dépenser manuellement (via l'UI)
         self.unspent_points += 3
+        
+        # Every 3 levels, grant +1 to all stats automatically
+        if self.level % 3 == 0:
+            self.base_atk += 1
+            self.base_defense += 1
+            self.base_max_hp += 5
+            self.max_hp = self.base_max_hp
+            self.hp = self.max_hp
+            self.base_agility = getattr(self, 'base_agility', 0) + 1
+            print(f"🎉 Milestone! Level {self.level}: +1 to all stats!")
+        
         # Recalculate derived stats (equipment, permanent upgrades) so level HP stacks with them
         try:
             self._recalc_stats()
@@ -67,7 +234,7 @@ class Player:
         print(f"{self.name} est maintenant niveau {self.level} ! (+3 points non dépensés)")
 
     def spend_point(self, stat: str) -> bool:
-        """Dépense un point sur une statistique: 'atk', 'def', 'hp'. Retourne True si succès."""
+        """Dépense un point sur une statistique: 'atk', 'def', 'hp', 'agi'. Retourne True si succès."""
         if self.unspent_points <= 0:
             return False
         if stat == "atk":
@@ -83,6 +250,9 @@ class Player:
                 self.hp = min(self.max_hp, self.hp + 5)
             except Exception:
                 self.hp = self.max_hp
+        elif stat == "agi" or stat == "agility":
+            # increase base agility
+            self.base_agility = getattr(self, 'base_agility', 0) + 1
         else:
             return False
 
@@ -134,8 +304,28 @@ class Player:
             return
 
         # Auto-equip enabled: handle equippable types specially
-        if itype == "weapon" and item.get("attack"):
-            prev_id = self.equipment.get("weapon")
+        # Map item types to equipment slots
+        slot_mapping = {
+            "weapon": "weapon",
+            "armor": "armor",
+            "offhand": "offhand",
+            "relic": None  # Will auto-find first empty relic slot
+        }
+        
+        slot = slot_mapping.get(itype)
+        if slot is None and itype == "relic":
+            # Find first empty relic slot
+            for relic_slot in ["relic1", "relic2", "relic3"]:
+                if not self.equipment.get(relic_slot):
+                    slot = relic_slot
+                    break
+            if not slot:
+                # All relic slots full, add to inventory
+                self.inventory[item_id] = self.inventory.get(item_id, 0) + 1
+                return
+        
+        if slot and (itype in ["weapon", "armor", "offhand", "relic"]):
+            prev_id = self.equipment.get(slot)
             # If same item already equipped, treat as spare and add to inventory
             if prev_id == item_id:
                 self.inventory[item_id] = self.inventory.get(item_id, 0) + 1
@@ -143,18 +333,7 @@ class Player:
             # Equip the new item and return previous to inventory (if any)
             if prev_id:
                 self.inventory[prev_id] = self.inventory.get(prev_id, 0) + 1
-            self.equipment["weapon"] = item_id
-            self._recalc_stats()
-            return
-
-        if itype == "armor" and item.get("defense"):
-            prev_id = self.equipment.get("armor")
-            if prev_id == item_id:
-                self.inventory[item_id] = self.inventory.get(item_id, 0) + 1
-                return
-            if prev_id:
-                self.inventory[prev_id] = self.inventory.get(prev_id, 0) + 1
-            self.equipment["armor"] = item_id
+            self.equipment[slot] = item_id
             self._recalc_stats()
             return
 
@@ -167,23 +346,33 @@ class Player:
         if not item:
             return False
         itype = item.get('type')
-        if itype == 'weapon' and item.get('attack'):
-            prev_id = self.equipment.get('weapon')
+        
+        # Map item types to slots
+        slot_mapping = {
+            'weapon': 'weapon',
+            'armor': 'armor',
+            'offhand': 'offhand'
+        }
+        
+        slot = slot_mapping.get(itype)
+        
+        # Special handling for relics - find first empty slot
+        if itype == 'relic':
+            for relic_slot in ['relic1', 'relic2', 'relic3']:
+                if not self.equipment.get(relic_slot):
+                    slot = relic_slot
+                    break
+            if not slot:
+                return False  # All relic slots full
+        
+        if slot:
+            prev_id = self.equipment.get(slot)
             if prev_id == item_id:
                 return False
-            # return previous weapon to inventory
+            # return previous item to inventory
             if prev_id:
                 self.inventory[prev_id] = self.inventory.get(prev_id, 0) + 1
-            self.equipment['weapon'] = item_id
-            self._recalc_stats()
-            return True
-        if itype == 'armor' and item.get('defense'):
-            prev_id = self.equipment.get('armor')
-            if prev_id == item_id:
-                return False
-            if prev_id:
-                self.inventory[prev_id] = self.inventory.get(prev_id, 0) + 1
-            self.equipment['armor'] = item_id
+            self.equipment[slot] = item_id
             self._recalc_stats()
             return True
         return False
@@ -248,38 +437,42 @@ class Player:
         # reset crit stats to base
         self.critchance = getattr(self, 'base_critchance', 0.0)
         self.critdamage = getattr(self, 'base_critdamage', 1.5)
-        # weapon bonus
-        wid = self.equipment.get('weapon')
-        if wid:
-            w = self._load_item_by_id(wid)
-            if w and w.get('attack'):
-                self.atk += w.get('attack', 0)
-            # weapon may also add crit stats
-            if w and w.get('critchance'):
+        # reset penetration to base
+        self.penetration = getattr(self, 'base_penetration', 0.0)
+        # reset agility to base
+        self.agility = getattr(self, 'base_agility', 0)
+        # Apply bonuses from all equipment slots
+        for slot_name, item_id in self.equipment.items():
+            if not item_id:
+                continue
+            equipped_item = self._load_item_by_id(item_id)
+            if not equipped_item:
+                continue
+            
+            # Add all possible stat bonuses
+            if equipped_item.get('attack'):
+                self.atk += equipped_item.get('attack', 0)
+            if equipped_item.get('defense'):
+                self.defense += equipped_item.get('defense', 0)
+            if equipped_item.get('critchance'):
                 try:
-                    self.critchance += float(w.get('critchance', 0.0))
+                    self.critchance += float(equipped_item.get('critchance', 0.0))
                 except Exception:
                     pass
-            if w and w.get('critdamage'):
+            if equipped_item.get('critdamage'):
                 try:
-                    self.critdamage += float(w.get('critdamage', 0.0))
+                    self.critdamage += float(equipped_item.get('critdamage', 0.0))
                 except Exception:
                     pass
-        # armor bonus
-        aid = self.equipment.get('armor')
-        if aid:
-            a = self._load_item_by_id(aid)
-            if a and a.get('defense'):
-                self.defense += a.get('defense', 0)
-            # armor may also add crit stats
-            if a and a.get('critchance'):
+            if equipped_item.get('penetration'):
                 try:
-                    self.critchance += float(a.get('critchance', 0.0))
+                    self.penetration += float(equipped_item.get('penetration', 0.0))
                 except Exception:
                     pass
-            if a and a.get('critdamage'):
+            # Relics and offhand can provide HP bonuses
+            if equipped_item.get('max_hp'):
                 try:
-                    self.critdamage += float(a.get('critdamage', 0.0))
+                    self.max_hp += int(equipped_item.get('max_hp', 0))
                 except Exception:
                     pass
 
@@ -327,6 +520,10 @@ class Player:
                                     self.critchance += float(val) * int(lvl)
                                 elif s in ('critdamage', 'crit_mult'):
                                     self.critdamage += float(val) * int(lvl)
+                                elif s in ('penetration', 'pen'):
+                                    self.penetration += float(val) * int(lvl)
+                                elif s in ('agility', 'agi'):
+                                    self.agility += int(val) * int(lvl)
                                 else:
                                     # fallback: apply to attribute if exists (but don't mutate base_* names)
                                     try:
@@ -338,6 +535,9 @@ class Player:
                             pass
         except Exception:
             pass
+
+        # Apply agility-based bonuses
+        self._apply_agility_bonuses()
 
         # If max_hp changed, preserve the player's current HP proportionally.
         try:

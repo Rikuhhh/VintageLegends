@@ -7,13 +7,32 @@ from pathlib import Path
 class Enemy:
     def __init__(self, name="Slime", hp=30, atk=5, gold=10, xp=15, id=None):
         self.id = id
-        self.name = name
-        self.hp = hp
-        self.max_hp = hp
-        self.atk = atk
-        self.gold = gold
-        self.xp = xp
+        self.name = str(name)
+        try:
+            self.hp = max(1, int(hp))
+            self.max_hp = self.hp
+        except (ValueError, TypeError):
+            self.hp = 30
+            self.max_hp = 30
+        try:
+            self.atk = max(1, int(atk))
+        except (ValueError, TypeError):
+            self.atk = 5
+        try:
+            self.gold = max(0, int(gold))
+        except (ValueError, TypeError):
+            self.gold = 10
+        try:
+            self.xp = max(0, int(xp))
+        except (ValueError, TypeError):
+            self.xp = 15
         self.category = None
+        self.classification = None
+        # Defense stored as raw value, will be converted to % when calculating damage
+        # Initialized to 0, will be set later when creating from monster data
+        self.defense = 0
+        # Penetration stat (most enemies won't have this)
+        self.penetration = 0.0
 
     @staticmethod
     def _load_monsters():
@@ -140,9 +159,13 @@ class Enemy:
         atk_base = int(chosen.get('atk_base', 1))
         gold_base = int(chosen.get('gold_base', 1))
         xp_base = int(chosen.get('xp_base', 1))
+        def_base = int(chosen.get('def_base', 0))
+        pen_base = float(chosen.get('pen_base', 0.0))
 
         hp = Enemy._scale_value(hp_base, wave, hp_pct)
         atk = Enemy._scale_value(atk_base, wave, atk_pct)
+        # Defense scales slower (0.015 per wave instead of 0.025)
+        defense = Enemy._scale_value(def_base, wave, 0.015)
         # gold/xp scaling: use simple formulas if provided in scaling_notes
         try:
             gold = int(round(gold_base * (1 + wave * 0.05)))
@@ -154,13 +177,61 @@ class Enemy:
             xp = xp_base
 
         e = Enemy(name=f"{chosen.get('name', 'Enemy')} Lv.{wave}", hp=hp, atk=atk, gold=gold, xp=xp, id=chosen.get('id'))
+        # Add defense and penetration
+        e.defense = defense
+        e.penetration = pen_base  # Penetration doesn't scale with wave for enemies
         # classification comes from monster def (normal/elite/miniboss/boss). Category is an optional tag like 'demon'/'dragon'.
-        e.classification = chosen.get('classification')
-        e.category = chosen.get('category', chosen.get('classification'))
+        e.classification = chosen.get('classification', 'normal')
+        # Ensure category is set - fall back to classification if not specified
+        e.category = chosen.get('category', chosen.get('classification', 'normal'))
         return e
 
-    def take_damage(self, dmg):
-        self.hp = max(0, self.hp - dmg)
+    @staticmethod
+    def _calculate_effective_stat(raw_value, soft_cap, hard_cap):
+        """Calculate effective stat with soft and hard caps.
+        Below soft_cap: 1:1 ratio
+        Between soft_cap and hard_cap: diminishing returns (2:1 ratio)
+        Above hard_cap: capped at hard_cap
+        """
+        if raw_value <= soft_cap:
+            return raw_value
+        elif raw_value <= hard_cap:
+            # Diminishing returns: every 2 points gives 1% after soft cap
+            excess = raw_value - soft_cap
+            return soft_cap + (excess * 0.5)
+        else:
+            # Hard capped
+            excess = hard_cap - soft_cap
+            return soft_cap + (excess * 0.5)
+
+    def take_damage(self, dmg, attacker_penetration=0):
+        """Take damage with percentage-based defense reduction.
+        
+        Args:
+            dmg: Raw damage amount
+            attacker_penetration: Attacker's penetration stat (reduces defense effectiveness)
+        
+        Returns:
+            Actual damage taken after defense
+        """
+        # Calculate effective defense percentage (0-75%)
+        defense_percent = self._calculate_effective_stat(self.defense, 30, 75)
+        
+        # Calculate effective penetration from attacker (0-75%)
+        if attacker_penetration > 0:
+            pen_percent = self._calculate_effective_stat(attacker_penetration, 50, 75)
+        else:
+            pen_percent = 0
+        
+        # Penetration reduces defense effectiveness
+        effective_defense = defense_percent * (1.0 - (pen_percent / 100.0))
+        
+        # Apply damage reduction
+        damage_multiplier = 1.0 - (effective_defense / 100.0)
+        dmg_taken = max(1, int(dmg * damage_multiplier))  # Minimum 1 damage
+        
+        self.hp = max(0, self.hp - dmg_taken)
+        return dmg_taken
 
     def is_dead(self):
         return self.hp <= 0

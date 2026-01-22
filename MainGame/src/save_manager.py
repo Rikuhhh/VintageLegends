@@ -18,6 +18,10 @@ class SaveManager:
             # critical base stats
             "base_critchance": getattr(player, 'base_critchance', getattr(player, 'critchance', 0.0)),
             "base_critdamage": getattr(player, 'base_critdamage', getattr(player, 'critdamage', 1.5)),
+            # penetration base stat
+            "base_penetration": getattr(player, 'base_penetration', getattr(player, 'penetration', 0.0)),
+            # agility base stat
+            "base_agility": getattr(player, 'base_agility', getattr(player, 'agility', 0)),
             # canonical base max HP
             "base_max_hp": getattr(player, 'base_max_hp', getattr(player, 'max_hp', 100)),
             # unspent skill points
@@ -27,7 +31,7 @@ class SaveManager:
             "level": player.level,
             "inventory": player.inventory,
             "equipment": player.equipment,
-            "highest_wave": getattr(player, 'highest_wave', 0),
+            "highest_wave": max(getattr(player, 'highest_wave', 0), getattr(battle, 'wave', 0) if battle else 0),
             # challenge progression
             "challenge_coins": getattr(player, 'challenge_coins', 0),
             "permanent_upgrades": getattr(player, 'permanent_upgrades', {}),
@@ -37,9 +41,9 @@ class SaveManager:
         # include current battle state if provided
         try:
             if battle is not None:
-                data['wave'] = getattr(battle, 'wave', None)
-                # save current enemy HP if there is an active enemy
-                if getattr(battle, 'enemy', None):
+                data['wave'] = getattr(battle, 'wave', 1)
+                # save current enemy HP if there is an active enemy (not in shop)
+                if getattr(battle, 'enemy', None) and not getattr(battle, 'in_shop', False):
                     data['enemy_hp'] = getattr(battle.enemy, 'hp', None)
                     data['enemy_id'] = getattr(battle.enemy, 'id', None)
         except Exception:
@@ -51,9 +55,29 @@ class SaveManager:
     def load(self):
         path = self.save_dir / "save.json"
         if path.exists():
-            with open(path, "r", encoding="utf-8") as f:
-                print("📂 Sauvegarde chargée.")
-                data = json.load(f)
-                # return full data to caller
-                return data
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    print("📂 Sauvegarde chargée.")
+                    data = json.load(f)
+                    # Validate critical fields
+                    if not isinstance(data, dict):
+                        print("⚠️ Invalid save format, starting fresh")
+                        return None
+                    # Ensure critical numeric fields are valid
+                    try:
+                        data['hp'] = max(1, int(data.get('hp', 100)))
+                        data['max_hp'] = max(1, int(data.get('max_hp', 100)))
+                        data['gold'] = max(0, int(data.get('gold', 0)))
+                        data['level'] = max(1, int(data.get('level', 1)))
+                    except (ValueError, TypeError):
+                        print("⚠️ Corrupted save data, starting fresh")
+                        return None
+                    return data
+            except json.JSONDecodeError:
+                print("⚠️ Save file corrupted, starting fresh")
+                return None
+            except Exception as e:
+                print(f"⚠️ Error loading save: {e}, starting fresh")
+                return None
         return None
+

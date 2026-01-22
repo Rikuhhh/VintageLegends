@@ -22,8 +22,11 @@ class BattleSystem:
     def player_attack(self):
         """Action du joueur via un bouton."""
         if self.turn != "player":
-            return  # ignore si ce n’est pas ton tour
-
+            return  # ignore si ce n’est pas ton tour        
+        # Safety check: ensure enemy exists
+        if not self.enemy or self.enemy.is_dead():
+            print("No enemy to attack!")
+            return
         # base damage
         base_dmg = getattr(self.player, 'atk', 0)
         # roll for critical hit using player's crit chance (0.0 - 1.0)
@@ -38,22 +41,23 @@ class BattleSystem:
         else:
             dmg = int(base_dmg)
 
-        # apply damage to enemy
-        self.enemy.take_damage(dmg)
+        # apply damage to enemy (pass player penetration)
+        player_pen = getattr(self.player, 'penetration', 0)
+        dmg_dealt = self.enemy.take_damage(dmg, player_pen)
         # register damage event for UI
         try:
             self.damage_events.append({
                 'target': 'enemy',
-                'amount': int(dmg),
+                'amount': int(dmg_dealt),
                 'time': time.time(),
                 'is_crit': bool(is_crit),
             })
         except Exception:
             pass
         if is_crit:
-            print(f"CRIT! {self.player.name} inflige {dmg} (x{crit_mult}) à {self.enemy.name} !")
+            print(f"CRIT! {self.player.name} inflige {dmg_dealt} (x{crit_mult}) à {self.enemy.name} !")
         else:
-            print(f"{self.player.name} inflige {dmg} à {self.enemy.name} !")
+            print(f"{self.player.name} inflige {dmg_dealt} à {self.enemy.name} !")
 
         if self.enemy.is_dead():
             print(f"{self.enemy.name} est vaincu !")
@@ -69,24 +73,49 @@ class BattleSystem:
     def update(self):
         """Tour automatique de l’ennemi après ton attaque."""
         if self.turn == "enemy":
+            # Safety check: ensure enemy exists before attacking
+            if not self.enemy or self.enemy.is_dead():
+                self.turn = "player"
+                return
+            
             if time.time() - self.last_action_time >= self.action_delay:
-                dmg = self.enemy.atk
-                # apply damage and capture the actual damage taken after defense
-                dmg_taken = self.player.take_damage(dmg)
-                # register damage event for UI with post-defense damage
-                try:
-                    self.damage_events.append({
-                        'target': 'player',
-                        'amount': int(dmg_taken),
-                        'time': time.time(),
-                        'is_crit': False,
-                    })
-                except Exception:
-                    pass
-                print(f"{self.enemy.name} inflige {dmg_taken} à {self.player.name} !")
+                # Check if player dodges the attack
+                player_dodge = getattr(self.player, 'dodge_chance', 0.0)
+                dodged = random.random() < player_dodge
+                
+                if dodged:
+                    # Player dodged the attack!
+                    try:
+                        self.damage_events.append({
+                            'target': 'player',
+                            'amount': 0,
+                            'time': time.time(),
+                            'is_crit': False,
+                            'dodged': True,
+                        })
+                    except Exception:
+                        pass
+                    print(f"{self.player.name} esquive l'attaque de {self.enemy.name}!")
+                else:
+                    dmg = self.enemy.atk
+                    # Enemies don't have penetration (for now), pass 0
+                    enemy_pen = getattr(self.enemy, 'penetration', 0)
+                    # apply damage and capture the actual damage taken after defense
+                    dmg_taken = self.player.take_damage(dmg, enemy_pen)
+                    # register damage event for UI with post-defense damage
+                    try:
+                        self.damage_events.append({
+                            'target': 'player',
+                            'amount': int(dmg_taken),
+                            'time': time.time(),
+                            'is_crit': False,
+                        })
+                    except Exception:
+                        pass
+                    print(f"{self.enemy.name} inflige {dmg_taken} à {self.player.name} !")
 
-                if self.player.is_dead():
-                    print(f"{self.player.name} est vaincu... 💀")
+                    if self.player.is_dead():
+                        print(f"{self.player.name} est vaincu... 💀")
                     # Do not auto-respawn here; main loop will handle game over
 
                 self.turn = "player"

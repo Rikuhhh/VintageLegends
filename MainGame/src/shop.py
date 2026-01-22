@@ -36,8 +36,8 @@ class Shop:
                     factor = random.uniform(low, high)
                 else:
                     factor = float(gv)
-                # factor interpreted as percentage multiplier (e.g., -0.05 -> reduce by 5%, 3.0 -> 300%)
-                final_cost = max(0, int(cost * factor))
+                # factor interpreted as percentage multiplier (e.g., -0.05 -> reduce by 5%, 0.2 -> increase by 20%)
+                final_cost = max(1, int(cost * (1.0 + factor)))
 
             offers.append({**i, '_final_cost': final_cost})
 
