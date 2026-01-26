@@ -1,4 +1,9 @@
-from src.player import Player
+import sys
+from pathlib import Path
+# Add parent src directory to path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'src'))
+
+from player import Player
 
 p = Player({'name':'Test','hp':100,'atk':10,'def':5,'critchance':0.1,'critdamage':1.5})
 print('initial base_max_hp, max_hp, hp:', p.base_max_hp, p.max_hp, p.hp)

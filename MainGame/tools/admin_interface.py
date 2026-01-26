@@ -190,6 +190,17 @@ class AdminInterface:
         self.item_fields['drop_chance'] = ttk.Entry(drop_frame, width=15)
         self.item_fields['drop_chance'].grid(row=2, column=1, padx=5, pady=3)
         
+        # Image settings
+        image_frame = ttk.LabelFrame(scrollable_frame, text="Image Settings")
+        image_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        ttk.Label(image_frame, text="Image Filename:").grid(row=0, column=0, sticky='w', padx=5, pady=3)
+        self.item_fields['image'] = ttk.Entry(image_frame, width=30)
+        self.item_fields['image'].grid(row=0, column=1, padx=5, pady=3)
+        ttk.Label(image_frame, text="(e.g. potion.png - in assets/images/items/)", 
+                 font=('Arial', 8)).grid(row=1, column=0, columnspan=2, sticky='w', padx=5, pady=3)
+        
         # Save button
         ttk.Button(scrollable_frame, text="Save Item", command=self.save_item, 
                   style='Accent.TButton').grid(row=row, column=0, columnspan=2, pady=20)
@@ -310,6 +321,17 @@ class AdminInterface:
         self.monster_fields['spawn_multiple'] = ttk.Entry(spawn_frame, width=15)
         self.monster_fields['spawn_multiple'].grid(row=2, column=1, padx=5, pady=3)
         
+        # Image settings
+        image_frame = ttk.LabelFrame(scrollable_frame, text="Image Settings")
+        image_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        ttk.Label(image_frame, text="Image Filename:").grid(row=0, column=0, sticky='w', padx=5, pady=3)
+        self.monster_fields['image'] = ttk.Entry(image_frame, width=30)
+        self.monster_fields['image'].grid(row=0, column=1, padx=5, pady=3)
+        ttk.Label(image_frame, text="(e.g. wolf.png - in assets/images/monsters/)", 
+                 font=('Arial', 8)).grid(row=1, column=0, columnspan=2, sticky='w', padx=5, pady=3)
+        
         # Save button
         ttk.Button(scrollable_frame, text="Save Monster", command=self.save_monster,
                   style='Accent.TButton').grid(row=row, column=0, columnspan=2, pady=20)
@@ -425,6 +447,10 @@ class AdminInterface:
         if item.get('drop_chance'):
             self.item_fields['drop_chance'].insert(0, str(item.get('drop_chance')))
         
+        # Image settings
+        if item.get('image'):
+            self.item_fields['image'].insert(0, item.get('image'))
+        
         # Update UI
         self.on_type_change()
     
@@ -456,6 +482,7 @@ class AdminInterface:
         self.monster_fields['min_wave'].insert(0, str(monster.get('min_wave', '')))
         self.monster_fields['max_wave'].insert(0, str(monster.get('max_wave', '')))
         self.monster_fields['spawn_multiple'].insert(0, str(monster.get('spawn_on_wave_multiple_of', '')))
+        self.monster_fields['image'].insert(0, str(monster.get('image', '')))
     
     def clear_item_form(self):
         """Clear all item form fields"""
@@ -546,6 +573,10 @@ class AdminInterface:
             if self.item_fields['drop_chance'].get():
                 item['drop_chance'] = float(self.item_fields['drop_chance'].get())
         
+        # Image settings
+        if self.item_fields['image'].get():
+            item['image'] = self.item_fields['image'].get()
+        
         # Find if updating or creating new
         item_id = item['id']
         found = False
@@ -603,6 +634,10 @@ class AdminInterface:
             monster['max_wave'] = int(self.monster_fields['max_wave'].get())
         if self.monster_fields['spawn_multiple'].get():
             monster['spawn_on_wave_multiple_of'] = int(self.monster_fields['spawn_multiple'].get())
+        
+        # Image settings
+        if self.monster_fields['image'].get():
+            monster['image'] = self.monster_fields['image'].get()
         
         # Placeholder for attacks and drops (can be extended)
         if 'attacks' not in monster:

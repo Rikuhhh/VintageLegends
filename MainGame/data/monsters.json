@@ -34,6 +34,7 @@
       "def_base": 1,
       "xp_base": 12,
       "gold_base": 5,
+      "image": "wolf1.png",
       "drops": [
         {
           "item_id": "potion",
@@ -163,6 +164,24 @@
       "min_wave": 20,
       "max_wave": 0,
       "spawn_on_wave_multiple_of": 5,
+      "attacks": [],
+      "drops": []
+    },
+    {
+      "id": "minotaure1",
+      "name": "Minotaure Des Plaines",
+      "classification": "elite",
+      "category": "beast",
+      "hp_base": 150,
+      "atk_base": 15,
+      "def_base": 15,
+      "pen_base": 0.0,
+      "xp_base": 300,
+      "gold_base": 100,
+      "min_wave": 0,
+      "max_wave": 0,
+      "spawn_on_wave_multiple_of": 3,
+      "image": "minotaure1.png",
       "attacks": [],
       "drops": []
     }

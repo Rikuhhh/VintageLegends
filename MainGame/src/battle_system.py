@@ -138,6 +138,26 @@ class BattleSystem:
                     pass
         except Exception:
             pass
+        
+        # Apply wave-based price increase (1-15% per wave, seeded)
+        try:
+            if hasattr(self.player, 'game_seed') and self.player.game_seed is not None:
+                # Use player seed + wave to determine this wave's price increase
+                import random
+                wave_seed = (self.player.game_seed + self.wave * 9973) % 1000000007
+                rng = random.Random(wave_seed)
+                # Random increase between 0.01 (1%) and 0.15 (15%)
+                wave_increase = rng.uniform(0.01, 0.15)
+                # Add to cumulative price increase
+                if hasattr(self.player, 'cumulative_price_increase'):
+                    self.player.cumulative_price_increase = getattr(self.player, 'cumulative_price_increase', 0.0) + wave_increase
+        except Exception as e:
+            print(f"Error calculating price increase: {e}")
+        
+        # Update highest wave
+        if hasattr(self.player, 'highest_wave'):
+            self.player.highest_wave = max(getattr(self.player, 'highest_wave', 0), self.wave)
+        
         # Decide whether next wave is a shop — guaranteed every 10th wave, otherwise 10% chance
         import random
         if self.wave % 10 == 0:

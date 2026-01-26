@@ -64,6 +64,27 @@ class UIManager:
         self.character_sheet_pos = None  # Will be (x, y) when set
         # Floating damage texts: list of dicts {text, pos, start_time, duration, color, alpha, dy}
         self.floats = []
+        # Enemy images cache: {enemy_id: pygame.Surface}
+        self.enemy_images = {}
+        self.current_enemy_image = None
+        # Player character image
+        self.player_image = None
+        try:
+            if self.assets_path:
+                player_path = self.assets_path / "images" / "characters" / "mage.png"
+                if player_path.exists():
+                    loaded_img = pygame.image.load(str(player_path)).convert_alpha()
+                    # Scale to reasonable size (max 200x200 for player)
+                    orig_w, orig_h = loaded_img.get_size()
+                    max_size = 200
+                    if orig_w > max_size or orig_h > max_size:
+                        scale = min(max_size / orig_w, max_size / orig_h)
+                        new_w = int(orig_w * scale)
+                        new_h = int(orig_h * scale)
+                        loaded_img = pygame.transform.smoothscale(loaded_img, (new_w, new_h))
+                    self.player_image = loaded_img
+        except Exception:
+            self.player_image = None
 
     def _blit_text_outlined(self, surface, font, text, pos, fg=(255,255,255), outline=(0,0,0), outline_width=2, center=False):
         """Render text with a simple outline by drawing the outline color around the text.
@@ -246,6 +267,42 @@ class UIManager:
             f['alpha'] = int(max(0, 255 * (1 - (elapsed / f['duration']))))
             new_floats.append(f)
         self.floats = new_floats
+        
+        # Load enemy image if battle enemy has changed
+        if battle and hasattr(battle, 'enemy') and battle.enemy:
+            enemy = battle.enemy
+            enemy_id = getattr(enemy, 'id', None)
+            image_filename = getattr(enemy, 'image', None)
+            
+            # Load image if we have a filename and haven't loaded it yet
+            if image_filename and enemy_id:
+                if enemy_id not in self.enemy_images:
+                    try:
+                        if self.assets_path:
+                            image_path = self.assets_path / "images" / "monsters" / image_filename
+                            if image_path.exists():
+                                loaded_img = pygame.image.load(str(image_path)).convert_alpha()
+                                # Scale to a smaller size (max 200x200 for enemy)
+                                orig_w, orig_h = loaded_img.get_size()
+                                max_size = 200
+                                if orig_w > max_size or orig_h > max_size:
+                                    scale = min(max_size / orig_w, max_size / orig_h)
+                                    new_w = int(orig_w * scale)
+                                    new_h = int(orig_h * scale)
+                                    loaded_img = pygame.transform.smoothscale(loaded_img, (new_w, new_h))
+                                self.enemy_images[enemy_id] = loaded_img
+                            else:
+                                self.enemy_images[enemy_id] = None  # Mark as not found
+                    except Exception:
+                        self.enemy_images[enemy_id] = None
+                
+                # Set current image to display
+                self.current_enemy_image = self.enemy_images.get(enemy_id)
+            else:
+                self.current_enemy_image = None
+        else:
+            self.current_enemy_image = None
+        
         return
 
     def draw(self, player=None, battle=None):
@@ -299,17 +356,8 @@ class UIManager:
             self._blit_text_outlined(self.screen, self.small_font, f"Enemy: {getattr(enemy, 'name', 'Unknown')}", (x, y), fg=(255,200,200), outline=(0,0,0), outline_width=2)
             y += line_h
 
-            self._blit_text_outlined(self.screen, self.small_font, f"Enemy HP: {enemy.hp}/{enemy.max_hp}", (x, y), fg=(255,150,150), outline=(0,0,0), outline_width=2)
+            # Enemy HP bar is now drawn near the enemy sprite, not here
             y += line_h
-
-            # Barre de vie
-            bar_x, bar_y = x, y
-            bar_width, bar_height = 200, 20
-            hp_ratio = (enemy.hp / enemy.max_hp) if getattr(enemy, "max_hp", 1) > 0 else 0
-            pygame.draw.rect(self.screen, (80, 80, 80), (bar_x, bar_y, bar_width, bar_height))
-            pygame.draw.rect(self.screen, (0, 200, 0), (bar_x, bar_y, int(bar_width * hp_ratio), bar_height))
-            self._blit_text_outlined(self.screen, self.small_font, f"{enemy.hp}/{enemy.max_hp}", (bar_x + bar_width + 10, bar_y), fg=(255,255,255), outline=(0,0,0), outline_width=2)
-            y += bar_height + 10
 
         # Stats joueur (gold, level)
         if player is not None:
@@ -400,6 +448,48 @@ class UIManager:
                 # store for click handling
                 self.alloc_buttons.append({"rect": btn_rect, "label": lab, "action": (lambda s=st: player.spend_point(s))})
             y += btn_h + spacing
+
+        # Draw enemy image and HP bar BEFORE modals (so modals appear on top)
+        screen_w, screen_h = self.screen.get_size()
+        if battle and getattr(battle, "enemy", None):
+            enemy = battle.enemy
+            
+            # Calculate positions for enemy sprite and HP bar
+            if self.current_enemy_image:
+                # Position at top-center of screen
+                enemy_img_x = screen_w // 2 - self.current_enemy_image.get_width() // 2
+                enemy_img_y = 60  # Top of screen with some padding
+                
+                # Draw a semi-transparent black backdrop
+                backdrop_padding = 15
+                backdrop = pygame.Surface((self.current_enemy_image.get_width() + backdrop_padding * 2, 
+                                          self.current_enemy_image.get_height() + backdrop_padding * 2), pygame.SRCALPHA)
+                backdrop.fill((0, 0, 0, 120))
+                self.screen.blit(backdrop, (enemy_img_x - backdrop_padding, enemy_img_y - backdrop_padding))
+                
+                # Draw the enemy image
+                self.screen.blit(self.current_enemy_image, (enemy_img_x, enemy_img_y))
+                
+                # HP bar below the sprite
+                bar_y = enemy_img_y + self.current_enemy_image.get_height() + 10
+            else:
+                # No sprite, so position HP bar at top-center
+                bar_y = 80
+            
+            # Draw enemy HP bar (always visible if there's an enemy)
+            bar_width, bar_height = 180, 16
+            bar_x = screen_w // 2 - bar_width // 2
+            hp_ratio = (enemy.hp / enemy.max_hp) if getattr(enemy, "max_hp", 1) > 0 else 0
+            
+            # HP bar background
+            pygame.draw.rect(self.screen, (40, 40, 40), (bar_x, bar_y, bar_width, bar_height), border_radius=3)
+            # HP bar fill
+            pygame.draw.rect(self.screen, (50, 220, 50), (bar_x, bar_y, int(bar_width * hp_ratio), bar_height), border_radius=3)
+            # HP bar border
+            pygame.draw.rect(self.screen, (180, 180, 180), (bar_x, bar_y, bar_width, bar_height), width=2, border_radius=3)
+            # HP text centered on bar
+            hp_text = f"{enemy.hp}/{enemy.max_hp}"
+            self._blit_text_outlined(self.screen, self.small_font, hp_text, (bar_x + bar_width // 2, bar_y + bar_height // 2), fg=(255,255,255), outline=(0,0,0), outline_width=2, center=True)
 
         # Single Character Sheet button (replaces Inventory + Stats buttons)
         char_sheet_btn = pygame.Rect(panel_x + panel_w - 170, panel_y + panel_h - 48, 160, 36)
@@ -627,17 +717,26 @@ class UIManager:
             item_def = self.shop_loader.find_item(iid) if getattr(self, 'shop_loader', None) else None
             name = item_def.get('name') if item_def else iid
             
-            # Icon
+            # Icon - check if item has an image field
             ico_rect = pygame.Rect(cx + 8, cy + 8, cell_w - 16, cell_h - 30)
-            if self.assets_path and item_def:
-                icon_path = self.assets_path / 'images' / 'items' / f"{iid}.png"
+            image_filename = item_def.get('image') if item_def else None
+            
+            if image_filename and self.assets_path:
+                # Try to load custom item image
+                icon_path = self.assets_path / 'images' / 'items' / image_filename
                 if icon_path.exists():
-                    ico = pygame.image.load(str(icon_path)).convert_alpha()
-                    ico = pygame.transform.smoothscale(ico, (ico_rect.w, ico_rect.h))
-                    self.screen.blit(ico, ico_rect)
+                    try:
+                        ico = pygame.image.load(str(icon_path)).convert_alpha()
+                        ico = pygame.transform.smoothscale(ico, (ico_rect.w, ico_rect.h))
+                        self.screen.blit(ico, ico_rect)
+                    except Exception:
+                        # If loading fails, draw placeholder
+                        pygame.draw.rect(self.screen, (100, 100, 140), ico_rect, border_radius=4)
                 else:
+                    # Image file doesn't exist, draw placeholder
                     pygame.draw.rect(self.screen, (100, 100, 140), ico_rect, border_radius=4)
             else:
+                # No image specified, draw placeholder
                 pygame.draw.rect(self.screen, (100, 100, 140), ico_rect, border_radius=4)
             
             # Count badge
@@ -731,6 +830,7 @@ class UIManager:
             (f"  Level: {getattr(player, 'level', 1)}", None),
             (f"  XP: {getattr(player, 'xp', 0)} / {next_level_xp}", None),
             (f"  Gold: {player.gold}g", (255, 215, 0)),
+            (f"  Game Seed: {getattr(player, 'game_seed', 'N/A')}", (180, 180, 255)),
             ("", None),
             ("Combat Stats", None),
             (f"  HP: {player.hp} / {player.max_hp}", (100, 255, 100)),

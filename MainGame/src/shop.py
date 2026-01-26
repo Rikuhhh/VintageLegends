@@ -15,8 +15,16 @@ class Shop:
         except Exception:
             self.items = []
 
-    def get_offers_for_wave(self, wave=1):
+    def get_offers_for_wave(self, wave=1, player_seed=None, cumulative_increase=0.0):
         import random
+        # Use player seed to create deterministic RNG for this wave's shop
+        if player_seed is not None:
+            # Create a wave-specific seed from player seed and wave number
+            wave_seed = (player_seed + wave * 7919) % 1000000007
+            rng = random.Random(wave_seed)
+        else:
+            rng = random
+        
         offers = []
         for i in self.items:
             cost = i.get('cost')
@@ -24,7 +32,7 @@ class Shop:
                 continue
             # per-item shop chance (default 1.0)
             sch = float(i.get('shopchance', 1.0))
-            if random.random() > sch:
+            if rng.random() > sch:
                 continue
             # gold variation: a range like [-0.05, 3.0] or single percentage expressed as -0.05 to 3.0
             gv = i.get('goldvariation')
@@ -33,11 +41,14 @@ class Shop:
                 # gv can be a single value or a list [min, max]
                 if isinstance(gv, list) and len(gv) >= 2:
                     low, high = float(gv[0]), float(gv[1])
-                    factor = random.uniform(low, high)
+                    factor = rng.uniform(low, high)
                 else:
                     factor = float(gv)
                 # factor interpreted as percentage multiplier (e.g., -0.05 -> reduce by 5%, 0.2 -> increase by 20%)
                 final_cost = max(1, int(cost * (1.0 + factor)))
+            
+            # Apply cumulative price increase from waves (scales all prices)
+            final_cost = max(1, int(final_cost * (1.0 + cumulative_increase)))
 
             offers.append({**i, '_final_cost': final_cost})
 

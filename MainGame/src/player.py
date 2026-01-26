@@ -101,6 +101,38 @@ class Player:
             if slot not in self.equipment:
                 self.equipment[slot] = None
         
+        # Game seed for deterministic RNG (shop price increases, mob/shop appearance)
+        import random
+        import time
+        if 'game_seed' in data and data['game_seed'] is not None:
+            try:
+                self.game_seed = int(data['game_seed'])
+            except (ValueError, TypeError):
+                self.game_seed = int(time.time() * 1000) % 1000000000
+        else:
+            # Generate new seed from current time
+            self.game_seed = int(time.time() * 1000) % 1000000000
+        
+        # Shop statistics tracking
+        try:
+            self.total_items_bought = max(0, int(data.get('total_items_bought', 0)))
+        except (ValueError, TypeError):
+            self.total_items_bought = 0
+        try:
+            self.total_gold_spent = max(0, int(data.get('total_gold_spent', 0)))
+        except (ValueError, TypeError):
+            self.total_gold_spent = 0
+        try:
+            self.cumulative_price_increase = max(0.0, float(data.get('cumulative_price_increase', 0.0)))
+        except (ValueError, TypeError):
+            self.cumulative_price_increase = 0.0
+        
+        # Highest wave reached (for stats)
+        try:
+            self.highest_wave = max(0, int(data.get('highest_wave', 0)))
+        except (ValueError, TypeError):
+            self.highest_wave = 0
+        
         # Apply agility bonuses on initialization
         self._apply_agility_bonuses()
 
@@ -242,14 +274,8 @@ class Player:
         elif stat == "def":
             self.base_defense += 1
         elif stat == "hp":
-            # increase canonical base max HP and heal proportionally by the delta
+            # increase canonical base max HP without healing the player
             self.base_max_hp = getattr(self, 'base_max_hp', self.max_hp) + 5
-            self.max_hp = self.base_max_hp
-            # give the player the +5 HP as immediate heal
-            try:
-                self.hp = min(self.max_hp, self.hp + 5)
-            except Exception:
-                self.hp = self.max_hp
         elif stat == "agi" or stat == "agility":
             # increase base agility
             self.base_agility = getattr(self, 'base_agility', 0) + 1
@@ -258,25 +284,16 @@ class Player:
 
         self.unspent_points -= 1
         print(f"{self.name} dépense 1 point sur {stat}. Points restants: {self.unspent_points}")
-        # recalc current stats after base change
-        # Protect against unintended modifications to base_max_hp when
-        # spending points on non-HP stats: remember canonical base and
-        # restore it after recalculation.
-        prev_base_max = getattr(self, 'base_max_hp', None)
-        prev_hp = getattr(self, 'hp', None)
-        prev_max = getattr(self, 'max_hp', None)
-        self._recalc_stats()
-        if stat != 'hp' and prev_base_max is not None:
-            try:
-                # restore canonical base and derived max_hp
-                self.base_max_hp = int(prev_base_max)
-                self.max_hp = int(prev_base_max)
-                # restore HP fraction relative to previous max if possible
-                if prev_max and prev_hp is not None and prev_max > 0:
-                    frac = float(prev_hp) / float(prev_max)
-                    self.hp = min(self.max_hp, int(frac * self.max_hp))
-            except Exception:
-                pass
+        
+        # For HP stat, preserve current HP to avoid healing
+        if stat == "hp":
+            current_hp = self.hp
+            self._recalc_stats()
+            # Restore the exact HP value (no healing)
+            self.hp = min(current_hp, self.max_hp)
+        else:
+            # For other stats, recalc normally
+            self._recalc_stats()
         return True
 
     def add_item(self, item: dict, auto_equip: bool = True):

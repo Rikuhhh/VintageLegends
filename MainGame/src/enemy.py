@@ -184,6 +184,8 @@ class Enemy:
         e.classification = chosen.get('classification', 'normal')
         # Ensure category is set - fall back to classification if not specified
         e.category = chosen.get('category', chosen.get('classification', 'normal'))
+        # Add image attribute
+        e.image = chosen.get('image', None)
         return e
 
     @staticmethod

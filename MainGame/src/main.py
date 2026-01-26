@@ -86,36 +86,71 @@ player_sprite = pygame.image.load(mage_path).convert_alpha() if mage_path.exists
 
 # --- CHARACTER SELECTION ---
 def choose_character(screen, background, data_path, assets_path):
-    """Display a simple character selection screen and return a player data dict.
+    """Display a simple character selection screen with seed selection and return a player data dict.
 
     Characters are loaded from data/characters.json and mapped to the shape expected by Player.
     """
+    import time
     chars = load_json('characters.json', {}).get('characters', [])
     font = pygame.font.Font(None, 36)
     small = pygame.font.Font(None, 24)
+    tiny = pygame.font.Font(None, 20)
 
     if not chars:
         # fallback to a default mage-like template
-        return {"name": "Mage", "hp": 100, "atk": 15, "def": 5, 'critchance': 0.05, 'critdamage': 1.5}
+        return {"name": "Mage", "hp": 100, "atk": 15, "def": 5, 'critchance': 0.05, 'critdamage': 1.5, 'game_seed': int(time.time() * 1000) % 1000000000}
 
     # Simple interactive chooser: show a list of characters and let the player click one
     selected = None
+    # Seed selection: "random" or specific seed (string input)
+    seed_mode = "random"  # "random" or "custom"
+    custom_seed_input = ""
+    seed_input_active = False
+    
+    # UI Rects
+    random_seed_rect = pygame.Rect(120, 480, 200, 40)
+    custom_seed_rect = pygame.Rect(340, 480, 200, 40)
+    seed_input_rect = pygame.Rect(120, 530, 420, 40)
+    
     while selected is None:
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
                 pygame.quit(); sys.exit()
             if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
                 mx, my = ev.pos
+                # Character selection
                 for i, ch in enumerate(chars):
                     r = pygame.Rect(120, 120 + i * 72, 600, 56)
                     if r.collidepoint((mx, my)):
                         selected = ch
                         break
+                # Seed mode buttons
+                if random_seed_rect.collidepoint((mx, my)):
+                    seed_mode = "random"
+                    seed_input_active = False
+                if custom_seed_rect.collidepoint((mx, my)):
+                    seed_mode = "custom"
+                    seed_input_active = True
+                # Seed input field
+                if seed_input_rect.collidepoint((mx, my)) and seed_mode == "custom":
+                    seed_input_active = True
+                else:
+                    if not (custom_seed_rect.collidepoint((mx, my)) or seed_input_rect.collidepoint((mx, my))):
+                        seed_input_active = False
+            
+            if ev.type == pygame.KEYDOWN and seed_input_active:
+                if ev.key == pygame.K_BACKSPACE:
+                    custom_seed_input = custom_seed_input[:-1]
+                elif ev.key == pygame.K_RETURN or ev.key == pygame.K_KP_ENTER:
+                    seed_input_active = False
+                elif ev.unicode.isdigit() and len(custom_seed_input) < 9:
+                    custom_seed_input += ev.unicode
 
         screen.blit(background, (0, 0))
         title = font.render("Choose your character", True, (255, 255, 255))
         screen.blit(title, (120, 60))
 
+        # Character list
         for i, ch in enumerate(chars):
             r = pygame.Rect(120, 120 + i * 72, 600, 56)
             pygame.draw.rect(screen, (30, 30, 40), r, border_radius=6)
@@ -123,10 +158,50 @@ def choose_character(screen, background, data_path, assets_path):
             screen.blit(name, (r.x + 8, r.y + 8))
             desc = small.render(ch.get('description', ''), True, (180, 180, 180))
             screen.blit(desc, (r.x + 8, r.y + 28))
+        
+        # Seed selection UI
+        seed_title = small.render("Game Seed:", True, (200, 200, 220))
+        screen.blit(seed_title, (120, 450))
+        
+        # Random seed button
+        random_color = (70, 120, 180) if seed_mode == "random" else (50, 50, 70)
+        pygame.draw.rect(screen, random_color, random_seed_rect, border_radius=6)
+        if seed_mode == "random":
+            pygame.draw.rect(screen, (100, 160, 220), random_seed_rect, width=2, border_radius=6)
+        random_text = tiny.render("Random Seed", True, (255, 255, 255))
+        screen.blit(random_text, random_text.get_rect(center=random_seed_rect.center))
+        
+        # Custom seed button
+        custom_color = (70, 120, 180) if seed_mode == "custom" else (50, 50, 70)
+        pygame.draw.rect(screen, custom_color, custom_seed_rect, border_radius=6)
+        if seed_mode == "custom":
+            pygame.draw.rect(screen, (100, 160, 220), custom_seed_rect, width=2, border_radius=6)
+        custom_text = tiny.render("Custom Seed", True, (255, 255, 255))
+        screen.blit(custom_text, custom_text.get_rect(center=custom_seed_rect.center))
+        
+        # Seed input field (only visible in custom mode)
+        if seed_mode == "custom":
+            input_color = (80, 80, 100) if seed_input_active else (50, 50, 70)
+            pygame.draw.rect(screen, input_color, seed_input_rect, border_radius=6)
+            pygame.draw.rect(screen, (100, 160, 220) if seed_input_active else (70, 70, 90), seed_input_rect, width=2, border_radius=6)
+            
+            display_text = custom_seed_input if custom_seed_input else "Enter seed (numbers only)"
+            text_color = (255, 255, 255) if custom_seed_input else (150, 150, 150)
+            input_surf = small.render(display_text, True, text_color)
+            screen.blit(input_surf, (seed_input_rect.x + 10, seed_input_rect.y + 10))
 
         pygame.display.flip()
         clock.tick(30)
 
+    # Determine final seed
+    if seed_mode == "random":
+        final_seed = int(time.time() * 1000) % 1000000000
+    else:
+        if custom_seed_input and custom_seed_input.isdigit():
+            final_seed = int(custom_seed_input) % 1000000000
+        else:
+            final_seed = int(time.time() * 1000) % 1000000000
+    
     # Map character JSON fields to the Player constructor shape
     return {
         'name': selected.get('name'),
@@ -137,6 +212,7 @@ def choose_character(screen, background, data_path, assets_path):
         # characters.json uses 'base_crit_chance' and 'base_crit_mult'
         'critchance': selected.get('base_crit_chance', selected.get('base_critchance', selected.get('critchance', 0.0))),
         'critdamage': selected.get('base_crit_mult', selected.get('base_critdamage', selected.get('critdamage', 1.5))),
+        'game_seed': final_seed,
     }
     
 
@@ -174,6 +250,11 @@ if saved:
     player.challenge_coins = saved.get('challenge_coins', getattr(player, 'challenge_coins', 0))
     player.highest_wave = saved.get('highest_wave', getattr(player, 'highest_wave', 0))
     player.selected_character = saved.get('selected_character')
+    # Restore game seed and shop stats
+    player.game_seed = saved.get('game_seed', getattr(player, 'game_seed', None))
+    player.total_items_bought = saved.get('total_items_bought', getattr(player, 'total_items_bought', 0))
+    player.total_gold_spent = saved.get('total_gold_spent', getattr(player, 'total_gold_spent', 0))
+    player.cumulative_price_increase = saved.get('cumulative_price_increase', getattr(player, 'cumulative_price_increase', 0.0))
     # restore hp/max_hp
     player.max_hp = saved.get('max_hp', getattr(player, 'max_hp', player.max_hp))
     saved_hp = saved.get('hp', getattr(player, 'hp', player.max_hp))
@@ -334,10 +415,15 @@ def main():
 
         # If battle indicates a shop wave, open shop modal before spawning next enemy
         if getattr(battle, 'in_shop', False):
-            offers = shop.get_offers_for_wave(battle.wave)
-            # simple shop modal with pagination
+            offers = shop.get_offers_for_wave(
+                battle.wave,
+                player_seed=getattr(player, 'game_seed', None),
+                cumulative_increase=getattr(player, 'cumulative_price_increase', 0.0)
+            )
+            # simple shop modal with pagination and tabs
             shop_open = True
             shop_page = 0
+            shop_tab = "items"  # "items" or "stats"
             items_per_page = 4
             total_pages = max(1, (len(offers) + items_per_page - 1) // items_per_page)
             title_font = pygame.font.Font(None, 48)
@@ -348,6 +434,9 @@ def main():
             panel_x = (width - panel_w) // 2
             panel_y = (height - panel_h) // 2
             close_rect = pygame.Rect(panel_x + panel_w - 90, panel_y + 10, 80, 40)
+            # Tab buttons
+            items_tab_rect = pygame.Rect(panel_x + 20, panel_y + 70, 120, 35)
+            stats_tab_rect = pygame.Rect(panel_x + 150, panel_y + 70, 120, 35)
             prev_page_rect = pygame.Rect(panel_x + 30, panel_y + panel_h - 60, 120, 45)
             next_page_rect = pygame.Rect(panel_x + panel_w - 150, panel_y + panel_h - 60, 120, 45)
             # Track mouse position for hover tooltips
@@ -367,28 +456,38 @@ def main():
                         # close button
                         if close_rect.collidepoint((mx, my)):
                             shop_open = False
-                        # pagination buttons
-                        if prev_page_rect.collidepoint((mx, my)) and shop_page > 0:
-                            shop_page -= 1
-                        if next_page_rect.collidepoint((mx, my)) and shop_page < total_pages - 1:
-                            shop_page += 1
-                        # iterate current page offers to find clicked buy buttons
-                        start_idx = shop_page * items_per_page
-                        end_idx = min(start_idx + items_per_page, len(offers))
-                        page_offers = offers[start_idx:end_idx]
-                        for page_idx, item in enumerate(page_offers):
-                            item_y = panel_y + 90 + page_idx * 100
-                            buy_rect = pygame.Rect(panel_x + panel_w - 140, item_y + 30, 110, 50)
-                            if buy_rect.collidepoint((mx, my)):
-                                cost = item.get('_final_cost', item.get('cost', 0))
-                                if player.gold >= cost:
-                                    player.gold -= cost
-                                    # remove _final_cost before adding to inventory
-                                    itm = {k: v for k, v in item.items() if not k.startswith('_')}
-                                    # Purchases should go to inventory only and NOT auto-equip to avoid duplication
-                                    player.add_item(itm, auto_equip=False)
-                                else:
-                                    print("Not enough gold")
+                        # Tab switching
+                        if items_tab_rect.collidepoint((mx, my)):
+                            shop_tab = "items"
+                            shop_page = 0
+                        if stats_tab_rect.collidepoint((mx, my)):
+                            shop_tab = "stats"
+                        # pagination buttons (only for items tab)
+                        if shop_tab == "items":
+                            if prev_page_rect.collidepoint((mx, my)) and shop_page > 0:
+                                shop_page -= 1
+                            if next_page_rect.collidepoint((mx, my)) and shop_page < total_pages - 1:
+                                shop_page += 1
+                            # iterate current page offers to find clicked buy buttons
+                            start_idx = shop_page * items_per_page
+                            end_idx = min(start_idx + items_per_page, len(offers))
+                            page_offers = offers[start_idx:end_idx]
+                            for page_idx, item in enumerate(page_offers):
+                                item_y = panel_y + 120 + page_idx * 95
+                                buy_rect = pygame.Rect(panel_x + panel_w - 140, item_y + 30, 110, 50)
+                                if buy_rect.collidepoint((mx, my)):
+                                    cost = item.get('_final_cost', item.get('cost', 0))
+                                    if player.gold >= cost:
+                                        player.gold -= cost
+                                        # Track shop statistics
+                                        player.total_gold_spent = getattr(player, 'total_gold_spent', 0) + cost
+                                        player.total_items_bought = getattr(player, 'total_items_bought', 0) + 1
+                                        # remove _final_cost before adding to inventory
+                                        itm = {k: v for k, v in item.items() if not k.startswith('_')}
+                                        # Purchases should go to inventory only and NOT auto-equip to avoid duplication
+                                        player.add_item(itm, auto_equip=False)
+                                    else:
+                                        print("Not enough gold")
                     if ev.type == pygame.KEYDOWN and ev.key == pygame.K_ESCAPE:
                         shop_open = False
 
@@ -407,153 +506,202 @@ def main():
                 title = title_font.render(f"Shop - Wave {battle.wave}", True, (255, 255, 100))
                 screen.blit(title, (panel_x + 20, panel_y + 15))
                 
-                # Player gold display
-                gold_text = sf.render(f"Gold: {player.gold}g", True, (255, 215, 0))
-                screen.blit(gold_text, (panel_x + panel_w - 180, panel_y + 20))
-
                 # Close button
                 pygame.draw.rect(screen, (220, 80, 80), close_rect, border_radius=8)
                 pygame.draw.rect(screen, (255, 120, 120), close_rect, width=2, border_radius=8)
                 cr = sf.render("Close", True, (255, 255, 255))
                 screen.blit(cr, cr.get_rect(center=close_rect.center))
+                
+                # Tab buttons
+                items_tab_color = (70, 120, 180) if shop_tab == "items" else (50, 50, 70)
+                stats_tab_color = (70, 120, 180) if shop_tab == "stats" else (50, 50, 70)
+                pygame.draw.rect(screen, items_tab_color, items_tab_rect, border_radius=6)
+                pygame.draw.rect(screen, stats_tab_color, stats_tab_rect, border_radius=6)
+                if shop_tab == "items":
+                    pygame.draw.rect(screen, (100, 160, 220), items_tab_rect, width=2, border_radius=6)
+                else:
+                    pygame.draw.rect(screen, (100, 160, 220), stats_tab_rect, width=2, border_radius=6)
+                items_text = small_font.render("Items", True, (255, 255, 255))
+                stats_text = small_font.render("Shop Stats", True, (255, 255, 255))
+                screen.blit(items_text, items_text.get_rect(center=items_tab_rect.center))
+                screen.blit(stats_text, stats_text.get_rect(center=stats_tab_rect.center))
+                
+                # Conditional rendering based on active tab
+                if shop_tab == "items":
+                    # Player gold display
+                    gold_bg = pygame.Rect(panel_x + panel_w - 200, panel_y + 70, 180, 35)
+                    pygame.draw.rect(screen, (40, 40, 55), gold_bg, border_radius=6)
+                    pygame.draw.rect(screen, (255, 215, 0), gold_bg, width=2, border_radius=6)
+                    gold_text = small_font.render(f"Gold: {player.gold}g", True, (255, 215, 0))
+                    screen.blit(gold_text, (panel_x + panel_w - 190, panel_y + 77))
 
-                # Display current page items
-                start_idx = shop_page * items_per_page
-                end_idx = min(start_idx + items_per_page, len(offers))
-                page_offers = offers[start_idx:end_idx]
-                
-                for idx, item in enumerate(page_offers):
-                    item_y = panel_y + 90 + idx * 100
-                    item_h = 85
-                    item_rect = pygame.Rect(panel_x + 20, item_y, panel_w - 40, item_h)
+                    # Display current page items
+                    start_idx = shop_page * items_per_page
+                    end_idx = min(start_idx + items_per_page, len(offers))
+                    page_offers = offers[start_idx:end_idx]
                     
-                    # Check if mouse is hovering over this item
-                    is_hovering = item_rect.collidepoint((mx, my))
-                    if is_hovering:
-                        hover_item = item
-                    
-                    # Item background with hover effect
-                    bg_color = (60, 70, 90) if is_hovering else (45, 50, 65)
-                    pygame.draw.rect(screen, bg_color, item_rect, border_radius=8)
-                    pygame.draw.rect(screen, (100, 110, 140), item_rect, width=2, border_radius=8)
-                    
-                    # Icon with larger size
-                    icon_size = 64
-                    icon_rect = pygame.Rect(panel_x + 30, item_y + 10, icon_size, icon_size)
-                    icon_path = ASSETS_PATH / 'images' / 'items' / f"{item.get('id')}.png"
-                    if icon_path.exists():
-                        try:
-                            ico = pygame.image.load(str(icon_path)).convert_alpha()
-                            ico = pygame.transform.smoothscale(ico, (icon_size, icon_size))
-                            screen.blit(ico, icon_rect)
-                        except:
-                            # Draw placeholder if image fails to load
-                            pygame.draw.rect(screen, (80, 80, 100), icon_rect, border_radius=4)
-                    else:
-                        # Draw placeholder box for missing icon
-                        pygame.draw.rect(screen, (80, 80, 100), icon_rect, border_radius=4)
-                    
-                    # Item name (full, no truncation)
-                    name = item.get('name', item.get('id'))
-                    name_surf = sf.render(name, True, (255, 255, 255))
-                    screen.blit(name_surf, (panel_x + 110, item_y + 12))
-                    
-                    # Item type/description on second line
-                    item_type = item.get('type', '').capitalize()
-                    desc = item.get('desc', '')
-                    if item_type:
-                        type_surf = small_font.render(f"[{item_type}]", True, (150, 200, 255))
-                        screen.blit(type_surf, (panel_x + 110, item_y + 42))
-                    
-                    # Price with larger font
-                    price = item.get('_final_cost', item.get('cost', 0))
-                    price_color = (100, 255, 100) if player.gold >= price else (255, 100, 100)
-                    price_surf = sf.render(f"{price}g", True, price_color)
-                    price_x = panel_x + panel_w - 270
-                    screen.blit(price_surf, (price_x, item_y + 25))
-                    
-                    # Buy button with better styling
-                    buy_rect = pygame.Rect(panel_x + panel_w - 140, item_y + 17, 110, 50)
-                    can_afford = player.gold >= price
-                    button_color = (80, 180, 80) if can_afford else (100, 100, 100)
-                    pygame.draw.rect(screen, button_color, buy_rect, border_radius=8)
-                    if can_afford:
-                        pygame.draw.rect(screen, (120, 220, 120), buy_rect, width=2, border_radius=8)
-                    bt = sf.render("Buy", True, (255, 255, 255) if can_afford else (150, 150, 150))
-                    screen.blit(bt, bt.get_rect(center=buy_rect.center))
-                
-                # Draw hover tooltip if hovering over an item
-                if hover_item:
-                    tooltip_w, tooltip_h = 350, 200
-                    tooltip_x = min(mx + 20, width - tooltip_w - 10)
-                    tooltip_y = min(my + 20, height - tooltip_h - 10)
-                    
-                    # Tooltip background with shadow
-                    pygame.draw.rect(screen, (10, 10, 15), (tooltip_x + 3, tooltip_y + 3, tooltip_w, tooltip_h), border_radius=8)
-                    pygame.draw.rect(screen, (25, 25, 40), (tooltip_x, tooltip_y, tooltip_w, tooltip_h), border_radius=8)
-                    pygame.draw.rect(screen, (120, 120, 180), (tooltip_x, tooltip_y, tooltip_w, tooltip_h), width=2, border_radius=8)
-                    
-                    # Tooltip content
-                    ty = tooltip_y + 10
-                    tip_name = small_font.render(hover_item.get('name', ''), True, (255, 255, 100))
-                    screen.blit(tip_name, (tooltip_x + 10, ty))
-                    ty += 30
-                    
-                    # Description
-                    desc = hover_item.get('desc', 'No description')
-                    # Word wrap description
-                    words = desc.split()
-                    lines = []
-                    current_line = ""
-                    for word in words:
-                        test_line = current_line + (" " if current_line else "") + word
-                        if small_font.size(test_line)[0] < tooltip_w - 20:
-                            current_line = test_line
+                    for idx, item in enumerate(page_offers):
+                        item_y = panel_y + 120 + idx * 95
+                        item_h = 85
+                        item_rect = pygame.Rect(panel_x + 20, item_y, panel_w - 40, item_h)
+                        
+                        # Check if mouse is hovering over this item
+                        is_hovering = item_rect.collidepoint((mx, my))
+                        if is_hovering:
+                            hover_item = item
+                        
+                        # Item background with hover effect
+                        bg_color = (60, 70, 90) if is_hovering else (45, 50, 65)
+                        pygame.draw.rect(screen, bg_color, item_rect, border_radius=8)
+                        pygame.draw.rect(screen, (100, 110, 140), item_rect, width=2, border_radius=8)
+                        
+                        # Icon with larger size
+                        icon_size = 64
+                        icon_rect = pygame.Rect(panel_x + 30, item_y + 10, icon_size, icon_size)
+                        icon_path = ASSETS_PATH / 'images' / 'items' / f"{item.get('id')}.png"
+                        if icon_path.exists():
+                            try:
+                                ico = pygame.image.load(str(icon_path)).convert_alpha()
+                                ico = pygame.transform.smoothscale(ico, (icon_size, icon_size))
+                                screen.blit(ico, icon_rect)
+                            except:
+                                # Draw placeholder if image fails to load
+                                pygame.draw.rect(screen, (80, 80, 100), icon_rect, border_radius=4)
                         else:
-                            if current_line:
-                                lines.append(current_line)
-                            current_line = word
-                    if current_line:
-                        lines.append(current_line)
+                            # Draw placeholder box for missing icon
+                            pygame.draw.rect(screen, (80, 80, 100), icon_rect, border_radius=4)
+                        
+                        # Item name (full, no truncation)
+                        name = item.get('name', item.get('id'))
+                        name_surf = sf.render(name, True, (255, 255, 255))
+                        screen.blit(name_surf, (panel_x + 110, item_y + 12))
+                        
+                        # Item type/description on second line
+                        item_type = item.get('type', '').capitalize()
+                        desc = item.get('desc', '')
+                        if item_type:
+                            type_surf = small_font.render(f"[{item_type}]", True, (150, 200, 255))
+                            screen.blit(type_surf, (panel_x + 110, item_y + 42))
+                        
+                        # Price with larger font
+                        price = item.get('_final_cost', item.get('cost', 0))
+                        price_color = (100, 255, 100) if player.gold >= price else (255, 100, 100)
+                        price_surf = sf.render(f"{price}g", True, price_color)
+                        price_x = panel_x + panel_w - 270
+                        screen.blit(price_surf, (price_x, item_y + 25))
+                        
+                        # Buy button with better styling
+                        buy_rect = pygame.Rect(panel_x + panel_w - 140, item_y + 17, 110, 50)
+                        can_afford = player.gold >= price
+                        button_color = (80, 180, 80) if can_afford else (100, 100, 100)
+                        pygame.draw.rect(screen, button_color, buy_rect, border_radius=8)
+                        if can_afford:
+                            pygame.draw.rect(screen, (120, 220, 120), buy_rect, width=2, border_radius=8)
+                        bt = sf.render("Buy", True, (255, 255, 255) if can_afford else (150, 150, 150))
+                        screen.blit(bt, bt.get_rect(center=buy_rect.center))
                     
-                    for line in lines[:3]:  # Max 3 lines
-                        desc_surf = small_font.render(line, True, (200, 200, 200))
-                        screen.blit(desc_surf, (tooltip_x + 10, ty))
-                        ty += 25
+                    # Draw hover tooltip if hovering over an item
+                    if hover_item:
+                        tooltip_w, tooltip_h = 350, 200
+                        tooltip_x = min(mx + 20, width - tooltip_w - 10)
+                        tooltip_y = min(my + 20, height - tooltip_h - 10)
+                        
+                        # Tooltip background with shadow
+                        pygame.draw.rect(screen, (10, 10, 15), (tooltip_x + 3, tooltip_y + 3, tooltip_w, tooltip_h), border_radius=8)
+                        pygame.draw.rect(screen, (25, 25, 40), (tooltip_x, tooltip_y, tooltip_w, tooltip_h), border_radius=8)
+                        pygame.draw.rect(screen, (120, 120, 180), (tooltip_x, tooltip_y, tooltip_w, tooltip_h), width=2, border_radius=8)
+                        
+                        # Tooltip content
+                        ty = tooltip_y + 10
+                        tip_name = small_font.render(hover_item.get('name', ''), True, (255, 255, 100))
+                        screen.blit(tip_name, (tooltip_x + 10, ty))
+                        ty += 30
+                        
+                        # Description
+                        desc = hover_item.get('desc', 'No description')
+                        # Word wrap description
+                        words = desc.split()
+                        lines = []
+                        current_line = ""
+                        for word in words:
+                            test_line = current_line + (" " if current_line else "") + word
+                            if small_font.size(test_line)[0] < tooltip_w - 20:
+                                current_line = test_line
+                            else:
+                                if current_line:
+                                    lines.append(current_line)
+                                current_line = word
+                        if current_line:
+                            lines.append(current_line)
+                        
+                        for line in lines[:3]:  # Max 3 lines
+                            desc_surf = small_font.render(line, True, (200, 200, 200))
+                            screen.blit(desc_surf, (tooltip_x + 10, ty))
+                            ty += 25
+                        
+                        ty += 5
+                        # Stats display
+                        stats = []
+                        if hover_item.get('attack'): stats.append(f"Attack: +{hover_item['attack']}")
+                        if hover_item.get('defense'): stats.append(f"Defense: +{hover_item['defense']}")
+                        if hover_item.get('hp'): stats.append(f"HP: +{hover_item['hp']}")
+                        if hover_item.get('critchance'): stats.append(f"Crit: +{int(hover_item['critchance']*100)}%")
+                        if hover_item.get('critdamage'): stats.append(f"Crit Dmg: +{hover_item['critdamage']}x")
+                        if hover_item.get('penetration'): stats.append(f"Pen: +{hover_item['penetration']}")
+                        
+                        for stat_text in stats:
+                            stat_surf = small_font.render(stat_text, True, (150, 255, 150))
+                            screen.blit(stat_surf, (tooltip_x + 10, ty))
+                            ty += 25
                     
-                    ty += 5
-                    # Stats display
-                    stats = []
-                    if hover_item.get('attack'): stats.append(f"Attack: +{hover_item['attack']}")
-                    if hover_item.get('defense'): stats.append(f"Defense: +{hover_item['defense']}")
-                    if hover_item.get('hp'): stats.append(f"HP: +{hover_item['hp']}")
-                    if hover_item.get('critchance'): stats.append(f"Crit: +{int(hover_item['critchance']*100)}%")
-                    if hover_item.get('critdamage'): stats.append(f"Crit Dmg: +{hover_item['critdamage']}x")
-                    if hover_item.get('penetration'): stats.append(f"Pen: +{hover_item['penetration']}")
-                    
-                    for stat_text in stats:
-                        stat_surf = small_font.render(stat_text, True, (150, 255, 150))
-                        screen.blit(stat_surf, (tooltip_x + 10, ty))
-                        ty += 25
+                    # Pagination buttons at bottom (only for items tab)
+                    if shop_page > 0:
+                        pygame.draw.rect(screen, (80, 120, 200), prev_page_rect, border_radius=8)
+                    else:
+                        pygame.draw.rect(screen, (50, 50, 70), prev_page_rect, border_radius=8)
+                    prev_text = sf.render("< Prev", True, (255, 255, 255) if shop_page > 0 else (120, 120, 120))
+                    screen.blit(prev_text, prev_text.get_rect(center=prev_page_rect.center))
+
+                    if shop_page < total_pages - 1:
+                        pygame.draw.rect(screen, (80, 120, 200), next_page_rect, border_radius=8)
+                    else:
+                        pygame.draw.rect(screen, (50, 50, 70), next_page_rect, border_radius=8)
+                    next_text = sf.render("Next >", True, (255, 255, 255) if shop_page < total_pages - 1 else (120, 120, 120))
+                    screen.blit(next_text, next_text.get_rect(center=next_page_rect.center))
+
+                    # Page indicator
+                    page_text = sf.render(f"Page {shop_page + 1}/{total_pages}", True, (200, 200, 220))
+                    screen.blit(page_text, page_text.get_rect(center=(panel_x + panel_w // 2, panel_y + panel_h - 35)))
                 
-                # Pagination buttons at bottom
-                if shop_page > 0:
-                    pygame.draw.rect(screen, (80, 120, 200), prev_page_rect, border_radius=8)
-                else:
-                    pygame.draw.rect(screen, (50, 50, 70), prev_page_rect, border_radius=8)
-                prev_text = sf.render("< Prev", True, (255, 255, 255) if shop_page > 0 else (120, 120, 120))
-                screen.blit(prev_text, prev_text.get_rect(center=prev_page_rect.center))
-
-                if shop_page < total_pages - 1:
-                    pygame.draw.rect(screen, (80, 120, 200), next_page_rect, border_radius=8)
-                else:
-                    pygame.draw.rect(screen, (50, 50, 70), next_page_rect, border_radius=8)
-                next_text = sf.render("Next >", True, (255, 255, 255) if shop_page < total_pages - 1 else (120, 120, 120))
-                screen.blit(next_text, next_text.get_rect(center=next_page_rect.center))
-
-                # Page indicator
-                page_text = sf.render(f"Page {shop_page + 1}/{total_pages}", True, (200, 200, 220))
-                screen.blit(page_text, page_text.get_rect(center=(panel_x + panel_w // 2, panel_y + panel_h - 35)))
+                elif shop_tab == "stats":
+                    # Shop Stats Tab - display shop statistics
+                    stats_y = panel_y + 130
+                    line_height = 40
+                    
+                    # Display various shop statistics
+                    stats_data = [
+                        ("Game Seed:", str(getattr(player, 'game_seed', 'N/A'))),
+                        ("Total Items Bought:", str(getattr(player, 'total_items_bought', 0))),
+                        ("Total Gold Spent:", f"{getattr(player, 'total_gold_spent', 0)}g"),
+                        ("Current Gold:", f"{player.gold}g"),
+                        ("Price Increase:", f"+{getattr(player, 'cumulative_price_increase', 0.0) * 100:.1f}%"),
+                        ("Current Wave:", str(battle.wave)),
+                        ("Highest Wave:", str(getattr(player, 'highest_wave', 0))),
+                    ]
+                    
+                    for label, value in stats_data:
+                        # Label
+                        label_surf = sf.render(label, True, (180, 180, 200))
+                        screen.blit(label_surf, (panel_x + 50, stats_y))
+                        # Value
+                        value_surf = sf.render(value, True, (255, 255, 100))
+                        screen.blit(value_surf, (panel_x + 350, stats_y))
+                        stats_y += line_height
+                    
+                    # Additional info
+                    info_y = stats_y + 20
+                    info_text = small_font.render("Prices increase by 1-15% per wave (seeded)", True, (150, 150, 170))
+                    screen.blit(info_text, (panel_x + 50, info_y))
 
                 pygame.display.flip()
                 clock.tick(30)
@@ -736,6 +884,8 @@ def main():
                             player.challenge_coins = old_coins
                             try:
                                 player._recalc_stats()
+                                # Ensure player starts at full HP with upgraded max_hp
+                                player.hp = player.max_hp
                             except Exception:
                                 pass
                             battle = BattleSystem(player)

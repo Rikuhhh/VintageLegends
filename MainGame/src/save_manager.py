@@ -37,6 +37,11 @@ class SaveManager:
             "permanent_upgrades": getattr(player, 'permanent_upgrades', {}),
             # selected character id (if the game uses character chooser)
             "selected_character": getattr(player, 'selected_character', None),
+            # Game seed and shop statistics
+            "game_seed": getattr(player, 'game_seed', None),
+            "total_items_bought": getattr(player, 'total_items_bought', 0),
+            "total_gold_spent": getattr(player, 'total_gold_spent', 0),
+            "cumulative_price_increase": getattr(player, 'cumulative_price_increase', 0.0),
         }
         # include current battle state if provided
         try:
