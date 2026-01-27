@@ -19,6 +19,7 @@
           "drop_chance": {"type": "number"},
           "dropped_by": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
           "shopchance": {"type": "number"},
+          "shop_zones": {"type": "array", "items": {"type": "string"}, "description": "List of zone IDs where this item appears in shop"},
           "goldvariation": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
           "effect": {"type": "object"}
         },

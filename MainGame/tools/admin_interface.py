@@ -25,13 +25,39 @@ class AdminInterface:
         # Create tabs
         self.items_frame = ttk.Frame(self.notebook)
         self.monsters_frame = ttk.Frame(self.notebook)
+        self.zones_frame = ttk.Frame(self.notebook)
         
         self.notebook.add(self.items_frame, text='Items')
         self.notebook.add(self.monsters_frame, text='Monsters')
+        self.notebook.add(self.zones_frame, text='Zones')
         
         # Setup tabs
         self.setup_items_tab()
         self.setup_monsters_tab()
+        self.setup_zones_tab()
+    
+    def get_monster_categories(self):
+        """Get unique monster categories from monsters.json"""
+        try:
+            with open(self.data_path / 'monsters.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                categories = set()
+                for monster in data.get('enemies', []):
+                    if 'category' in monster:
+                        categories.add(monster['category'])
+                return sorted(list(categories))
+        except Exception as e:
+            # Fallback to defaults if file can't be read
+            return ['beast', 'construct', 'demon', 'dragon', 'undead']
+    
+    def get_zones(self):
+        """Get zones from zones.json"""
+        try:
+            with open(self.data_path / 'zones.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get('zones', [])
+        except Exception as e:
+            return []
         
     def setup_items_tab(self):
         """Setup the Items tab with form fields"""
@@ -172,6 +198,21 @@ class AdminInterface:
         self.item_fields['goldvar_max'] = ttk.Entry(shop_frame, width=15)
         self.item_fields['goldvar_max'].grid(row=4, column=1, padx=5, pady=3)
         
+        ttk.Label(shop_frame, text="Shop Zones:", font=('Arial', 9, 'bold')).grid(row=5, column=0, sticky='w', padx=5, pady=5)
+        ttk.Label(shop_frame, text="(Leave all unchecked for all zones)", font=('Arial', 8)).grid(row=5, column=1, sticky='w', padx=5)
+        
+        # Shop zones checkboxes
+        self.item_fields['shop_zones'] = {}
+        zones = self.get_zones()
+        zone_row = 6
+        for i, zone in enumerate(zones):
+            zone_id = zone.get('id')
+            zone_name = zone.get('name', zone_id)
+            self.item_fields['shop_zones'][zone_id] = tk.BooleanVar()
+            ttk.Checkbutton(shop_frame, text=zone_name, 
+                          variable=self.item_fields['shop_zones'][zone_id]).grid(
+                              row=zone_row + (i // 2), column=i % 2, sticky='w', padx=10, pady=3)
+        
         # Drop settings
         drop_frame = ttk.LabelFrame(scrollable_frame, text="Drop Settings")
         drop_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
@@ -183,7 +224,7 @@ class AdminInterface:
         
         ttk.Label(drop_frame, text="Dropped By:").grid(row=1, column=0, sticky='w', padx=5, pady=3)
         self.item_fields['dropped_by'] = ttk.Combobox(drop_frame, width=12,
-                                                      values=['beast', 'demon', 'construct', 'dragon', 'undead'])
+                                                      values=self.get_monster_categories())
         self.item_fields['dropped_by'].grid(row=1, column=1, padx=5, pady=3)
         
         ttk.Label(drop_frame, text="Drop Chance (0-1):").grid(row=2, column=0, sticky='w', padx=5, pady=3)
@@ -271,7 +312,7 @@ class AdminInterface:
         # Category
         ttk.Label(scrollable_frame, text="Category*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
         self.monster_fields['category'] = ttk.Combobox(scrollable_frame, width=37,
-                                                       values=['beast', 'demon', 'construct', 'dragon', 'undead'])
+                                                       values=self.get_monster_categories())
         self.monster_fields['category'].grid(row=row, column=1, pady=5)
         row += 1
         
@@ -451,6 +492,11 @@ class AdminInterface:
         if item.get('image'):
             self.item_fields['image'].insert(0, item.get('image'))
         
+        # Shop zones
+        shop_zones = item.get('shop_zones', [])
+        for zone_id, var in self.item_fields['shop_zones'].items():
+            var.set(zone_id in shop_zones)
+        
         # Update UI
         self.on_type_change()
     
@@ -487,7 +533,10 @@ class AdminInterface:
     def clear_item_form(self):
         """Clear all item form fields"""
         for key, field in self.item_fields.items():
-            if isinstance(field, tk.BooleanVar):
+            if key == 'shop_zones':
+                for var in field.values():
+                    var.set(False)
+            elif isinstance(field, tk.BooleanVar):
                 field.set(False)
             elif isinstance(field, (ttk.Entry, ttk.Combobox)):
                 field.delete(0, tk.END)
@@ -564,6 +613,11 @@ class AdminInterface:
                     float(self.item_fields['goldvar_min'].get()),
                     float(self.item_fields['goldvar_max'].get())
                 ]
+            
+            # Shop zones
+            shop_zones = [zone_id for zone_id, var in self.item_fields['shop_zones'].items() if var.get()]
+            if shop_zones:
+                item['shop_zones'] = shop_zones
         
         # Drop settings
         if self.item_fields['droppable'].get():
@@ -720,6 +774,243 @@ class AdminInterface:
                 self.clear_monster_form()
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete monster: {e}")
+    
+    def setup_zones_tab(self):
+        """Setup the Zones tab with form fields"""
+        # Left side - Zone list
+        left_frame = ttk.Frame(self.zones_frame)
+        left_frame.pack(side='left', fill='both', expand=False, padx=5, pady=5)
+        
+        ttk.Label(left_frame, text="Existing Zones:", font=('Arial', 10, 'bold')).pack()
+        
+        self.zones_listbox = tk.Listbox(left_frame, width=30, height=25)
+        self.zones_listbox.pack(fill='both', expand=True)
+        self.zones_listbox.bind('<<ListboxSelect>>', self.load_selected_zone)
+        
+        btn_frame = ttk.Frame(left_frame)
+        btn_frame.pack(fill='x', pady=5)
+        ttk.Button(btn_frame, text="New Zone", command=self.new_zone).pack(side='left', padx=2)
+        ttk.Button(btn_frame, text="Delete", command=self.delete_zone).pack(side='left', padx=2)
+        
+        # Right side - Zone editor
+        right_frame = ttk.Frame(self.zones_frame)
+        right_frame.pack(side='right', fill='both', expand=True, padx=5, pady=5)
+        
+        # Create scrollable frame
+        canvas = tk.Canvas(right_frame)
+        scrollbar = ttk.Scrollbar(right_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Zone fields
+        self.zone_fields = {}
+        row = 0
+        
+        # ID
+        ttk.Label(scrollable_frame, text="ID*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.zone_fields['id'] = ttk.Entry(scrollable_frame, width=40)
+        self.zone_fields['id'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Name
+        ttk.Label(scrollable_frame, text="Name*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.zone_fields['name'] = ttk.Entry(scrollable_frame, width=40)
+        self.zone_fields['name'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Spawn Settings
+        spawn_frame = ttk.LabelFrame(scrollable_frame, text="Spawn Settings")
+        spawn_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        ttk.Label(spawn_frame, text="Spawn Chance (% per 10 waves)*:", font=('Arial', 9)).grid(row=0, column=0, sticky='w', padx=5, pady=5)
+        self.zone_fields['spawn_chance'] = ttk.Entry(spawn_frame, width=15)
+        self.zone_fields['spawn_chance'].grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(spawn_frame, text="(0-100)", font=('Arial', 8)).grid(row=0, column=2, sticky='w', padx=5)
+        
+        ttk.Label(spawn_frame, text="Minimum Wave*:", font=('Arial', 9)).grid(row=1, column=0, sticky='w', padx=5, pady=5)
+        self.zone_fields['min_wave'] = ttk.Entry(spawn_frame, width=15)
+        self.zone_fields['min_wave'].grid(row=1, column=1, padx=5, pady=5)
+        
+        # Background Image
+        bg_frame = ttk.LabelFrame(scrollable_frame, text="Background Image")
+        bg_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        ttk.Label(bg_frame, text="Image Filename:", font=('Arial', 9)).grid(row=0, column=0, sticky='w', padx=5, pady=5)
+        self.zone_fields['background_image'] = ttk.Entry(bg_frame, width=30)
+        self.zone_fields['background_image'].grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(bg_frame, text="(e.g. flowerfield.png - in assets/images/backgrounds/)", 
+                 font=('Arial', 8)).grid(row=1, column=0, columnspan=2, sticky='w', padx=5, pady=3)
+        
+        # Enemy Types
+        enemy_frame = ttk.LabelFrame(scrollable_frame, text="Enemy Types Allowed")
+        enemy_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        enemy_types = self.get_monster_categories()
+        self.zone_fields['enemy_types'] = {}
+        
+        for i, enemy_type in enumerate(enemy_types):
+            self.zone_fields['enemy_types'][enemy_type] = tk.BooleanVar()
+            ttk.Checkbutton(enemy_frame, text=enemy_type.capitalize(), 
+                          variable=self.zone_fields['enemy_types'][enemy_type]).grid(
+                              row=i // 2, column=i % 2, sticky='w', padx=10, pady=5)
+        
+        # Save button
+        ttk.Button(scrollable_frame, text="Save Zone", command=self.save_zone,
+                  style='Accent.TButton').grid(row=row, column=0, columnspan=2, pady=20)
+        
+        # Load zones
+        self.load_zones_list()
+    
+    def load_zones_list(self):
+        """Load zones from zones.json into the listbox"""
+        self.zones_listbox.delete(0, tk.END)
+        try:
+            with open(self.data_path / 'zones.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.zones_data = data.get('zones', [])
+                for zone in self.zones_data:
+                    self.zones_listbox.insert(tk.END, f"{zone.get('id')} - {zone.get('name')}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load zones: {e}")
+            self.zones_data = []
+    
+    def load_selected_zone(self, event):
+        """Load selected zone into the form"""
+        selection = self.zones_listbox.curselection()
+        if not selection:
+            return
+        
+        idx = selection[0]
+        zone = self.zones_data[idx]
+        
+        # Clear all fields first
+        self.clear_zone_form()
+        
+        # Load fields
+        self.zone_fields['id'].insert(0, zone.get('id', ''))
+        self.zone_fields['name'].insert(0, zone.get('name', ''))
+        self.zone_fields['spawn_chance'].insert(0, str(zone.get('spawn_chance', '')))
+        self.zone_fields['min_wave'].insert(0, str(zone.get('min_wave', '')))
+        self.zone_fields['background_image'].insert(0, zone.get('background_image', ''))
+        
+        # Load enemy types
+        enemy_types = zone.get('enemy_types', {})
+        for enemy_type, var in self.zone_fields['enemy_types'].items():
+            var.set(enemy_types.get(enemy_type, False))
+    
+    def clear_zone_form(self):
+        """Clear all zone form fields"""
+        for key, field in self.zone_fields.items():
+            if key == 'enemy_types':
+                for var in field.values():
+                    var.set(False)
+            elif isinstance(field, (ttk.Entry, ttk.Combobox)):
+                field.delete(0, tk.END)
+    
+    def new_zone(self):
+        """Clear form for new zone creation"""
+        self.clear_zone_form()
+        self.zones_listbox.selection_clear(0, tk.END)
+    
+    def save_zone(self):
+        """Save zone to zones.json"""
+        # Validate required fields
+        if not self.zone_fields['id'].get() or not self.zone_fields['name'].get():
+            messagebox.showerror("Error", "ID and Name are required!")
+            return
+        
+        if not self.zone_fields['spawn_chance'].get() or not self.zone_fields['min_wave'].get():
+            messagebox.showerror("Error", "Spawn Chance and Minimum Wave are required!")
+            return
+        
+        try:
+            spawn_chance = float(self.zone_fields['spawn_chance'].get())
+            if spawn_chance < 0 or spawn_chance > 100:
+                messagebox.showerror("Error", "Spawn Chance must be between 0 and 100!")
+                return
+        except ValueError:
+            messagebox.showerror("Error", "Spawn Chance must be a number!")
+            return
+        
+        try:
+            min_wave = int(self.zone_fields['min_wave'].get())
+            if min_wave < 1:
+                messagebox.showerror("Error", "Minimum Wave must be at least 1!")
+                return
+        except ValueError:
+            messagebox.showerror("Error", "Minimum Wave must be a number!")
+            return
+        
+        # Build zone dict
+        zone = {
+            'id': self.zone_fields['id'].get(),
+            'name': self.zone_fields['name'].get(),
+            'spawn_chance': spawn_chance,
+            'min_wave': min_wave,
+            'background_image': self.zone_fields['background_image'].get(),
+            'enemy_types': {}
+        }
+        
+        # Get enemy types (ensure all current categories are included)
+        for enemy_type in self.get_monster_categories():
+            if enemy_type in self.zone_fields['enemy_types']:
+                zone['enemy_types'][enemy_type] = self.zone_fields['enemy_types'][enemy_type].get()
+            else:
+                zone['enemy_types'][enemy_type] = False
+        
+        # Find if updating or creating new
+        zone_id = zone['id']
+        found = False
+        for i, existing in enumerate(self.zones_data):
+            if existing.get('id') == zone_id:
+                self.zones_data[i] = zone
+                found = True
+                break
+        
+        if not found:
+            self.zones_data.append(zone)
+        
+        # Save to file
+        try:
+            with open(self.data_path / 'zones.json', 'w', encoding='utf-8') as f:
+                json.dump({'zones': self.zones_data}, f, indent=2, ensure_ascii=False)
+            messagebox.showinfo("Success", f"Zone '{zone['name']}' saved successfully!")
+            self.load_zones_list()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save zone: {e}")
+    
+    def delete_zone(self):
+        """Delete selected zone"""
+        selection = self.zones_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Warning", "Please select a zone to delete")
+            return
+        
+        idx = selection[0]
+        zone = self.zones_data[idx]
+        
+        if messagebox.askyesno("Confirm Delete", f"Delete zone '{zone.get('name')}'?"):
+            self.zones_data.pop(idx)
+            try:
+                with open(self.data_path / 'zones.json', 'w', encoding='utf-8') as f:
+                    json.dump({'zones': self.zones_data}, f, indent=2, ensure_ascii=False)
+                self.load_zones_list()
+                self.clear_zone_form()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to delete zone: {e}")
 
 
 if __name__ == "__main__":

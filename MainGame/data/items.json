@@ -59,23 +59,30 @@
       "id": "legendary_staff",
       "name": "Sceptre légendaire",
       "type": "weapon",
-      "attack": 100,
-      "penetration": 25,
-      "critchance": 0.1,
-      "cost": 300,
-      "shopchance": 0.20,
-      "goldvariation": [-0.2, 0.2],
-      "description": "Très rare. Ignore une partie de l'armure."
+      "description": "Très rare. Ignore une partie de l'armure.",
+      "attack": 5,
+      "penetration": 10.0,
+      "critchance": 0.3,
+      "critdamage": 0.5,
+      "cost": 600,
+      "shopchance": 0.1,
+      "goldvariation": [
+        -0.2,
+        0.2
+      ]
     },
     {
       "id": "dull_sword",
       "name": "Épée terne",
       "type": "weapon",
-      "attack": 5,
+      "description": "Une épée basique.",
+      "attack": 3,
       "cost": 10,
-      "shopchance": 1,
-      "goldvariation": [-0.2, 0.3],
-      "description": "Une épée basique."
+      "shopchance": 1.0,
+      "goldvariation": [
+        -0.2,
+        0.3
+      ]
     },
     {
       "id": "arrow_bundle",
@@ -94,28 +101,37 @@
       "penetration": 5,
       "cost": 50,
       "shopchance": 0.8,
-      "goldvariation": [-0.1, 0.15],
+      "goldvariation": [
+        -0.1,
+        0.15
+      ],
       "description": "Une épée en fer solide avec une lame aiguisée."
     },
     {
       "id": "leather_armor",
       "name": "Armure de cuir",
       "type": "armor",
-      "defense": 8,
+      "description": "Armure légère en cuir.",
+      "defense": 5,
       "cost": 40,
       "shopchance": 0.9,
-      "goldvariation": [-0.15, 0.2],
-      "description": "Armure légère en cuir."
+      "goldvariation": [
+        -0.15,
+        0.2
+      ]
     },
     {
       "id": "steel_armor",
       "name": "Armure d'acier",
       "type": "armor",
-      "defense": 20,
+      "description": "Armure lourde en acier.",
+      "defense": 10,
       "cost": 120,
       "shopchance": 0.5,
-      "goldvariation": [-0.1, 0.25],
-      "description": "Armure lourde en acier."
+      "goldvariation": [
+        -0.1,
+        0.25
+      ]
     },
     {
       "id": "wooden_shield",
@@ -124,19 +140,25 @@
       "defense": 5,
       "cost": 30,
       "shopchance": 0.7,
-      "goldvariation": [-0.2, 0.2],
+      "goldvariation": [
+        -0.2,
+        0.2
+      ],
       "description": "Bouclier basique en bois renforcé."
     },
     {
       "id": "iron_shield",
       "name": "Bouclier de fer",
       "type": "offhand",
-      "defense": 12,
+      "description": "Bouclier en fer offrant protection et santé.",
+      "defense": 8,
       "max_hp": 20,
       "cost": 80,
       "shopchance": 0.5,
-      "goldvariation": [-0.1, 0.15],
-      "description": "Bouclier en fer offrant protection et santé."
+      "goldvariation": [
+        -0.1,
+        0.15
+      ]
     },
     {
       "id": "spell_tome",
@@ -146,18 +168,24 @@
       "penetration": 10,
       "cost": 90,
       "shopchance": 0.4,
-      "goldvariation": [-0.15, 0.2],
+      "goldvariation": [
+        -0.15,
+        0.2
+      ],
       "description": "Livre magique augmentant la puissance et la pénétration."
     },
     {
       "id": "power_ring",
       "name": "Anneau de puissance",
       "type": "relic",
-      "attack": 10,
+      "description": "Anneau mystique augmentant l'attaque.",
+      "attack": 5,
       "cost": 100,
       "shopchance": 0.3,
-      "goldvariation": [-0.1, 0.1],
-      "description": "Anneau mystique augmentant l'attaque."
+      "goldvariation": [
+        -0.1,
+        0.1
+      ]
     },
     {
       "id": "vitality_amulet",
@@ -167,7 +195,10 @@
       "defense": 5,
       "cost": 120,
       "shopchance": 0.3,
-      "goldvariation": [-0.1, 0.15],
+      "goldvariation": [
+        -0.1,
+        0.15
+      ],
       "description": "Amulette augmentant la santé et la défense."
     },
     {
@@ -178,44 +209,56 @@
       "critdamage": 0.3,
       "cost": 150,
       "shopchance": 0.25,
-      "goldvariation": [-0.05, 0.1],
+      "goldvariation": [
+        -0.05,
+        0.1
+      ],
       "description": "Charme augmentant les chances et dégâts critiques."
     },
     {
       "id": "penetration_relic",
       "name": "Relique de pénétration",
       "type": "relic",
-      "penetration": 15,
-      "attack": 5,
+      "description": "Relique augmentant significativement la pénétration.",
+      "attack": 2,
+      "penetration": 15.0,
       "cost": 140,
       "shopchance": 0.2,
-      "goldvariation": [-0.1, 0.1],
-      "description": "Relique augmentant significativement la pénétration."
+      "goldvariation": [
+        -0.1,
+        0.1
+      ]
     },
     {
       "id": "balanced_talisman",
       "name": "Talisman équilibré",
       "type": "relic",
-      "attack": 5,
+      "description": "Talisman offrant un bonus équilibré à toutes les stats.",
+      "attack": 3,
+      "penetration": 3.0,
       "defense": 3,
-      "max_hp": 25,
-      "penetration": 5,
+      "max_hp": 15,
       "cost": 110,
       "shopchance": 0.35,
-      "goldvariation": [-0.15, 0.15],
-      "description": "Talisman offrant un bonus équilibré à toutes les stats."
+      "goldvariation": [
+        -0.15,
+        0.15
+      ]
     },
     {
       "id": "dragon_eye",
       "name": "Œil de dragon",
       "type": "relic",
-      "attack": 15,
+      "description": "Relique rare donnée par les dragons, augmente attaque, critique et pénétration.",
+      "attack": 3,
+      "penetration": 1.0,
       "critchance": 0.1,
-      "penetration": 10,
+      "critdamage": 0.1,
+      "defense": 1,
+      "max_hp": 1,
       "droppable": true,
       "dropped_by": "dragon",
-      "drop_chance": 0.15,
-      "description": "Relique rare donnée par les dragons, augmente attaque, critique et pénétration."
+      "drop_chance": 0.15
     }
   ]
 }

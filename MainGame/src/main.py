@@ -45,6 +45,76 @@ def load_json(file_name, default=None):
             print(f"[ERREUR] Impossible de charger {file_name}: {e}")
     return default or {}
 
+def load_zones():
+    """Load zones from zones.json"""
+    try:
+        zones_data = load_json('zones.json', {'zones': []})
+        return zones_data.get('zones', [])
+    except Exception as e:
+        print(f"Error loading zones: {e}")
+        return []
+
+def select_zone(wave, zones):
+    """Select a zone based on wave number and spawn chances"""
+    if not zones:
+        return None
+    
+    # Filter zones by minimum wave
+    available_zones = [z for z in zones if z.get('min_wave', 1) <= wave]
+    if not available_zones:
+        return None
+    
+    # Every 10 waves, roll for zone change
+    if wave % 10 == 0 or wave == 1:
+        import random
+        # Build weighted list based on spawn_chance
+        total_chance = sum(z.get('spawn_chance', 0) for z in available_zones)
+        if total_chance <= 0:
+            return random.choice(available_zones)
+        
+        roll = random.random() * total_chance
+        current = 0
+        for zone in available_zones:
+            current += zone.get('spawn_chance', 0)
+            if roll <= current:
+                return zone
+        return available_zones[-1]
+    
+    return None  # Don't change zone
+
+def load_background_for_zone(zone, screen):
+    """Load background image for a specific zone"""
+    if not zone:
+        # Load default background
+        bg_dir = ASSETS_PATH / "images" / "backgrounds"
+        flower_bg = bg_dir / "flowerfield.png"
+        default_bg = bg_dir / "default_bg.png"
+        if flower_bg.exists():
+            _bg = pygame.image.load(flower_bg).convert()
+            return pygame.transform.smoothscale(_bg, screen.get_size())
+        elif default_bg.exists():
+            _bg = pygame.image.load(default_bg).convert()
+            return pygame.transform.smoothscale(_bg, screen.get_size())
+        else:
+            bg = pygame.Surface(screen.get_size())
+            bg.fill((40, 40, 60))
+            return bg
+    
+    bg_filename = zone.get('background_image', '')
+    if bg_filename:
+        bg_path = ASSETS_PATH / "images" / "backgrounds" / bg_filename
+        if bg_path.exists():
+            try:
+                _bg = pygame.image.load(bg_path).convert()
+                return pygame.transform.smoothscale(_bg, screen.get_size())
+            except Exception as e:
+                print(f"Error loading zone background {bg_filename}: {e}")
+    
+    # Fallback to default
+    bg = pygame.Surface(screen.get_size())
+    bg.fill((40, 40, 60))
+    return bg
+
 game_settings = load_json("gamesettings.json", {"width": 1280, "height": 720, "title": "MainGame"})
 user_settings = load_json("usersettings.json", {"volume": 0.8, "language": "fr"})
 
@@ -65,20 +135,13 @@ clock = pygame.time.Clock()
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption(title)
 
+# --- ZONES SYSTEM ---
+zones = load_zones()
+current_zone = None
+
 # --- CHARGEMENT DES RESSOURCES ---
 # Prefer an explicit 'flowerfield.png' background if present, otherwise fall back to default_bg.png
-bg_dir = ASSETS_PATH / "images" / "backgrounds"
-flower_bg = bg_dir / "flowerfield.png"
-default_bg = bg_dir / "default_bg.png"
-if flower_bg.exists():
-    _bg = pygame.image.load(flower_bg).convert()
-    background = pygame.transform.smoothscale(_bg, screen.get_size())
-elif default_bg.exists():
-    _bg = pygame.image.load(default_bg).convert()
-    background = pygame.transform.smoothscale(_bg, screen.get_size())
-else:
-    background = pygame.Surface(screen.get_size())
-    background.fill((40, 40, 60))  # Couleur par défaut
+background = load_background_for_zone(None, screen)
 
 # Exemple de personnage
 mage_path = ASSETS_PATH / "images" / "characters" / "mage.png"
@@ -292,7 +355,27 @@ if saved:
     if saved_wave:
         try:
             battle.wave = int(saved_wave)
-            battle.enemy = Enemy.random_enemy(battle.wave)
+            # Restore saved zone
+            saved_zone_id = saved.get('current_zone_id')
+            if saved_zone_id and zones:
+                for zone in zones:
+                    if zone.get('id') == saved_zone_id:
+                        battle.current_zone = zone
+                        background = load_background_for_zone(zone, screen)
+                        print(f"🗺️ Restored zone: {zone.get('name', 'Unknown')}")
+                        break
+            # If no saved zone or zone not found, select one based on current wave
+            if not battle.current_zone and zones:
+                loaded_zone = select_zone(battle.wave, zones)
+                if loaded_zone:
+                    battle.current_zone = loaded_zone
+                    background = load_background_for_zone(loaded_zone, screen)
+            # Get allowed categories from current zone for enemy spawning
+            allowed_categories = None
+            if battle.current_zone:
+                enemy_types = battle.current_zone.get('enemy_types', {})
+                allowed_categories = [cat for cat, allowed in enemy_types.items() if allowed]
+            battle.enemy = Enemy.random_enemy(battle.wave, allowed_categories=allowed_categories)
             if 'enemy_hp' in saved:
                 battle.enemy.hp = int(saved.get('enemy_hp', battle.enemy.hp))
         except Exception:
@@ -316,6 +399,13 @@ else:
     player = Player(player_template)
     player.selected_character = sel_id
     battle = BattleSystem(player)
+    # Initialize starting zone for new game
+    if zones:
+        starting_zone = select_zone(1, zones)
+        if starting_zone:
+            battle.current_zone = starting_zone
+            background = load_background_for_zone(starting_zone, screen)
+            print(f"🗺️ Starting in zone: {starting_zone.get('name', 'Unknown')}")
 
 # Create shared UI and shop instances
 ui = UIManager(screen, assets_path=ASSETS_PATH, data_path=DATA_PATH)
@@ -325,13 +415,15 @@ shop = Shop(DATA_PATH)
 # --- BOUCLE PRINCIPALE ---
 def main():
     print("🎮 Jeu démarré avec succès !")
-    global player, battle
+    global player, battle, background
     running = True
     # simple developer console state
     console_open = False
     console_text = ""
     # Auto-save tracking
     last_autosave_wave = 0
+    # Zone change tracking
+    last_zone_check_wave = 0
     while running:
         # --- ÉVÉNEMENTS ---
         for event in pygame.event.get():
@@ -398,6 +490,28 @@ def main():
         battle.update()
         ui.update(player, battle)
         
+        # Check for zone changes every 10 waves (only once when wave changes)
+        try:
+            current_wave = getattr(battle, 'wave', 0)
+            if current_wave % 10 == 0 and current_wave > 0 and current_wave != last_zone_check_wave:
+                new_zone = select_zone(current_wave, zones)
+                if new_zone and new_zone != battle.current_zone:
+                    battle.current_zone = new_zone
+                    background = load_background_for_zone(new_zone, screen)
+                    print(f"🗺️ Entering zone: {new_zone.get('name', 'Unknown')}")
+                    # Add notification
+                    try:
+                        battle.damage_events.append({
+                            'type': 'note',
+                            'msg': f"Entering {new_zone.get('name', 'Unknown')}",
+                            'time': time.time()
+                        })
+                    except Exception:
+                        pass
+                last_zone_check_wave = current_wave
+        except Exception as e:
+            print(f"Zone change error: {e}")
+        
         # Auto-save every 10 waves (on wave completion, not during combat)
         try:
             current_wave = getattr(battle, 'wave', 0)
@@ -418,7 +532,8 @@ def main():
             offers = shop.get_offers_for_wave(
                 battle.wave,
                 player_seed=getattr(player, 'game_seed', None),
-                cumulative_increase=getattr(player, 'cumulative_price_increase', 0.0)
+                cumulative_increase=getattr(player, 'cumulative_price_increase', 0.0),
+                current_zone=battle.current_zone
             )
             # simple shop modal with pagination and tabs
             shop_open = True
@@ -708,11 +823,28 @@ def main():
 
             # After shop closed, spawn next enemy for the new wave
             battle.in_shop = False
-            battle.enemy = Enemy.random_enemy(battle.wave)
+            # Get allowed categories from current zone
+            allowed_categories = None
+            if battle.current_zone:
+                enemy_types = battle.current_zone.get('enemy_types', {})
+                allowed_categories = [cat for cat, allowed in enemy_types.items() if allowed]
+            battle.enemy = Enemy.random_enemy(battle.wave, allowed_categories=allowed_categories)
             battle.turn = 'player'
 
         # --- AFFICHAGE ---
         screen.blit(background, (0, 0))
+        
+        # Display current zone name at top of screen
+        if battle.current_zone:
+            zone_font = pygame.font.Font(None, 24)
+            zone_name = battle.current_zone.get('name', 'Unknown Zone')
+            zone_text = zone_font.render(zone_name, True, (100, 255, 100))
+            zone_rect = zone_text.get_rect(center=(width // 2, 15))
+            # Draw shadow for better visibility
+            shadow_text = zone_font.render(zone_name, True, (0, 0, 0))
+            screen.blit(shadow_text, (zone_rect.x + 1, zone_rect.y + 1))
+            screen.blit(zone_text, zone_rect)
+        
         if player_sprite:
             # Scale down player sprite to 30% of original size
             scaled_width = int(player_sprite.get_width() * 0.3)

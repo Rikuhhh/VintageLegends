@@ -15,7 +15,7 @@ class Shop:
         except Exception:
             self.items = []
 
-    def get_offers_for_wave(self, wave=1, player_seed=None, cumulative_increase=0.0):
+    def get_offers_for_wave(self, wave=1, player_seed=None, cumulative_increase=0.0, current_zone=None):
         import random
         # Use player seed to create deterministic RNG for this wave's shop
         if player_seed is not None:
@@ -30,6 +30,14 @@ class Shop:
             cost = i.get('cost')
             if cost is None:
                 continue
+            
+            # Filter by zone if item has shop_zones restriction
+            shop_zones = i.get('shop_zones', [])
+            if shop_zones and current_zone:
+                zone_id = current_zone.get('id') if isinstance(current_zone, dict) else current_zone
+                if zone_id not in shop_zones:
+                    continue
+            
             # per-item shop chance (default 1.0)
             sch = float(i.get('shopchance', 1.0))
             if rng.random() > sch:

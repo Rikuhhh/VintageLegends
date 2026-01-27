@@ -47,6 +47,10 @@ class SaveManager:
         try:
             if battle is not None:
                 data['wave'] = getattr(battle, 'wave', 1)
+                # save current zone
+                current_zone = getattr(battle, 'current_zone', None)
+                if current_zone:
+                    data['current_zone_id'] = current_zone.get('id')
                 # save current enemy HP if there is an active enemy (not in shop)
                 if getattr(battle, 'enemy', None) and not getattr(battle, 'in_shop', False):
                     data['enemy_hp'] = getattr(battle.enemy, 'hp', None)

@@ -10,6 +10,7 @@ class BattleSystem:
     def __init__(self, player):
         self.player = player
         self.wave = 1
+        self.current_zone = None
         self.enemy = Enemy.random_enemy(self.wave)
         self.turn = "player"
         self.last_action_time = 0
@@ -165,7 +166,13 @@ class BattleSystem:
         else:
             self.in_shop = random.random() < 0.10
         if not self.in_shop:
-            self.enemy = Enemy.random_enemy(self.wave)
+            # Get allowed categories from current zone
+            allowed_categories = None
+            if self.current_zone:
+                enemy_types = self.current_zone.get('enemy_types', {})
+                allowed_categories = [cat for cat, allowed in enemy_types.items() if allowed]
+            
+            self.enemy = Enemy.random_enemy(self.wave, allowed_categories=allowed_categories)
             print(f"👹 Nouvelle vague : {self.enemy.name}")
             self.turn = "player"
         else:

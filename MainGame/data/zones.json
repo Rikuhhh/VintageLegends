@@ -1,0 +1,36 @@
+{
+  "zones": [
+    {
+      "id": "flower_field",
+      "name": "Flower Field",
+      "spawn_chance": 60.0,
+      "min_wave": 1,
+      "background_image": "flowerfield.png",
+      "enemy_types": {
+        "beast": true,
+        "construct": true,
+        "demon": false,
+        "dragon": true,
+        "elemental": false,
+        "horde": true,
+        "undead": false
+      }
+    },
+    {
+      "id": "dark_forest",
+      "name": "Dark Forest",
+      "spawn_chance": 40.0,
+      "min_wave": 5,
+      "background_image": "darkforest.png",
+      "enemy_types": {
+        "beast": true,
+        "construct": false,
+        "demon": true,
+        "dragon": false,
+        "elemental": false,
+        "horde": false,
+        "undead": true
+      }
+    }
+  ]
+}

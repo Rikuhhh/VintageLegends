@@ -75,13 +75,14 @@ class Enemy:
             return int(base_val)
 
     @staticmethod
-    def random_enemy(wave=1):
+    def random_enemy(wave=1, allowed_categories=None):
         """Create an enemy definition based on monsters.json rules and scaling.
         Rules:
         - Bosses prioritized on multiples of 10
         - Minibosses on multiples of 5
         - Elites are rarer than normal
         - min_wave/max_wave (0 means ignore)
+        - allowed_categories: list of category strings to filter by (from zones)
         """
         data = Enemy._load_monsters()
         if not data:
@@ -104,6 +105,11 @@ class Enemy:
         for mon in enemies:
             if not Enemy._in_wave_range(mon, wave):
                 continue
+            # Filter by allowed categories if specified
+            if allowed_categories is not None:
+                mon_category = mon.get('category')
+                if mon_category not in allowed_categories:
+                    continue
             cls = mon.get('classification', 'normal')
             if cls == 'boss':
                 bosses.append(mon)

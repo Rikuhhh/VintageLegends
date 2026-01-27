@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Zones Schema",
+  "type": "object",
+  "required": ["zones"],
+  "properties": {
+    "zones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "spawn_chance", "min_wave", "enemy_types"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the zone"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the zone"
+          },
+          "spawn_chance": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Percentage chance of zone appearing each 10 waves"
+          },
+          "min_wave": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Minimum wave number before zone can appear"
+          },
+          "background_image": {
+            "type": "string",
+            "description": "Filename of background image in assets/images/backgrounds/"
+          },
+          "enemy_types": {
+            "type": "object",
+            "description": "Dictionary of enemy types and whether they can spawn in this zone",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  }
+}
