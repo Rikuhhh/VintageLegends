@@ -1,5 +1,6 @@
 # src/save_manager.py
 import json
+import base64
 from pathlib import Path
 
 class SaveManager:
@@ -57,17 +58,22 @@ class SaveManager:
                     data['enemy_id'] = getattr(battle.enemy, 'id', None)
         except Exception:
             pass
-        with open(self.save_dir / "save.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
+        # Encode save data with base64
+        json_str = json.dumps(data, indent=4)
+        encoded_data = base64.b64encode(json_str.encode('utf-8'))
+        with open(self.save_dir / "save.save", "wb") as f:
+            f.write(encoded_data)
         print("💾 Sauvegarde réussie.")
 
     def load(self):
-        path = self.save_dir / "save.json"
+        path = self.save_dir / "save.save"
         if path.exists():
             try:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, "rb") as f:
+                    encoded_data = f.read()
+                    decoded_data = base64.b64decode(encoded_data)
+                    data = json.loads(decoded_data.decode('utf-8'))
                     print("📂 Sauvegarde chargée.")
-                    data = json.load(f)
                     # Validate critical fields
                     if not isinstance(data, dict):
                         print("⚠️ Invalid save format, starting fresh")
