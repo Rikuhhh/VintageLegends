@@ -54,6 +54,48 @@ class Player:
         self.agility = self.base_agility
         # Dodge chance (computed from agility)
         self.dodge_chance = 0.0
+        
+        # === NEW: MANA SYSTEM ===
+        # Mana stats
+        try:
+            self.base_max_mana = max(0, int(data.get('mana', 100)))
+        except (ValueError, TypeError):
+            self.base_max_mana = 100
+        self.max_mana = self.base_max_mana
+        self.current_mana = data.get('current_mana', self.max_mana)
+        try:
+            self.base_mana_regen = max(0, int(data.get('mana_regen', 10)))
+        except (ValueError, TypeError):
+            self.base_mana_regen = 10
+        self.mana_regen = self.base_mana_regen
+        
+        # Magic stats
+        try:
+            self.base_magic_power = max(0, int(data.get('magic_power', 5)))
+        except (ValueError, TypeError):
+            self.base_magic_power = 5
+        self.magic_power = self.base_magic_power
+        try:
+            self.base_magic_penetration = max(0.0, float(data.get('magic_penetration', 0.0)))
+        except (ValueError, TypeError):
+            self.base_magic_penetration = 0.0
+        self.magic_penetration = self.base_magic_penetration
+        
+        # Skills list (skill IDs the player knows)
+        self.skills = data.get('skills', [])
+        if not isinstance(self.skills, list):
+            self.skills = []
+        
+        # Equipped skills (max 5, displayed on skill bar)
+        self.equipped_skills = data.get('equipped_skills', [])
+        if not isinstance(self.equipped_skills, list):
+            self.equipped_skills = []
+        
+        # Skill cooldowns (dict of skill_id -> remaining turns)
+        self.skill_cooldowns = data.get('skill_cooldowns', {})
+        if not isinstance(self.skill_cooldowns, dict):
+            self.skill_cooldowns = {}
+        
         try:
             self.gold = max(0, int(data.get('gold', 0)))
         except (ValueError, TypeError):
@@ -191,6 +233,70 @@ class Player:
         
         self.hp = max(0, self.hp - dmg_taken)
         return dmg_taken
+    
+    def regenerate_mana(self, amount=None):
+        """Regenerate mana (called each turn). Returns amount gained."""
+        if amount is None:
+            amount = self.mana_regen
+        old_mana = self.current_mana
+        self.current_mana = min(self.max_mana, self.current_mana + amount)
+        return self.current_mana - old_mana
+    
+    def consume_mana(self, cost):
+        """Consume mana for skill usage. Returns True if successful."""
+        if self.current_mana >= cost:
+            self.current_mana -= cost
+            return True
+        return False
+    
+    def use_item(self, item_id):
+        """Use a consumable item from inventory
+        
+        Handles:
+        - Fixed healing (heal: int)
+        - Percentage healing (heal_percent: float 0.0-1.0)
+        - Mana restoration (restore_mana: int)
+        
+        Returns True if item was used successfully
+        """
+        item = self._load_item_by_id(item_id)
+        if not item:
+            return False
+        
+        if item.get('type') != 'consumable':
+            return False
+        
+        if not self.has_item(item_id):
+            return False
+        
+        # Apply effects
+        effect = item.get('effect', {})
+        
+        # Fixed healing
+        if 'heal' in effect:
+            heal_amount = effect['heal']
+            old_hp = self.hp
+            self.hp = min(self.max_hp, self.hp + heal_amount)
+            print(f"Healed {self.hp - old_hp} HP")
+        
+        # Percentage healing
+        if 'heal_percent' in effect:
+            heal_percent = effect['heal_percent']
+            heal_amount = int(self.max_hp * heal_percent)
+            old_hp = self.hp
+            self.hp = min(self.max_hp, self.hp + heal_amount)
+            print(f"Healed {self.hp - old_hp} HP ({int(heal_percent * 100)}%)")
+        
+        # Mana restoration
+        if 'restore_mana' in effect:
+            mana_amount = effect['restore_mana']
+            old_mana = self.current_mana
+            self.current_mana = min(self.max_mana, self.current_mana + mana_amount)
+            print(f"Restored {self.current_mana - old_mana} mana")
+        
+        # Remove item from inventory
+        self.remove_item(item_id, 1)
+        return True
 
     def _apply_agility_bonuses(self):
         """Apply bonuses from agility stat: crit chance and dodge chance with soft/hard caps."""
@@ -257,6 +363,9 @@ class Player:
             self.hp = self.max_hp
             self.base_agility = getattr(self, 'base_agility', 0) + 1
             print(f"🎉 Milestone! Level {self.level}: +1 to all stats!")
+        
+        # Auto-unlock skills that require this level
+        self._check_level_unlocks()
         
         # Recalculate derived stats (equipment, permanent upgrades) so level HP stacks with them
         try:
@@ -390,6 +499,8 @@ class Player:
             if prev_id:
                 self.inventory[prev_id] = self.inventory.get(prev_id, 0) + 1
             self.equipment[slot] = item_id
+            # Check for skill unlocks from this item
+            self._check_item_unlocks(item_id)
             self._recalc_stats()
             return True
         return False
@@ -458,6 +569,12 @@ class Player:
         self.penetration = getattr(self, 'base_penetration', 0.0)
         # reset agility to base
         self.agility = getattr(self, 'base_agility', 0)
+        # reset mana stats to base
+        self.max_mana = getattr(self, 'base_max_mana', 100)
+        self.mana_regen = getattr(self, 'base_mana_regen', 10)
+        # reset magic stats to base
+        self.magic_power = getattr(self, 'base_magic_power', 5)
+        self.magic_penetration = getattr(self, 'base_magic_penetration', 0.0)
         # Apply bonuses from all equipment slots
         for slot_name, item_id in self.equipment.items():
             if not item_id:
@@ -490,6 +607,27 @@ class Player:
             if equipped_item.get('max_hp'):
                 try:
                     self.max_hp += int(equipped_item.get('max_hp', 0))
+                except Exception:
+                    pass
+            # Magic stats from equipment
+            if equipped_item.get('magic_power'):
+                try:
+                    self.magic_power += int(equipped_item.get('magic_power', 0))
+                except Exception:
+                    pass
+            if equipped_item.get('magic_penetration'):
+                try:
+                    self.magic_penetration += float(equipped_item.get('magic_penetration', 0.0))
+                except Exception:
+                    pass
+            if equipped_item.get('max_mana'):
+                try:
+                    self.max_mana += int(equipped_item.get('max_mana', 0))
+                except Exception:
+                    pass
+            if equipped_item.get('mana_regen'):
+                try:
+                    self.mana_regen += int(equipped_item.get('mana_regen', 0))
                 except Exception:
                     pass
 
@@ -592,3 +730,97 @@ class Player:
 
     def is_dead(self):
         return self.hp <= 0
+    
+    def unlock_skill(self, skill_id):
+        """Unlock a new skill. Returns True if newly unlocked, False if already known."""
+        if not hasattr(self, 'skills'):
+            self.skills = []
+        if skill_id not in self.skills:
+            self.skills.append(skill_id)
+            print(f"✨ New skill unlocked: {skill_id}")
+            return True
+        return False
+    
+    def _check_level_unlocks(self):
+        """Check all skills and unlock any that require current level or lower"""
+        import json
+        import os
+        try:
+            skills_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'skills.json')
+            with open(skills_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Handle both dict and array formats
+            if isinstance(data, dict) and 'skills' in data:
+                all_skills = data['skills']
+            elif isinstance(data, list):
+                all_skills = data
+            else:
+                all_skills = data  # Assume it's already in the right format
+            
+            for skill_data in all_skills:
+                skill_id = skill_data.get('id')
+                unlock_req = skill_data.get('unlock_requirements', {})
+                required_level = unlock_req.get('level')
+                if required_level and self.level >= required_level and skill_id:
+                    self.unlock_skill(skill_id)
+        except Exception as e:
+            print(f"Warning: Failed to check level unlocks: {e}")
+    
+    def _check_item_unlocks(self, item_id):
+        """Check all skills and unlock any that require this specific item to be equipped"""
+        import json
+        import os
+        try:
+            skills_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'skills.json')
+            with open(skills_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Handle both dict and array formats
+            if isinstance(data, dict) and 'skills' in data:
+                all_skills = data['skills']
+            elif isinstance(data, list):
+                all_skills = data
+            else:
+                all_skills = data  # Assume it's already in the right format
+            
+            for skill_data in all_skills:
+                skill_id = skill_data.get('id')
+                unlock_req = skill_data.get('unlock_requirements', {})
+                required_item = unlock_req.get('item_equipped')
+                if required_item == item_id and skill_id:
+                    self.unlock_skill(skill_id)
+        except Exception as e:
+            print(f"Warning: Failed to check item unlocks: {e}")
+    
+    def open_container(self, container_item):
+        """Open a container item and grant loot from its loot pool
+        
+        Returns list of granted items
+        """
+        loot_pool = container_item.get('loot_pool', [])
+        granted_items = []
+        
+        import random
+        for loot_entry in loot_pool:
+            chance = loot_entry.get('chance', 0.0)
+            if random.random() < chance:
+                item_id = loot_entry.get('item_id')
+                skill_id = loot_entry.get('skill_id')
+                qty = loot_entry.get('qty', 1)
+                
+                if item_id:
+                    # Grant item
+                    item_def = self._load_item_by_id(item_id)
+                    if item_def:
+                        for _ in range(qty):
+                            self.add_item(item_def, auto_equip=False)
+                        granted_items.append(('item', item_id, qty))
+                        print(f"📦 Container grants: {item_def.get('name', item_id)} x{qty}")
+                
+                if skill_id:
+                    # Grant skill
+                    if self.unlock_skill(skill_id):
+                        granted_items.append(('skill', skill_id, 1))
+        
+        return granted_items

@@ -25,6 +25,16 @@ class SaveManager:
             "base_agility": getattr(player, 'base_agility', getattr(player, 'agility', 0)),
             # canonical base max HP
             "base_max_hp": getattr(player, 'base_max_hp', getattr(player, 'max_hp', 100)),
+            # mana stats
+            "current_mana": getattr(player, 'current_mana', 0),
+            "base_max_mana": getattr(player, 'base_max_mana', 0),
+            "base_mana_regen": getattr(player, 'base_mana_regen', 0),
+            "base_magic_power": getattr(player, 'base_magic_power', 0),
+            "base_magic_penetration": getattr(player, 'base_magic_penetration', 0),
+            # skills
+            "skills": getattr(player, 'skills', []),
+            "equipped_skills": getattr(player, 'equipped_skills', []),
+            "skill_cooldowns": getattr(player, 'skill_cooldowns', {}),
             # unspent skill points
             "unspent_points": getattr(player, 'unspent_points', 0),
             "gold": player.gold,
@@ -84,6 +94,16 @@ class SaveManager:
                         data['max_hp'] = max(1, int(data.get('max_hp', 100)))
                         data['gold'] = max(0, int(data.get('gold', 0)))
                         data['level'] = max(1, int(data.get('level', 1)))
+                        # Mana fields
+                        data['current_mana'] = max(0, int(data.get('current_mana', 0)))
+                        data['base_max_mana'] = max(0, int(data.get('base_max_mana', 0)))
+                        # Skills
+                        if 'skills' not in data:
+                            data['skills'] = []
+                        if 'equipped_skills' not in data:
+                            data['equipped_skills'] = []
+                        if 'skill_cooldowns' not in data:
+                            data['skill_cooldowns'] = {}
                     except (ValueError, TypeError):
                         print("⚠️ Corrupted save data, starting fresh")
                         return None

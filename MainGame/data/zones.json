@@ -20,7 +20,7 @@
       "id": "dark_forest",
       "name": "Dark Forest",
       "spawn_chance": 40.0,
-      "min_wave": 5,
+      "min_wave": 30,
       "background_image": "darkforest.png",
       "enemy_types": {
         "beast": true,

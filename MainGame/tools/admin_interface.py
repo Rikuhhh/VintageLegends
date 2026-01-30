@@ -25,15 +25,18 @@ class AdminInterface:
         # Create tabs
         self.items_frame = ttk.Frame(self.notebook)
         self.monsters_frame = ttk.Frame(self.notebook)
+        self.skills_frame = ttk.Frame(self.notebook)
         self.zones_frame = ttk.Frame(self.notebook)
         
         self.notebook.add(self.items_frame, text='Items')
         self.notebook.add(self.monsters_frame, text='Monsters')
+        self.notebook.add(self.skills_frame, text='Skills')
         self.notebook.add(self.zones_frame, text='Zones')
         
         # Setup tabs
         self.setup_items_tab()
         self.setup_monsters_tab()
+        self.setup_skills_tab()
         self.setup_zones_tab()
     
     def get_monster_categories(self):
@@ -121,7 +124,7 @@ class AdminInterface:
         # Type
         ttk.Label(scrollable_frame, text="Type*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
         self.item_fields['type'] = ttk.Combobox(scrollable_frame, width=37, 
-                                                values=['weapon', 'armor', 'offhand', 'relic', 'consumable', 'material'])
+                                                values=['weapon', 'armor', 'offhand', 'relic', 'consumable', 'material', 'container'])
         self.item_fields['type'].grid(row=row, column=1, pady=5)
         self.item_fields['type'].bind('<<ComboboxSelected>>', self.on_type_change)
         row += 1
@@ -147,6 +150,14 @@ class AdminInterface:
         self.item_fields['critdamage'] = ttk.Entry(self.weapon_frame, width=15)
         self.item_fields['critdamage'].grid(row=3, column=1, padx=5, pady=3)
         
+        ttk.Label(self.weapon_frame, text="Magic Power:").grid(row=0, column=2, sticky='w', padx=5, pady=3)
+        self.item_fields['magic_power'] = ttk.Entry(self.weapon_frame, width=15)
+        self.item_fields['magic_power'].grid(row=0, column=3, padx=5, pady=3)
+        
+        ttk.Label(self.weapon_frame, text="Magic Penetration:").grid(row=1, column=2, sticky='w', padx=5, pady=3)
+        self.item_fields['magic_penetration'] = ttk.Entry(self.weapon_frame, width=15)
+        self.item_fields['magic_penetration'].grid(row=1, column=3, padx=5, pady=3)
+        
         # Armor stats (shown conditionally)
         self.armor_frame = ttk.LabelFrame(scrollable_frame, text="Armor Stats")
         self.armor_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
@@ -164,6 +175,14 @@ class AdminInterface:
         self.item_fields['max_hp'] = ttk.Entry(self.armor_frame, width=15)
         self.item_fields['max_hp'].grid(row=2, column=1, padx=5, pady=3)
         
+        ttk.Label(self.armor_frame, text="Max Mana Bonus:").grid(row=0, column=2, sticky='w', padx=5, pady=3)
+        self.item_fields['max_mana'] = ttk.Entry(self.armor_frame, width=15)
+        self.item_fields['max_mana'].grid(row=0, column=3, padx=5, pady=3)
+        
+        ttk.Label(self.armor_frame, text="Mana Regen:").grid(row=1, column=2, sticky='w', padx=5, pady=3)
+        self.item_fields['mana_regen'] = ttk.Entry(self.armor_frame, width=15)
+        self.item_fields['mana_regen'].grid(row=1, column=3, padx=5, pady=3)
+        
         # Consumable stats (shown conditionally)
         self.consumable_frame = ttk.LabelFrame(scrollable_frame, text="Consumable Effects")
         self.consumable_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
@@ -172,6 +191,53 @@ class AdminInterface:
         ttk.Label(self.consumable_frame, text="Heal Amount:").grid(row=0, column=0, sticky='w', padx=5, pady=3)
         self.item_fields['heal'] = ttk.Entry(self.consumable_frame, width=15)
         self.item_fields['heal'].grid(row=0, column=1, padx=5, pady=3)
+        
+        ttk.Label(self.consumable_frame, text="Heal % (0-1):").grid(row=1, column=0, sticky='w', padx=5, pady=3)
+        self.item_fields['heal_percent'] = ttk.Entry(self.consumable_frame, width=15)
+        self.item_fields['heal_percent'].grid(row=1, column=1, padx=5, pady=3)
+        
+        ttk.Label(self.consumable_frame, text="Restore Mana:").grid(row=2, column=0, sticky='w', padx=5, pady=3)
+        self.item_fields['restore_mana'] = ttk.Entry(self.consumable_frame, width=15)
+        self.item_fields['restore_mana'].grid(row=2, column=1, padx=5, pady=3)
+        
+        # Container settings (shown conditionally)
+        self.container_frame = ttk.LabelFrame(scrollable_frame, text="Container Loot Pool")
+        self.container_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        # Loot pool editor
+        self.loot_pool_entries = []
+        loot_info = ttk.Label(self.container_frame, text="Configure loot drops (item_id OR skill_id, chance 0-1, optional qty)", 
+                             font=('Arial', 8, 'italic'))
+        loot_info.grid(row=0, column=0, columnspan=6, sticky='w', padx=5, pady=5)
+        
+        # Headers
+        ttk.Label(self.container_frame, text="Type", font=('Arial', 8, 'bold')).grid(row=1, column=0, padx=5)
+        ttk.Label(self.container_frame, text="ID", font=('Arial', 8, 'bold')).grid(row=1, column=1, padx=5)
+        ttk.Label(self.container_frame, text="Chance", font=('Arial', 8, 'bold')).grid(row=1, column=2, padx=5)
+        ttk.Label(self.container_frame, text="Qty", font=('Arial', 8, 'bold')).grid(row=1, column=3, padx=5)
+        
+        # Add 5 loot entry rows
+        for i in range(5):
+            loot_row = 2 + i
+            entry_type = ttk.Combobox(self.container_frame, width=8, values=['item', 'skill'])
+            entry_type.grid(row=loot_row, column=0, padx=2, pady=2)
+            
+            entry_id = ttk.Entry(self.container_frame, width=20)
+            entry_id.grid(row=loot_row, column=1, padx=2, pady=2)
+            
+            entry_chance = ttk.Entry(self.container_frame, width=8)
+            entry_chance.grid(row=loot_row, column=2, padx=2, pady=2)
+            
+            entry_qty = ttk.Entry(self.container_frame, width=6)
+            entry_qty.grid(row=loot_row, column=3, padx=2, pady=2)
+            
+            self.loot_pool_entries.append({
+                'type': entry_type,
+                'id': entry_id,
+                'chance': entry_chance,
+                'qty': entry_qty
+            })
         
         # Shop settings
         shop_frame = ttk.LabelFrame(scrollable_frame, text="Shop Settings")
@@ -337,6 +403,10 @@ class AdminInterface:
         self.monster_fields['pen_base'] = ttk.Entry(stats_frame, width=15)
         self.monster_fields['pen_base'].grid(row=3, column=1, padx=5, pady=3)
         
+        ttk.Label(stats_frame, text="Magic Def Base:").grid(row=2, column=2, sticky='w', padx=5, pady=3)
+        self.monster_fields['magic_def_base'] = ttk.Entry(stats_frame, width=15)
+        self.monster_fields['magic_def_base'].grid(row=2, column=3, padx=5, pady=3)
+        
         ttk.Label(stats_frame, text="XP Base:").grid(row=0, column=2, sticky='w', padx=5, pady=3)
         self.monster_fields['xp_base'] = ttk.Entry(stats_frame, width=15)
         self.monster_fields['xp_base'].grid(row=0, column=3, padx=5, pady=3)
@@ -388,19 +458,28 @@ class AdminInterface:
             self.weapon_frame.grid()
             self.armor_frame.grid_remove()
             self.consumable_frame.grid_remove()
+            self.container_frame.grid_remove()
         elif item_type in ['armor', 'offhand', 'relic']:
             # All equipment types can use weapon and armor frames for stats
             self.weapon_frame.grid()  # Relics/offhand can have attack too
             self.armor_frame.grid()   # Can have defense too
             self.consumable_frame.grid_remove()
+            self.container_frame.grid_remove()
         elif item_type == 'consumable':
             self.weapon_frame.grid_remove()
             self.armor_frame.grid_remove()
             self.consumable_frame.grid()
+            self.container_frame.grid_remove()
+        elif item_type == 'container':
+            self.weapon_frame.grid_remove()
+            self.armor_frame.grid_remove()
+            self.consumable_frame.grid_remove()
+            self.container_frame.grid()
         else:
             self.weapon_frame.grid_remove()
             self.armor_frame.grid_remove()
             self.consumable_frame.grid_remove()
+            self.container_frame.grid_remove()
     
     def load_items_list(self):
         """Load items from items.json into the listbox"""
@@ -455,6 +534,10 @@ class AdminInterface:
             self.item_fields['critchance'].insert(0, str(item.get('critchance')))
         if item.get('critdamage'):
             self.item_fields['critdamage'].insert(0, str(item.get('critdamage')))
+        if item.get('magic_power'):
+            self.item_fields['magic_power'].insert(0, str(item.get('magic_power')))
+        if item.get('magic_penetration'):
+            self.item_fields['magic_penetration'].insert(0, str(item.get('magic_penetration')))
         
         # Armor stats
         if item.get('defense'):
@@ -463,10 +546,34 @@ class AdminInterface:
                 self.item_fields['penetration_armor'].insert(0, str(item.get('penetration', '')))
         if item.get('max_hp'):
             self.item_fields['max_hp'].insert(0, str(item.get('max_hp')))
+        if item.get('max_mana'):
+            self.item_fields['max_mana'].insert(0, str(item.get('max_mana')))
+        if item.get('mana_regen'):
+            self.item_fields['mana_regen'].insert(0, str(item.get('mana_regen')))
         
         # Consumable stats
-        if item.get('effect', {}).get('heal'):
-            self.item_fields['heal'].insert(0, str(item['effect']['heal']))
+        effect = item.get('effect', {})
+        if effect.get('heal'):
+            self.item_fields['heal'].insert(0, str(effect['heal']))
+        if effect.get('heal_percent'):
+            self.item_fields['heal_percent'].insert(0, str(effect['heal_percent']))
+        if effect.get('restore_mana'):
+            self.item_fields['restore_mana'].insert(0, str(effect['restore_mana']))
+        
+        # Container loot pool
+        loot_pool = item.get('loot_pool', [])
+        for i, loot_entry in enumerate(loot_pool[:5]):  # Max 5 entries in UI
+            if 'item_id' in loot_entry:
+                self.loot_pool_entries[i]['type'].set('item')
+                self.loot_pool_entries[i]['id'].insert(0, loot_entry['item_id'])
+            elif 'skill_id' in loot_entry:
+                self.loot_pool_entries[i]['type'].set('skill')
+                self.loot_pool_entries[i]['id'].insert(0, loot_entry['skill_id'])
+            
+            if 'chance' in loot_entry:
+                self.loot_pool_entries[i]['chance'].insert(0, str(loot_entry['chance']))
+            if 'qty' in loot_entry:
+                self.loot_pool_entries[i]['qty'].insert(0, str(loot_entry['qty']))
         
         # Shop settings
         if item.get('cost'):
@@ -522,6 +629,7 @@ class AdminInterface:
         self.monster_fields['atk_base'].insert(0, str(monster.get('atk_base', '')))
         self.monster_fields['def_base'].insert(0, str(monster.get('def_base', '')))
         self.monster_fields['pen_base'].insert(0, str(monster.get('pen_base', '')))
+        self.monster_fields['magic_def_base'].insert(0, str(monster.get('magic_def_base', '')))
         self.monster_fields['xp_base'].insert(0, str(monster.get('xp_base', '')))
         self.monster_fields['gold_base'].insert(0, str(monster.get('gold_base', '')))
         
@@ -540,6 +648,13 @@ class AdminInterface:
                 field.set(False)
             elif isinstance(field, (ttk.Entry, ttk.Combobox)):
                 field.delete(0, tk.END)
+        
+        # Clear loot pool entries
+        for entry in self.loot_pool_entries:
+            entry['type'].set('')
+            entry['id'].delete(0, tk.END)
+            entry['chance'].delete(0, tk.END)
+            entry['qty'].delete(0, tk.END)
     
     def clear_monster_form(self):
         """Clear all monster form fields"""
@@ -587,6 +702,10 @@ class AdminInterface:
                 item['critchance'] = float(self.item_fields['critchance'].get())
             if self.item_fields['critdamage'].get():
                 item['critdamage'] = float(self.item_fields['critdamage'].get())
+            if self.item_fields['magic_power'].get():
+                item['magic_power'] = int(self.item_fields['magic_power'].get())
+            if self.item_fields['magic_penetration'].get():
+                item['magic_penetration'] = float(self.item_fields['magic_penetration'].get())
         
         # Armor/defensive stats
         if itype in ['armor', 'offhand', 'relic']:
@@ -596,11 +715,49 @@ class AdminInterface:
                 item['penetration'] = float(self.item_fields['penetration_armor'].get())
             if self.item_fields['max_hp'].get():
                 item['max_hp'] = int(self.item_fields['max_hp'].get())
+            if self.item_fields['max_mana'].get():
+                item['max_mana'] = int(self.item_fields['max_mana'].get())
+            if self.item_fields['mana_regen'].get():
+                item['mana_regen'] = int(self.item_fields['mana_regen'].get())
         
         # Consumable stats
         if itype == 'consumable':
+            effect = {}
             if self.item_fields['heal'].get():
-                item['effect'] = {'heal': int(self.item_fields['heal'].get())}
+                effect['heal'] = int(self.item_fields['heal'].get())
+            if self.item_fields['heal_percent'].get():
+                effect['heal_percent'] = float(self.item_fields['heal_percent'].get())
+            if self.item_fields['restore_mana'].get():
+                effect['restore_mana'] = int(self.item_fields['restore_mana'].get())
+            if effect:
+                item['effect'] = effect
+        
+        # Container loot pool
+        if itype == 'container':
+            loot_pool = []
+            for entry in self.loot_pool_entries:
+                entry_type = entry['type'].get()
+                entry_id = entry['id'].get()
+                entry_chance = entry['chance'].get()
+                entry_qty = entry['qty'].get()
+                
+                if entry_id and entry_chance:  # Must have ID and chance
+                    loot_entry = {}
+                    if entry_type == 'item':
+                        loot_entry['item_id'] = entry_id
+                    elif entry_type == 'skill':
+                        loot_entry['skill_id'] = entry_id
+                    else:
+                        continue  # Skip invalid type
+                    
+                    loot_entry['chance'] = float(entry_chance)
+                    if entry_qty:
+                        loot_entry['qty'] = int(entry_qty)
+                    
+                    loot_pool.append(loot_entry)
+            
+            if loot_pool:
+                item['loot_pool'] = loot_pool
         
         # Shop settings
         if self.item_fields['in_shop'].get() and self.item_fields['cost'].get():
@@ -676,6 +833,8 @@ class AdminInterface:
             monster['def_base'] = int(self.monster_fields['def_base'].get())
         if self.monster_fields['pen_base'].get():
             monster['pen_base'] = float(self.monster_fields['pen_base'].get())
+        if self.monster_fields['magic_def_base'].get():
+            monster['magic_def_base'] = int(self.monster_fields['magic_def_base'].get())
         if self.monster_fields['xp_base'].get():
             monster['xp_base'] = int(self.monster_fields['xp_base'].get())
         if self.monster_fields['gold_base'].get():
@@ -774,6 +933,287 @@ class AdminInterface:
                 self.clear_monster_form()
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete monster: {e}")
+    
+    def setup_skills_tab(self):
+        """Setup the Skills tab with form fields"""
+        # Left side - Skill list
+        left_frame = ttk.Frame(self.skills_frame)
+        left_frame.pack(side='left', fill='both', expand=False, padx=5, pady=5)
+        
+        ttk.Label(left_frame, text="Existing Skills:", font=('Arial', 10, 'bold')).pack()
+        
+        self.skills_listbox = tk.Listbox(left_frame, width=30, height=25)
+        self.skills_listbox.pack(fill='both', expand=True)
+        self.skills_listbox.bind('<<ListboxSelect>>', self.load_selected_skill)
+        
+        btn_frame = ttk.Frame(left_frame)
+        btn_frame.pack(fill='x', pady=5)
+        ttk.Button(btn_frame, text="New Skill", command=self.new_skill).pack(side='left', padx=2)
+        ttk.Button(btn_frame, text="Delete", command=self.delete_skill).pack(side='left', padx=2)
+        
+        # Right side - Skill editor
+        right_frame = ttk.Frame(self.skills_frame)
+        right_frame.pack(side='right', fill='both', expand=True, padx=5, pady=5)
+        
+        # Create scrollable frame
+        canvas = tk.Canvas(right_frame)
+        scrollbar = ttk.Scrollbar(right_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Skill fields
+        self.skill_fields = {}
+        row = 0
+        
+        # ID
+        ttk.Label(scrollable_frame, text="ID*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.skill_fields['id'] = ttk.Entry(scrollable_frame, width=40)
+        self.skill_fields['id'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Name
+        ttk.Label(scrollable_frame, text="Name*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.skill_fields['name'] = ttk.Entry(scrollable_frame, width=40)
+        self.skill_fields['name'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Description
+        ttk.Label(scrollable_frame, text="Description:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.skill_fields['description'] = ttk.Entry(scrollable_frame, width=40)
+        self.skill_fields['description'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Type
+        ttk.Label(scrollable_frame, text="Type*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.skill_fields['type'] = ttk.Combobox(scrollable_frame, width=37, 
+                                                values=['damage', 'heal', 'buff', 'debuff', 'counter'])
+        self.skill_fields['type'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Element
+        ttk.Label(scrollable_frame, text="Element:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.skill_fields['element'] = ttk.Combobox(scrollable_frame, width=37,
+                                                   values=['physical', 'arcane', 'fire', 'ice', 'lightning', 'dark', 'light', 'neutral'])
+        self.skill_fields['element'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Stats frame
+        stats_frame = ttk.LabelFrame(scrollable_frame, text="Skill Stats")
+        stats_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        ttk.Label(stats_frame, text="Mana Cost:").grid(row=0, column=0, sticky='w', padx=5, pady=3)
+        self.skill_fields['mana_cost'] = ttk.Entry(stats_frame, width=15)
+        self.skill_fields['mana_cost'].grid(row=0, column=1, padx=5, pady=3)
+        
+        ttk.Label(stats_frame, text="Power:").grid(row=1, column=0, sticky='w', padx=5, pady=3)
+        self.skill_fields['power'] = ttk.Entry(stats_frame, width=15)
+        self.skill_fields['power'].grid(row=1, column=1, padx=5, pady=3)
+        
+        ttk.Label(stats_frame, text="Scaling Stat:").grid(row=2, column=0, sticky='w', padx=5, pady=3)
+        self.skill_fields['scaling_stat'] = ttk.Combobox(stats_frame, width=12,
+                                                        values=['atk', 'magic_power', 'defense'])
+        self.skill_fields['scaling_stat'].grid(row=2, column=1, padx=5, pady=3)
+        
+        ttk.Label(stats_frame, text="Penetration:").grid(row=3, column=0, sticky='w', padx=5, pady=3)
+        self.skill_fields['penetration'] = ttk.Entry(stats_frame, width=15)
+        self.skill_fields['penetration'].grid(row=3, column=1, padx=5, pady=3)
+        
+        ttk.Label(stats_frame, text="Cooldown:").grid(row=0, column=2, sticky='w', padx=5, pady=3)
+        self.skill_fields['cooldown'] = ttk.Entry(stats_frame, width=15)
+        self.skill_fields['cooldown'].grid(row=0, column=3, padx=5, pady=3)
+        
+        ttk.Label(stats_frame, text="Target:").grid(row=1, column=2, sticky='w', padx=5, pady=3)
+        self.skill_fields['target'] = ttk.Combobox(stats_frame, width=12,
+                                                  values=['single', 'self', 'all'])
+        self.skill_fields['target'].grid(row=1, column=3, padx=5, pady=3)
+        
+        # Unlock requirements frame
+        unlock_frame = ttk.LabelFrame(scrollable_frame, text="Unlock Requirements")
+        unlock_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        ttk.Label(unlock_frame, text="Level Required:").grid(row=0, column=0, sticky='w', padx=5, pady=3)
+        self.skill_fields['unlock_level'] = ttk.Entry(unlock_frame, width=15)
+        self.skill_fields['unlock_level'].grid(row=0, column=1, padx=5, pady=3)
+        
+        ttk.Label(unlock_frame, text="Item Required:").grid(row=1, column=0, sticky='w', padx=5, pady=3)
+        self.skill_fields['unlock_item'] = ttk.Entry(unlock_frame, width=30)
+        self.skill_fields['unlock_item'].grid(row=1, column=1, padx=5, pady=3)
+        
+        # Save button
+        ttk.Button(scrollable_frame, text="Save Skill", command=self.save_skill,
+                  style='Accent.TButton').grid(row=row, column=0, columnspan=2, pady=20)
+        
+        # Load skills
+        self.load_skills_list()
+    
+    def load_skills_list(self):
+        """Load skills from skills.json into the listbox"""
+        self.skills_listbox.delete(0, tk.END)
+        try:
+            with open(self.data_path / 'skills.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.skills_data = data.get('skills', [])
+                for skill in self.skills_data:
+                    self.skills_listbox.insert(tk.END, f"{skill.get('id')} - {skill.get('name', '')}")
+        except FileNotFoundError:
+            self.skills_data = []
+            messagebox.showwarning("Warning", "skills.json not found")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load skills: {e}")
+    
+    def load_selected_skill(self, event=None):
+        """Load selected skill into editor"""
+        selection = self.skills_listbox.curselection()
+        if not selection:
+            return
+        
+        index = selection[0]
+        skill = self.skills_data[index]
+        
+        # Clear form
+        self.clear_skill_form()
+        
+        # Load basic fields
+        self.skill_fields['id'].insert(0, skill.get('id', ''))
+        self.skill_fields['name'].insert(0, skill.get('name', ''))
+        self.skill_fields['description'].insert(0, skill.get('description', ''))
+        self.skill_fields['type'].set(skill.get('type', ''))
+        self.skill_fields['element'].set(skill.get('element', ''))
+        
+        # Load stats
+        if skill.get('mana_cost') is not None:
+            self.skill_fields['mana_cost'].insert(0, str(skill['mana_cost']))
+        if skill.get('power') is not None:
+            self.skill_fields['power'].insert(0, str(skill['power']))
+        if skill.get('scaling_stat'):
+            self.skill_fields['scaling_stat'].set(skill['scaling_stat'])
+        if skill.get('penetration') is not None:
+            self.skill_fields['penetration'].insert(0, str(skill['penetration']))
+        if skill.get('cooldown') is not None:
+            self.skill_fields['cooldown'].insert(0, str(skill['cooldown']))
+        if skill.get('target'):
+            self.skill_fields['target'].set(skill['target'])
+        
+        # Load unlock requirements
+        unlock_req = skill.get('unlock_requirements', {})
+        if unlock_req.get('level'):
+            self.skill_fields['unlock_level'].insert(0, str(unlock_req['level']))
+        if unlock_req.get('item_equipped'):
+            self.skill_fields['unlock_item'].insert(0, unlock_req['item_equipped'])
+    
+    def clear_skill_form(self):
+        """Clear all skill form fields"""
+        for key, field in self.skill_fields.items():
+            if isinstance(field, (ttk.Entry, ttk.Combobox)):
+                field.delete(0, tk.END)
+    
+    def new_skill(self):
+        """Clear form for new skill creation"""
+        self.clear_skill_form()
+        self.skills_listbox.selection_clear(0, tk.END)
+    
+    def save_skill(self):
+        """Save skill to skills.json"""
+        # Validate required fields
+        if not self.skill_fields['id'].get() or not self.skill_fields['name'].get() or not self.skill_fields['type'].get():
+            messagebox.showerror("Error", "ID, Name, and Type are required!")
+            return
+        
+        # Build skill dict
+        skill = {
+            'id': self.skill_fields['id'].get(),
+            'name': self.skill_fields['name'].get(),
+            'type': self.skill_fields['type'].get(),
+        }
+        
+        if self.skill_fields['description'].get():
+            skill['description'] = self.skill_fields['description'].get()
+        
+        if self.skill_fields['element'].get():
+            skill['element'] = self.skill_fields['element'].get()
+        
+        # Stats
+        if self.skill_fields['mana_cost'].get():
+            skill['mana_cost'] = int(self.skill_fields['mana_cost'].get())
+        if self.skill_fields['power'].get():
+            skill['power'] = int(self.skill_fields['power'].get())
+        if self.skill_fields['scaling_stat'].get():
+            skill['scaling_stat'] = self.skill_fields['scaling_stat'].get()
+        if self.skill_fields['penetration'].get():
+            skill['penetration'] = float(self.skill_fields['penetration'].get())
+        if self.skill_fields['cooldown'].get():
+            skill['cooldown'] = int(self.skill_fields['cooldown'].get())
+        if self.skill_fields['target'].get():
+            skill['target'] = self.skill_fields['target'].get()
+        
+        # Unlock requirements
+        unlock_req = {}
+        if self.skill_fields['unlock_level'].get():
+            unlock_req['level'] = int(self.skill_fields['unlock_level'].get())
+        if self.skill_fields['unlock_item'].get():
+            unlock_req['item_equipped'] = self.skill_fields['unlock_item'].get()
+        if unlock_req:
+            skill['unlock_requirements'] = unlock_req
+        
+        # Default empty fields
+        if 'effectiveness' not in skill:
+            skill['effectiveness'] = {}
+        if 'effects' not in skill:
+            skill['effects'] = []
+        
+        # Find if updating or creating new
+        skill_id = skill['id']
+        found = False
+        for i, existing in enumerate(self.skills_data):
+            if existing.get('id') == skill_id:
+                self.skills_data[i] = skill
+                found = True
+                break
+        
+        if not found:
+            self.skills_data.append(skill)
+        
+        # Save to file
+        try:
+            with open(self.data_path / 'skills.json', 'w', encoding='utf-8') as f:
+                json.dump({'skills': self.skills_data}, f, indent=2, ensure_ascii=False)
+            messagebox.showinfo("Success", f"Skill '{skill['name']}' saved!")
+            self.load_skills_list()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save skill: {e}")
+    
+    def delete_skill(self):
+        """Delete selected skill"""
+        selection = self.skills_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Warning", "No skill selected")
+            return
+        
+        index = selection[0]
+        skill = self.skills_data[index]
+        
+        if messagebox.askyesno("Confirm Delete", f"Delete skill '{skill.get('name')}'?"):
+            try:
+                self.skills_data.pop(index)
+                with open(self.data_path / 'skills.json', 'w', encoding='utf-8') as f:
+                    json.dump({'skills': self.skills_data}, f, indent=2, ensure_ascii=False)
+                self.load_skills_list()
+                self.clear_skill_form()
+                messagebox.showinfo("Success", "Skill deleted!")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to delete skill: {e}")
     
     def setup_zones_tab(self):
         """Setup the Zones tab with form fields"""

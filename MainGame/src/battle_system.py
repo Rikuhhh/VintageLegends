@@ -4,10 +4,18 @@ try:
     from enemy import Enemy
 except Exception:
     from .enemy import Enemy
+try:
+    from skill_manager import SkillManager
+except Exception:
+    from .skill_manager import SkillManager
+try:
+    from effect_manager import EffectManager
+except Exception:
+    from .effect_manager import EffectManager
 import random
 
 class BattleSystem:
-    def __init__(self, player):
+    def __init__(self, player, data_path=None):
         self.player = player
         self.wave = 1
         self.current_zone = None
@@ -19,11 +27,83 @@ class BattleSystem:
         self.in_shop = False
         # Queue of recent damage events for UI (list of dicts: target, amount, time, is_crit)
         self.damage_events = []
+        # Combat log messages (list of strings)
+        self.combat_log = []
+        # Blocking state: temporary defense bonus for next enemy turn
+        self.block_defense_bonus = 0
+        self.combat_log = []
+        # Skill and effect managers
+        self.skill_manager = SkillManager(data_path=data_path)
+        self.effect_manager = EffectManager()
+        # Track if turn start effects have been processed
+        self.turn_processed = False
+    
+    def add_log(self, message, category='info'):
+        """Add a message to combat log"""
+        self.combat_log.append({
+            'message': message,
+            'category': category,
+            'time': time.time()
+        })
+        # Keep only last 100 messages
+        if len(self.combat_log) > 100:
+            self.combat_log = self.combat_log[-100:]
+    
+    def start_player_turn(self):
+        """Process turn start effects: mana regen, cooldown reduction, effect ticking"""
+        if self.turn != "player":
+            return
+        
+        # Only process once per turn
+        if self.turn_processed:
+            return
+        self.turn_processed = True
+        
+        # Regenerate mana
+        if hasattr(self.player, 'regenerate_mana'):
+            mana_gained = self.player.regenerate_mana()
+            if mana_gained and mana_gained > 0:
+                self.add_log(f"+{mana_gained} mana", 'buff')
+        
+        # Reduce skill cooldowns
+        if hasattr(self.player, 'skill_cooldowns'):
+            expired_skills = []
+            for skill_id, remaining in list(self.player.skill_cooldowns.items()):
+                new_cooldown = remaining - 1
+                if new_cooldown <= 0:
+                    expired_skills.append(skill_id)
+                    del self.player.skill_cooldowns[skill_id]
+                else:
+                    self.player.skill_cooldowns[skill_id] = new_cooldown
+            
+            # Log skills coming off cooldown
+            for skill_id in expired_skills:
+                skill = self.skill_manager.get_skill(skill_id)
+                skill_name = skill.get('name', skill_id) if skill else skill_id
+                self.add_log(f"{skill_name} ready!", 'info')
+        
+        # Tick player effects
+        if hasattr(self, 'effect_manager') and self.effect_manager:
+            try:
+                self.effect_manager.tick_effects(self.player)
+            except Exception as e:
+                print(f"Warning: Failed to tick player effects: {e}")
+        
+        # Tick enemy effects
+        if self.enemy and hasattr(self, 'effect_manager') and self.effect_manager:
+            try:
+                self.effect_manager.tick_effects(self.enemy)
+            except Exception as e:
+                print(f"Warning: Failed to tick enemy effects: {e}")
 
     def player_attack(self):
         """Action du joueur via un bouton."""
         if self.turn != "player":
-            return  # ignore si ce n’est pas ton tour        
+            return  # ignore si ce n'est pas ton tour
+        
+        # Process turn start effects (mana regen, cooldowns, etc.)
+        self.start_player_turn()
+        
         # Safety check: ensure enemy exists
         if not self.enemy or self.enemy.is_dead():
             print("No enemy to attack!")
@@ -57,19 +137,133 @@ class BattleSystem:
             pass
         if is_crit:
             print(f"CRIT! {self.player.name} inflige {dmg_dealt} (x{crit_mult}) à {self.enemy.name} !")
+            self.add_log(f"CRIT! {dmg_dealt} damage!", 'damage')
         else:
             print(f"{self.player.name} inflige {dmg_dealt} à {self.enemy.name} !")
+            self.add_log(f"Dealt {dmg_dealt} damage", 'damage')
 
         if self.enemy.is_dead():
             print(f"{self.enemy.name} est vaincu !")
+            self.add_log(f"{self.enemy.name} defeated!", 'info')
             self.player.gold += self.enemy.gold
             self.player.gain_xp(self.enemy.xp)
+            # Handle boss skill unlock chance
+            if self.enemy.is_boss:
+                self._try_boss_skill_unlock()
             # handle potential drops before moving to next wave
             self._process_drops(self.enemy)
             self.next_wave()
         else:
             self.turn = "enemy"
             self.last_action_time = time.time()
+    
+    def player_block(self):
+        """Player blocks, adding +300 defense for the next enemy turn"""
+        if self.turn != "player":
+            return
+        
+        # Process turn start effects (mana regen, cooldowns, etc.)
+        self.start_player_turn()
+        
+        if not self.enemy or self.enemy.is_dead():
+            print("No enemy to block!")
+            return
+        
+        # Add temporary defense bonus
+        self.block_defense_bonus = 300
+        self.add_log("Blocking! +300 defense this turn", 'buff')
+        print(f"{self.player.name} is blocking! (+300 defense)")
+        
+        # Pass turn to enemy
+        self.turn = "enemy"
+        self.last_action_time = time.time()
+    
+    def player_use_skill(self, skill_id):
+        """Player uses a skill"""
+        if self.turn != "player":
+            return
+        
+        # Process turn start effects (mana regen, cooldowns, etc.)
+        self.start_player_turn()
+        
+        if not self.enemy or self.enemy.is_dead():
+            print("No enemy to target!")
+            return
+        
+        # Check if skill manager exists
+        if not hasattr(self, 'skill_manager') or self.skill_manager is None:
+            print("Skill system not initialized!")
+            return
+        
+        # Get skill data
+        skill = self.skill_manager.get_skill(skill_id)
+        if not skill:
+            print(f"Skill {skill_id} not found!")
+            return
+        
+        # Check if player has the skill
+        if not hasattr(self.player, 'skills') or skill_id not in self.player.skills:
+            print(f"Player doesn't know {skill_id}!")
+            return
+        
+        # Check if skill can be used (cooldown check)
+        can_use, msg = self.skill_manager.can_use_skill(self.player, skill_id)
+        if not can_use:
+            print(f"Cannot use skill: {msg}")
+            self.add_log(msg, 'debuff')
+            return
+        
+        # Check mana cost
+        mana_cost = skill.get('mana_cost', 0)
+        if not self.player.consume_mana(mana_cost):
+            print(f"Not enough mana! Need {mana_cost}, have {self.player.current_mana}")
+            self.add_log(f"Not enough mana for {skill_id}!", 'debuff')
+            return
+        
+        # Use the skill
+        result, msg = self.skill_manager.use_skill(self.player, self.enemy, skill_id, self.effect_manager)
+        
+        # Log the skill usage
+        if result:
+            damage = result.get('damage', 0)
+            healing = result.get('healing', 0)
+            
+            if damage > 0:
+                self.add_log(f"Used {skill.get('name', skill_id)}: {damage} damage!", 'skill')
+                print(f"{self.player.name} used {skill_id} for {damage} damage!")
+                
+                # Register damage event for UI
+                try:
+                    self.damage_events.append({
+                        'target': 'enemy',
+                        'amount': int(damage),
+                        'time': time.time(),
+                        'is_crit': result.get('is_crit', False),
+                    })
+                except Exception:
+                    pass
+            
+            if healing > 0:
+                self.add_log(f"Used {skill.get('name', skill_id)}: healed {healing}!", 'heal')
+                print(f"{self.player.name} healed {healing} HP!")
+            
+            # Check if enemy died
+            if self.enemy.is_dead():
+                print(f"{self.enemy.name} est vaincu !")
+                self.add_log(f"{self.enemy.name} defeated! +{self.enemy.gold}g", 'info')
+                self.player.gold += self.enemy.gold
+                self.player.gain_xp(self.enemy.xp)
+                if self.enemy.is_boss:
+                    self._try_boss_skill_unlock()
+                self._process_drops(self.enemy)
+                self.next_wave()
+            else:
+                # Pass turn to enemy
+                self.turn = "enemy"
+                self.last_action_time = time.time()
+        else:
+            print(f"Failed to use skill: {msg}")
+            self.add_log(f"Skill failed: {msg}", 'debuff')
 
     def update(self):
         """Tour automatique de l’ennemi après ton attaque."""
@@ -77,6 +271,7 @@ class BattleSystem:
             # Safety check: ensure enemy exists before attacking
             if not self.enemy or self.enemy.is_dead():
                 self.turn = "player"
+                self.turn_processed = False  # Reset for next player turn
                 return
             
             if time.time() - self.last_action_time >= self.action_delay:
@@ -97,12 +292,25 @@ class BattleSystem:
                     except Exception:
                         pass
                     print(f"{self.player.name} esquive l'attaque de {self.enemy.name}!")
+                    self.add_log("Dodged enemy attack!", 'buff')
                 else:
                     dmg = self.enemy.atk
+                    # Apply block defense bonus temporarily
+                    original_defense = self.player.defense
+                    if self.block_defense_bonus > 0:
+                        self.player.defense += self.block_defense_bonus
+                        print(f"Block reduces damage! (Defense: {original_defense} -> {self.player.defense})")
+                    
                     # Enemies don't have penetration (for now), pass 0
                     enemy_pen = getattr(self.enemy, 'penetration', 0)
                     # apply damage and capture the actual damage taken after defense
                     dmg_taken = self.player.take_damage(dmg, enemy_pen)
+                    
+                    # Restore original defense and clear block bonus
+                    if self.block_defense_bonus > 0:
+                        self.player.defense = original_defense
+                        self.block_defense_bonus = 0
+                    
                     # register damage event for UI with post-defense damage
                     try:
                         self.damage_events.append({
@@ -114,12 +322,14 @@ class BattleSystem:
                     except Exception:
                         pass
                     print(f"{self.enemy.name} inflige {dmg_taken} à {self.player.name} !")
+                    self.add_log(f"Took {dmg_taken} damage!", 'debuff')
 
                     if self.player.is_dead():
                         print(f"{self.player.name} est vaincu... 💀")
                     # Do not auto-respawn here; main loop will handle game over
 
                 self.turn = "player"
+                self.turn_processed = False  # Reset for next player turn
 
     def next_wave(self):
         self.wave += 1
@@ -175,9 +385,59 @@ class BattleSystem:
             self.enemy = Enemy.random_enemy(self.wave, allowed_categories=allowed_categories)
             print(f"👹 Nouvelle vague : {self.enemy.name}")
             self.turn = "player"
+            self.turn_processed = False  # Reset for new wave
         else:
             self.enemy = None
             print(f"🛒 Shop opens at wave {self.wave}")
+    
+    
+    def _try_boss_skill_unlock(self):
+        """Try to unlock a random locked skill when killing a boss (15% chance)"""
+        import json
+        import random
+        from pathlib import Path
+        
+        # 15% chance to unlock a skill from boss
+        if random.random() > 0.15:
+            return
+        
+        try:
+            base = Path(__file__).resolve().parents[1]
+            skills_path = base / 'data' / 'skills.json'
+            if not skills_path.exists():
+                return
+            
+            with open(skills_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Handle both dict and array formats
+            if isinstance(data, dict) and 'skills' in data:
+                all_skills = data['skills']
+            elif isinstance(data, list):
+                all_skills = data
+            else:
+                all_skills = []
+            
+            # Get list of locked skills (not yet unlocked)
+            player_skills = getattr(self.player, 'skills', [])
+            locked_skills = [skill.get('id') for skill in all_skills if skill.get('id') and skill.get('id') not in player_skills]
+            
+            if not locked_skills:
+                self.add_log("No more skills to unlock!", 'info')
+                return
+            
+            # Randomly pick one locked skill
+            skill_id = random.choice(locked_skills)
+            if self.player.unlock_skill(skill_id):
+                # Get skill name for better display
+                skill_name = skill_id
+                for skill in all_skills:
+                    if skill.get('id') == skill_id:
+                        skill_name = skill.get('name', skill_id)
+                        break
+                self.add_log(f"Boss dropped skill: {skill_name}!", 'buff')
+        except Exception as e:
+            print(f"Warning: Failed to process boss skill drop: {e}")
     
     def _process_drops(self, enemy):
         """Check items.json for droppable items matching the enemy category and roll.

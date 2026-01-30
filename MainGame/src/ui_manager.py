@@ -58,6 +58,17 @@ class UIManager:
         self.inventory_page = 0
         self.stats_page = 0
         self.character_sheet_open_rect = None
+        # Skills UI modal
+        self.skills_ui_open = False
+        self.skills_ui_buttons = []
+        self.skills_page = 0
+        self.skills_ui_rect = None
+        # Combat Log UI
+        self.combat_log_open = True  # Start open by default
+        self.combat_log_dragging = False
+        self.combat_log_drag_offset = (0, 0)
+        self.combat_log_pos = None  # Will be (x, y) when set, default to right side
+        self.combat_log_scroll = 0  # Scroll offset for log
         # Dragging state for moveable character sheet
         self.character_sheet_dragging = False
         self.character_sheet_drag_offset = (0, 0)
@@ -144,7 +155,14 @@ class UIManager:
                 "label": "Attaquer",
                 "action": battle.player_attack,
             },
+            {
+                "rect": pygame.Rect(screen_width - 520, screen_height - 100, 200, 60),
+                "label": "Block",
+                "action": battle.player_block,
+            },
         ]
+        # Store battle reference for skill buttons
+        self.battle = battle
 
     # allocation buttons are created dynamically in draw when needed
 
@@ -158,12 +176,54 @@ class UIManager:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_c:
             self.character_sheet_open = not self.character_sheet_open
             return
+        
+        # Toggle skills UI with 'K' key
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_k:
+            self.skills_ui_open = not self.skills_ui_open
+            return
+        
+        # Toggle combat log with 'L' key
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
+            self.combat_log_open = not self.combat_log_open
+            return
+        
+        # Skill hotkeys (1-5)
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_1:
+                self._use_skill_slot(0)
+                return
+            elif event.key == pygame.K_2:
+                self._use_skill_slot(1)
+                return
+            elif event.key == pygame.K_3:
+                self._use_skill_slot(2)
+                return
+            elif event.key == pygame.K_4:
+                self._use_skill_slot(3)
+                return
+            elif event.key == pygame.K_5:
+                self._use_skill_slot(4)
+                return
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            # Check skill buttons
+            for btn in getattr(self, 'skill_buttons', []):
+                if btn["rect"].collidepoint(event.pos):
+                    btn["action"]()
+                    return
+            
             # Check character sheet buttons first (close, tabs, etc.) before dragging
             for btn in getattr(self, 'character_sheet_buttons', []):
                 if btn["rect"].collidepoint(event.pos):
                     btn["action"]()
+                    return
+            
+            # Check if dragging combat log title bar
+            if getattr(self, 'combat_log_open', False) and hasattr(self, 'combat_log_title_bar'):
+                if self.combat_log_title_bar.collidepoint(event.pos):
+                    self.combat_log_dragging = True
+                    pos = self.combat_log_pos or (self.screen.get_width() - 320, 80)
+                    self.combat_log_drag_offset = (event.pos[0] - pos[0], event.pos[1] - pos[1])
                     return
             
             # Check if dragging character sheet title bar
@@ -207,11 +267,36 @@ class UIManager:
             if getattr(self, 'character_sheet_open_rect', None) and self.character_sheet_open_rect.collidepoint(event.pos):
                 self.character_sheet_open = not self.character_sheet_open
                 return
+            
+            # skills UI open/close button
+            if getattr(self, 'skills_ui_rect', None) and self.skills_ui_rect.collidepoint(event.pos):
+                self.skills_ui_open = not self.skills_ui_open
+                return
+            
+            # combat log toggle button
+            if getattr(self, 'combat_log_toggle_rect', None) and self.combat_log_toggle_rect.collidepoint(event.pos):
+                self.combat_log_open = not self.combat_log_open
+                return
+            
+            # skills UI modal buttons
+            for btn in getattr(self, 'skills_ui_buttons', []):
+                if btn['rect'].collidepoint(event.pos):
+                    btn['action']()
+                    return
         
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.character_sheet_dragging = False
+            self.combat_log_dragging = False
         
         if event.type == pygame.MOUSEMOTION:
+            if getattr(self, 'combat_log_dragging', False):
+                new_x = event.pos[0] - self.combat_log_drag_offset[0]
+                new_y = event.pos[1] - self.combat_log_drag_offset[1]
+                # Clamp to screen bounds
+                new_x = max(0, min(new_x, self.screen.get_width() - 300))
+                new_y = max(0, min(new_y, self.screen.get_height() - 400))
+                self.combat_log_pos = (new_x, new_y)
+            
             if getattr(self, 'character_sheet_dragging', False):
                 new_x = event.pos[0] - self.character_sheet_drag_offset[0]
                 new_y = event.pos[1] - self.character_sheet_drag_offset[1]
@@ -341,6 +426,58 @@ class UIManager:
             pygame.draw.rect(self.screen, (100, 100, 250), btn["rect"], border_radius=8)
             # outlined label
             self._blit_text_outlined(self.screen, self.title_font, btn["label"], btn["rect"].center, fg=(255,255,255), outline=(0,0,0), outline_width=2, center=True)
+        
+        # Draw equipped skill buttons (1-5 keys)
+        if player is not None and hasattr(player, 'equipped_skills'):
+            equipped = player.equipped_skills[:5]  # Max 5 skills
+            skill_btn_w, skill_btn_h = 80, 40
+            skill_start_x = screen_w - 740
+            skill_y = screen_h - 100
+            
+            for i, skill_id in enumerate(equipped):
+                skill_x = skill_start_x + i * (skill_btn_w + 10)
+                skill_rect = pygame.Rect(skill_x, skill_y, skill_btn_w, skill_btn_h)
+                
+                # Check if skill is usable (has mana, no cooldown)
+                can_use = True
+                skill_data = None
+                if hasattr(battle, 'skill_manager'):
+                    skill_data = battle.skill_manager.get_skill(skill_id)
+                    if skill_data:
+                        mana_cost = skill_data.get('mana_cost', 0)
+                        if player.current_mana < mana_cost:
+                            can_use = False
+                
+                # Color based on usability
+                btn_color = (50, 150, 200) if can_use else (80, 80, 80)
+                pygame.draw.rect(self.screen, btn_color, skill_rect, border_radius=6)
+                pygame.draw.rect(self.screen, (255, 255, 255), skill_rect, 2, border_radius=6)
+                
+                # Skill name (shortened)
+                skill_name = skill_id.replace('skill_', '').replace('_', ' ')[:8]
+                text_color = (255, 255, 255) if can_use else (120, 120, 120)
+                skill_text = pygame.font.Font(None, 18).render(skill_name, True, text_color)
+                self.screen.blit(skill_text, skill_text.get_rect(center=(skill_x + skill_btn_w//2, skill_y + 12)))
+                
+                # Key hint
+                key_hint = pygame.font.Font(None, 16).render(f"[{i+1}]", True, (200, 200, 100))
+                self.screen.blit(key_hint, (skill_x + 5, skill_y + skill_btn_h - 16))
+                
+                # Store for click handling
+                if not hasattr(self, 'skill_buttons'):
+                    self.skill_buttons = []
+                
+                def make_use_skill(sid=skill_id):
+                    def action():
+                        if hasattr(battle, 'player_use_skill'):
+                            battle.player_use_skill(sid)
+                    return action
+                
+                # Add to buttons for click handling (store separately to avoid conflicts)
+                if i >= len(getattr(self, 'skill_buttons', [])):
+                    self.skill_buttons.append({'rect': skill_rect, 'action': make_use_skill()})
+                else:
+                    self.skill_buttons[i] = {'rect': skill_rect, 'action': make_use_skill()}
 
         # Affichage des infos joueur / ennemi
         x = panel_x + 12
@@ -348,8 +485,42 @@ class UIManager:
         line_h = 28
 
         if player is not None:
+            # Player HP bar (draw bar first, then text)
+            bar_x, bar_y = x + 150, y
+            bar_width, bar_height = 200, 20
+            pygame.draw.rect(self.screen, (100, 100, 100), (bar_x, bar_y, bar_width, bar_height), border_radius=4)
+            hp_ratio = player.hp / max(1, player.max_hp)
+            filled_width = int(bar_width * hp_ratio)
+            hp_color = (100, 255, 100) if hp_ratio > 0.5 else (255, 200, 100) if hp_ratio > 0.25 else (255, 100, 100)
+            if filled_width > 0:
+                pygame.draw.rect(self.screen, hp_color, (bar_x, bar_y, filled_width, bar_height), border_radius=4)
+            pygame.draw.rect(self.screen, (255, 255, 255), (bar_x, bar_y, bar_width, bar_height), 2, border_radius=4)
+            
+            # Draw text AFTER bar so it appears on top
             self._blit_text_outlined(self.screen, self.small_font, f"Player HP: {player.hp}/{player.max_hp}", (x, y), fg=(255,255,255), outline=(0,0,0), outline_width=2)
+            
             y += line_h
+            
+            # Player Mana bar
+            current_mana = getattr(player, 'current_mana', 0)
+            max_mana = getattr(player, 'max_mana', 0)
+            if max_mana > 0:
+                # Mana bar (draw bar first, then text)
+                mana_bar_y = y
+                pygame.draw.rect(self.screen, (100, 100, 100), (bar_x, mana_bar_y, bar_width, bar_height), border_radius=4)
+                mana_ratio = current_mana / max(1, max_mana)
+                mana_filled = int(bar_width * mana_ratio)
+                if mana_filled > 0:
+                    pygame.draw.rect(self.screen, (100, 150, 255), (bar_x, mana_bar_y, mana_filled, bar_height), border_radius=4)
+                pygame.draw.rect(self.screen, (255, 255, 255), (bar_x, mana_bar_y, bar_width, bar_height), 2, border_radius=4)
+                
+                # Draw text AFTER bar
+                self._blit_text_outlined(self.screen, self.small_font, f"Mana: {current_mana}/{max_mana}", (x, y), fg=(150,200,255), outline=(0,0,0), outline_width=2)
+                if mana_filled > 0:
+                    pygame.draw.rect(self.screen, (100, 150, 255), (bar_x, mana_bar_y, mana_filled, bar_height), border_radius=4)
+                pygame.draw.rect(self.screen, (255, 255, 255), (bar_x, mana_bar_y, bar_width, bar_height), 2, border_radius=4)
+                
+                y += line_h
 
         if battle is not None and getattr(battle, "enemy", None):
             enemy = battle.enemy
@@ -492,11 +663,25 @@ class UIManager:
             self._blit_text_outlined(self.screen, self.small_font, hp_text, (bar_x + bar_width // 2, bar_y + bar_height // 2), fg=(255,255,255), outline=(0,0,0), outline_width=2, center=True)
 
         # Single Character Sheet button (replaces Inventory + Stats buttons)
-        char_sheet_btn = pygame.Rect(panel_x + panel_w - 170, panel_y + panel_h - 48, 160, 36)
+        char_sheet_btn = pygame.Rect(panel_x + panel_w - 170, panel_y + panel_h - 90, 160, 36)
         pygame.draw.rect(self.screen, (120, 100, 200), char_sheet_btn, border_radius=8)
         self._blit_text_outlined(self.screen, self.small_font, "Character (C)", char_sheet_btn.center, fg=(255,255,255), outline=(0,0,0), outline_width=2, center=True)
         # store for clicks
         self.character_sheet_open_rect = char_sheet_btn
+        
+        # Skills button
+        skills_btn = pygame.Rect(panel_x + panel_w - 170, panel_y + panel_h - 48, 160, 36)
+        pygame.draw.rect(self.screen, (200, 120, 100), skills_btn, border_radius=8)
+        self._blit_text_outlined(self.screen, self.small_font, "Skills (K)", skills_btn.center, fg=(255,255,255), outline=(0,0,0), outline_width=2, center=True)
+        self.skills_ui_rect = skills_btn
+        
+        # Combat Log toggle button
+        log_btn = pygame.Rect(panel_x + 10, panel_y + panel_h - 48, 140, 36)
+        log_color = (100, 200, 120) if self.combat_log_open else (80, 80, 80)
+        pygame.draw.rect(self.screen, log_color, log_btn, border_radius=8)
+        self._blit_text_outlined(self.screen, self.small_font, "Log (L)", log_btn.center, fg=(255,255,255), outline=(0,0,0), outline_width=2, center=True)
+        # Store rect for click detection (don't add to self.buttons - we draw it manually)
+        self.combat_log_toggle_rect = log_btn
 
         # Character Sheet Modal (tabbed: Equipment, Inventory, Stats)
         self.character_sheet_buttons = []
@@ -565,6 +750,14 @@ class UIManager:
             elif self.character_sheet_tab == 'stats':
                 self._draw_stats_tab(player, modal_x, content_y, modal_w, content_h)
 
+        # Skills UI Modal
+        if getattr(self, 'skills_ui_open', False) and player is not None and battle is not None:
+            self._draw_skills_ui(player, battle)
+        
+        # Combat Log Window (draggable)
+        if battle is not None:
+            self._draw_combat_log(battle)
+        
         # Draw floating damage texts (above all UI so they're visible)
         try:
             for f in list(self.floats):
@@ -650,6 +843,10 @@ class UIManager:
                     if item_data.get('defense'): stats_text.append(f"+{item_data['defense']} DEF")
                     if item_data.get('penetration'): stats_text.append(f"+{item_data['penetration']:.0f} PEN")
                     if item_data.get('max_hp'): stats_text.append(f"+{item_data['max_hp']} HP")
+                    if item_data.get('magic_power'): stats_text.append(f"+{item_data['magic_power']} MAG")
+                    if item_data.get('magic_penetration'): stats_text.append(f"+{item_data['magic_penetration']:.0f} M.PEN")
+                    if item_data.get('max_mana'): stats_text.append(f"+{item_data['max_mana']} MANA")
+                    if item_data.get('mana_regen'): stats_text.append(f"+{item_data['mana_regen']} M.REG")
                 
                 for i, stat in enumerate(stats_text[:2]):  # Show max 2 stats
                     self._blit_text_outlined(self.screen, self.small_font, stat, (slot_x + 80, name_y + 20 + i * 18), fg=(180,220,180), outline=(0,0,0), outline_width=1)
@@ -776,15 +973,36 @@ class UIManager:
             
             if sel:
                 detail_y = start_y + 3 * (cell_h + pad) + 20
-                detail_rect = pygame.Rect(modal_x + 30, detail_y, modal_w - 60, 80)
+                detail_rect = pygame.Rect(modal_x + 30, detail_y, modal_w - 60, 120)
                 pygame.draw.rect(self.screen, (40, 40, 60), detail_rect, border_radius=6)
                 
                 # Description
                 desc = sel['def'].get('description', 'No description') if sel.get('def') else 'No description'
                 self._blit_text_outlined(self.screen, self.small_font, desc[:80], (detail_rect.x + 10, detail_rect.y + 10), fg=(200,200,200), outline=(0,0,0), outline_width=1)
                 
+                # Stats display
+                if sel.get('def'):
+                    stats_y = detail_rect.y + 35
+                    stats = []
+                    item_def = sel['def']
+                    if item_def.get('attack'): stats.append(f"+{item_def['attack']} Attack")
+                    if item_def.get('defense'): stats.append(f"+{item_def['defense']} Defense")
+                    if item_def.get('max_hp'): stats.append(f"+{item_def['max_hp']} Max HP")
+                    if item_def.get('penetration'): stats.append(f"+{item_def['penetration']:.0f} Penetration")
+                    if item_def.get('magic_power'): stats.append(f"+{item_def['magic_power']} Magic Power")
+                    if item_def.get('magic_penetration'): stats.append(f"+{item_def['magic_penetration']:.0f} Magic Pen")
+                    if item_def.get('max_mana'): stats.append(f"+{item_def['max_mana']} Max Mana")
+                    if item_def.get('mana_regen'): stats.append(f"+{item_def['mana_regen']} Mana Regen")
+                    
+                    for i, stat in enumerate(stats[:4]):  # Show up to 4 stats
+                        col = i % 2
+                        row = i // 2
+                        stat_x = detail_rect.x + 10 + col * 200
+                        stat_y = stats_y + row * 20
+                        self._blit_text_outlined(self.screen, self.small_font, stat, (stat_x, stat_y), fg=(150,220,150), outline=(0,0,0), outline_width=1)
+                
                 # Action buttons
-                btn_y = detail_rect.y + 45
+                btn_y = detail_rect.y + 85
                 if sel.get('def') and sel['def'].get('type') in ('weapon', 'armor', 'offhand', 'relic'):
                     equip_rect = pygame.Rect(detail_rect.x + detail_rect.w - 110, btn_y, 100, 30)
                     pygame.draw.rect(self.screen, (100, 180, 100), equip_rect, border_radius=6)
@@ -802,18 +1020,37 @@ class UIManager:
                     pygame.draw.rect(self.screen, (180, 140, 60), use_rect, border_radius=6)
                     use_text = self.small_font.render('Use', True, (0, 0, 0))
                     self.screen.blit(use_text, use_text.get_rect(center=use_rect.center))
-                    def make_use(iid=sel['item_id'], idef=sel.get('def')):
+                    def make_use(iid=sel['item_id']):
                         def act():
-                            eff = idef.get('effect', {}) if idef else {}
-                            if eff.get('heal'):
-                                player.hp = min(player.max_hp, player.hp + eff.get('heal'))
-                            if player.remove_item(iid, 1):
+                            # Use the player's use_item method which handles all effect types correctly
+                            if player.use_item(iid):
                                 if getattr(battle, 'turn', None) == 'player':
                                     battle.turn = 'enemy'
                                     battle.last_action_time = pygame.time.get_ticks() / 1000.0
                                 self.inventory_selected = None
                         return act
                     self.character_sheet_buttons.append({'rect': use_rect, 'action': make_use()})
+                elif sel.get('def') and sel['def'].get('type') == 'container':
+                    # Container - add Open button
+                    open_rect = pygame.Rect(detail_rect.x + detail_rect.w - 110, btn_y, 100, 30)
+                    pygame.draw.rect(self.screen, (220, 180, 60), open_rect, border_radius=6)
+                    open_text = self.small_font.render('Open', True, (0, 0, 0))
+                    self.screen.blit(open_text, open_text.get_rect(center=open_rect.center))
+                    def make_open(iid=sel['item_id'], idef=sel.get('def')):
+                        def act():
+                            # Open container
+                            granted = player.open_container(idef)
+                            player.remove_item(iid, 1)
+                            # Add combat log messages if battle exists
+                            if battle and hasattr(battle, 'add_log'):
+                                for grant_type, grant_id, qty in granted:
+                                    if grant_type == 'skill':
+                                        battle.add_log(f"Learned skill: {grant_id}!", 'buff')
+                                    elif grant_type == 'item':
+                                        battle.add_log(f"Received: {grant_id} x{qty}!", 'info')
+                            self.inventory_selected = None
+                        return act
+                    self.character_sheet_buttons.append({'rect': open_rect, 'action': make_open()})
     
     def _draw_stats_tab(self, player, modal_x, content_y, modal_w, content_h):
         """Draw player stats with pagination"""
@@ -837,6 +1074,12 @@ class UIManager:
             (f"  Attack: {player.atk}", (255, 150, 100)),
             (f"  Defense: {player.defense} ({def_pct:.1f}% reduction)", (150, 200, 255)),
             (f"  Penetration: {getattr(player, 'penetration', 0):.1f} ({pen_pct:.1f}%)", (255, 180, 255)),
+            ("", None),
+            ("Magic Stats", None),
+            (f"  Mana: {getattr(player, 'current_mana', 0)} / {getattr(player, 'max_mana', 0)}", (100, 200, 255)),
+            (f"  Mana Regen: {getattr(player, 'mana_regen', 0)}/turn", (150, 220, 255)),
+            (f"  Magic Power: {getattr(player, 'magic_power', 0)}", (200, 150, 255)),
+            (f"  Magic Penetration: {getattr(player, 'magic_penetration', 0)}", (220, 170, 255)),
             ("", None),
             ("Critical Stats", None),
             (f"  Crit Chance: {int(getattr(player, 'critchance', 0.0) * 100)}%", (255, 100, 100)),
@@ -910,3 +1153,218 @@ class UIManager:
             # Page indicator
             page_text = self.small_font.render(f"Page {page + 1}/{total_pages}", True, (200, 200, 200))
             self.screen.blit(page_text, (modal_x + modal_w // 2 - 30, btn_y + 5))
+    
+    def _draw_skills_ui(self, player, battle):
+        """Draw Skills UI modal with unlocked skills, lock status, and equip options"""
+        modal_w, modal_h = 700, 500
+        modal_x = (self.screen.get_width() - modal_w) // 2
+        modal_y = (self.screen.get_height() - modal_h) // 2
+        
+        # Reset buttons list
+        self.skills_ui_buttons = []
+        
+        # Modal background
+        modal_surf = pygame.Surface((modal_w, modal_h))
+        modal_surf.fill((30, 30, 40))
+        self.screen.blit(modal_surf, (modal_x, modal_y))
+        
+        # Title bar
+        title_bar = pygame.Rect(modal_x, modal_y, modal_w, 45)
+        pygame.draw.rect(self.screen, (40, 40, 60), title_bar)
+        self._blit_text_outlined(self.screen, self.title_font, "Skills", (modal_x + 20, modal_y + 12), fg=(255,255,255), outline=(0,0,0), outline_width=2)
+        
+        # Close button
+        close_rect = pygame.Rect(modal_x + modal_w - 90, modal_y + 10, 80, 30)
+        pygame.draw.rect(self.screen, (180, 80, 80), close_rect, border_radius=6)
+        ct = self.small_font.render('Close', True, (0, 0, 0))
+        self.screen.blit(ct, ct.get_rect(center=close_rect.center))
+        self.skills_ui_buttons.append({'rect': close_rect, 'action': lambda: setattr(self, 'skills_ui_open', False)})
+        
+        # Get all skills and player's unlocked skills
+        all_skills = battle.skill_manager.skills if hasattr(battle, 'skill_manager') else {}
+        unlocked_skills = getattr(player, 'skills', [])
+        equipped_skills = getattr(player, 'equipped_skills', [])[:5]  # Max 5 equipped
+        
+        # Split into unlocked and locked
+        unlocked_list = [(sid, all_skills[sid]) for sid in unlocked_skills if sid in all_skills]
+        locked_list = [(sid, skill) for sid, skill in all_skills.items() if sid not in unlocked_skills]
+        
+        # Content area
+        content_y = modal_y + 50
+        content_h = modal_h - 60
+        
+        # Draw unlocked skills section
+        section_y = content_y + 10
+        self._blit_text_outlined(self.screen, self.small_font, f"Unlocked Skills ({len(unlocked_list)})", (modal_x + 20, section_y), fg=(100, 255, 100), outline=(0,0,0), outline_width=2)
+        
+        grid_y = section_y + 30
+        grid_x = modal_x + 20
+        skill_w = 200
+        skill_h = 80
+        cols = 3
+        
+        for idx, (skill_id, skill) in enumerate(unlocked_list[:9]):  # Show max 9 unlocked
+            col = idx % cols
+            row = idx // cols
+            sx = grid_x + col * (skill_w + 10)
+            sy = grid_y + row * (skill_h + 10)
+            
+            # Skill box
+            is_equipped = skill_id in equipped_skills
+            box_color = (80, 120, 80) if is_equipped else (60, 60, 90)
+            skill_rect = pygame.Rect(sx, sy, skill_w, skill_h)
+            pygame.draw.rect(self.screen, box_color, skill_rect, border_radius=6)
+            
+            # Skill name
+            skill_name = skill.get('name', skill_id)[:20]
+            self._blit_text_outlined(self.screen, self.small_font, skill_name, (sx + 5, sy + 5), fg=(255, 255, 255), outline=(0,0,0), outline_width=1)
+            
+            # Mana cost
+            mana_cost = skill.get('mana_cost', 0)
+            mana_text = f"Mana: {mana_cost}"
+            self._blit_text_outlined(self.screen, self.small_font, mana_text, (sx + 5, sy + 25), fg=(100, 150, 255), outline=(0,0,0), outline_width=1)
+            
+            # Type and element
+            skill_type = skill.get('type', '?')
+            element = skill.get('element', 'neutral')
+            info_text = f"{skill_type.capitalize()} / {element.capitalize()}"
+            self._blit_text_outlined(self.screen, self.small_font, info_text[:25], (sx + 5, sy + 42), fg=(200, 200, 200), outline=(0,0,0), outline_width=1)
+            
+            # Equip/Unequip button
+            if is_equipped:
+                btn_rect = pygame.Rect(sx + skill_w - 75, sy + skill_h - 28, 70, 24)
+                pygame.draw.rect(self.screen, (180, 80, 80), btn_rect, border_radius=4)
+                btn_text = self.small_font.render('Unequip', True, (0, 0, 0))
+                self.screen.blit(btn_text, btn_text.get_rect(center=btn_rect.center))
+                self.skills_ui_buttons.append({'rect': btn_rect, 'action': lambda sid=skill_id: self._unequip_skill(player, sid)})
+            else:
+                if len(equipped_skills) < 5:
+                    btn_rect = pygame.Rect(sx + skill_w - 75, sy + skill_h - 28, 70, 24)
+                    pygame.draw.rect(self.screen, (80, 180, 80), btn_rect, border_radius=4)
+                    btn_text = self.small_font.render('Equip', True, (0, 0, 0))
+                    self.screen.blit(btn_text, btn_text.get_rect(center=btn_rect.center))
+                    self.skills_ui_buttons.append({'rect': btn_rect, 'action': lambda sid=skill_id: self._equip_skill(player, sid)})
+        
+        # Draw locked skills section
+        locked_section_y = grid_y + 270
+        self._blit_text_outlined(self.screen, self.small_font, f"Locked Skills ({len(locked_list)})", (modal_x + 20, locked_section_y), fg=(255, 100, 100), outline=(0,0,0), outline_width=2)
+        
+        locked_grid_y = locked_section_y + 30
+        for idx, (skill_id, skill) in enumerate(locked_list[:6]):  # Show max 6 locked
+            col = idx % cols
+            row = idx // cols
+            sx = grid_x + col * (skill_w + 10)
+            sy = locked_grid_y + row * (skill_h + 10)
+            
+            # Locked skill box (dimmed)
+            skill_rect = pygame.Rect(sx, sy, skill_w, skill_h)
+            pygame.draw.rect(self.screen, (40, 40, 50), skill_rect, border_radius=6)
+            
+            # Skill name (grayed out)
+            skill_name = skill.get('name', skill_id)[:20]
+            self._blit_text_outlined(self.screen, self.small_font, skill_name, (sx + 5, sy + 5), fg=(120, 120, 120), outline=(0,0,0), outline_width=1)
+            
+            # Lock icon
+            lock_text = "🔒 LOCKED"
+            self._blit_text_outlined(self.screen, self.small_font, lock_text, (sx + 5, sy + 25), fg=(180, 80, 80), outline=(0,0,0), outline_width=1)
+            
+            # Unlock requirements (if defined)
+            requirements = skill.get('unlock_requirements', {})
+            if requirements:
+                req_level = requirements.get('level')
+                req_item = requirements.get('item_equipped')
+                if req_level:
+                    req_text = f"Req: Lvl {req_level}"
+                    self._blit_text_outlined(self.screen, self.small_font, req_text, (sx + 5, sy + 45), fg=(180, 180, 100), outline=(0,0,0), outline_width=1)
+                elif req_item:
+                    req_text = f"Req: {req_item[:15]}"
+                    self._blit_text_outlined(self.screen, self.small_font, req_text, (sx + 5, sy + 45), fg=(180, 180, 100), outline=(0,0,0), outline_width=1)
+    
+    def _equip_skill(self, player, skill_id):
+        """Equip a skill to active skill bar"""
+        if not hasattr(player, 'equipped_skills'):
+            player.equipped_skills = []
+        if len(player.equipped_skills) < 5 and skill_id not in player.equipped_skills:
+            player.equipped_skills.append(skill_id)
+    
+    def _unequip_skill(self, player, skill_id):
+        """Unequip a skill from active skill bar"""
+        if hasattr(player, 'equipped_skills') and skill_id in player.equipped_skills:
+            player.equipped_skills.remove(skill_id)
+    
+    def _use_skill_slot(self, slot_index):
+        """Use skill in the given slot (0-4)"""
+        if not hasattr(self, 'battle') or self.battle is None:
+            return
+        player = self.battle.player
+        if not hasattr(player, 'equipped_skills'):
+            return
+        if slot_index >= len(player.equipped_skills):
+            return
+        skill_id = player.equipped_skills[slot_index]
+        if hasattr(self.battle, 'player_use_skill'):
+            self.battle.player_use_skill(skill_id)
+    
+    def _draw_combat_log(self, battle):
+        """Draw draggable combat log window"""
+        if not getattr(self, 'combat_log_open', False):
+            return
+        
+        if battle is None or not hasattr(battle, 'combat_log'):
+            return
+        
+        # Window dimensions
+        log_w, log_h = 300, 400
+        
+        # Use stored position or default to right side
+        if self.combat_log_pos is None:
+            log_x = self.screen.get_width() - log_w - 20
+            log_y = 80
+            self.combat_log_pos = (log_x, log_y)
+        else:
+            log_x, log_y = self.combat_log_pos
+        
+        # Background
+        bg_rect = pygame.Rect(log_x, log_y, log_w, log_h)
+        pygame.draw.rect(self.screen, (30, 30, 40, 240), bg_rect, border_radius=10)
+        pygame.draw.rect(self.screen, (100, 100, 120), bg_rect, 2, border_radius=10)
+        
+        # Title bar (draggable)
+        title_bar = pygame.Rect(log_x, log_y, log_w, 30)
+        pygame.draw.rect(self.screen, (50, 50, 70), title_bar, border_radius=10)
+        title_text = self.small_font.render("Combat Log", True, (255, 255, 255))
+        self.screen.blit(title_text, (log_x + 10, log_y + 5))
+        self.combat_log_title_bar = title_bar
+        
+        # Get recent log entries (last 20)
+        log_entries = battle.combat_log[-20:]
+        
+        # Draw log entries from bottom to top (newest at bottom)
+        entry_y = log_y + log_h - 35
+        line_height = 18
+        
+        for entry in reversed(log_entries):
+            if entry_y <= log_y + 35:
+                break  # Reached top of visible area
+            
+            msg = entry.get('message', '')
+            category = entry.get('category', 'info')
+            
+            # Color based on category
+            color_map = {
+                'damage': (255, 100, 100),
+                'heal': (100, 255, 100),
+                'buff': (100, 200, 255),
+                'debuff': (255, 150, 100),
+                'info': (200, 200, 200),
+                'skill': (200, 150, 255),
+            }
+            color = color_map.get(category, (200, 200, 200))
+            
+            # Render message (truncate if too long)
+            if len(msg) > 35:
+                msg = msg[:32] + "..."
+            
+            msg_surf = self.small_font.render(msg, True, color)
+            self.screen.blit(msg_surf, (log_x + 10, entry_y))
+            entry_y -= line_height

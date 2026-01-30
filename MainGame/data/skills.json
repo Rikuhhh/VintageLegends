@@ -1,46 +1,228 @@
 {
   "skills": [
     {
-      "id": "str_power",
-      "name": "Force accrue",
-      "type": "stat",
-      "stat_bonus": {
-        "atk": 3
+      "id": "skill_shield_bash",
+      "name": "Shield Bash",
+      "type": "damage",
+      "element": "physical",
+      "mana_cost": 15,
+      "power": 15,
+      "scaling_stat": "atk",
+      "target": "single",
+      "effectiveness": {
+        "strong_vs": [
+          "beast",
+          "undead"
+        ],
+        "weak_vs": []
       },
-      "cost_points": 1,
-      "description": "Augmente l'attaque."
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "atk",
+          "value": -3,
+          "duration": 2
+        }
+      ],
+      "cooldown": 0,
+      "description": "Coup de bouclier qui assomme l'ennemi, réduisant son attaque pendant 2 tours."
     },
     {
-      "id": "vitality_boost",
-      "name": "Vitalité",
-      "type": "stat",
-      "stat_bonus": {
-        "hp": 20
+      "id": "skill_arcane_bolt",
+      "name": "Arcane Bolt",
+      "type": "damage",
+      "element": "arcane",
+      "mana_cost": 20,
+      "power": 25,
+      "scaling_stat": "magic_power",
+      "penetration": 8.0,
+      "target": "single",
+      "effectiveness": {
+        "strong_vs": [
+          "demon",
+          "undead"
+        ],
+        "weak_vs": [
+          "dragon"
+        ]
       },
-      "cost_points": 1,
-      "description": "Augmente les PV max."
+      "effects": [],
+      "cooldown": 0,
+      "description": "Éclair magique arcanique. Utilise la puissance magique."
     },
     {
-      "id": "crit_training",
-      "name": "Entraînement critique",
-      "type": "stat",
-      "stat_bonus": {
-        "crit_chance": 0.03
-      },
-      "cost_points": 1,
-      "description": "Augmente la chance de coup critique."
+      "id": "skill_mana_shield",
+      "name": "Mana Shield",
+      "type": "buff",
+      "element": "neutral",
+      "mana_cost": 25,
+      "power": 0,
+      "target": "self",
+      "effectiveness": {},
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "def",
+          "value": 10,
+          "duration": 3
+        }
+      ],
+      "cooldown": 0,
+      "description": "Bouclier magique augmentant la défense pour 3 tours."
     },
     {
-      "id": "flame_mastery",
-      "name": "Maîtrise du feu",
-      "type": "skill_unlock",
-      "requires": {
-        "class": "mage",
+      "id": "skill_shadow_strike",
+      "name": "Shadow Strike",
+      "type": "counter",
+      "element": "dark",
+      "mana_cost": 30,
+      "power": 20,
+      "scaling_stat": "atk",
+      "target": "self",
+      "effectiveness": {},
+      "effects": [
+        {
+          "type": "counter",
+          "damage_percent": 0.5,
+          "duration": 2
+        }
+      ],
+      "cooldown": 0,
+      "description": "Mode contre-attaque: esquive le prochain coup et riposte avec 50% des dégâts."
+    },
+    {
+      "id": "skill_fireball_advanced",
+      "name": "Fireball Advanced",
+      "type": "damage",
+      "element": "fire",
+      "mana_cost": 35,
+      "power": 40,
+      "scaling_stat": "magic_power",
+      "penetration": 12.0,
+      "target": "single",
+      "effectiveness": {
+        "strong_vs": [
+          "beast",
+          "undead",
+          "construct"
+        ],
+        "weak_vs": [
+          "elemental",
+          "demon"
+        ]
+      },
+      "effects": [
+        {
+          "type": "dot",
+          "damage": 5,
+          "duration": 3
+        }
+      ],
+      "cooldown": 2,
+      "unlock_requirements": {
         "level": 5
       },
-      "grants_attack_id": "atk_fireball",
-      "cost_points": 2,
-      "description": "Débloque Fireball pour le mage."
+      "description": "Grande boule de feu infligeant des dégâts massifs avec brûlure (5 dmg/tour x3)."
+    },
+    {
+      "id": "skill_heal_minor",
+      "name": "Minor Heal",
+      "type": "heal",
+      "element": "light",
+      "mana_cost": 20,
+      "power": 30,
+      "target": "self",
+      "effectiveness": {},
+      "effects": [],
+      "cooldown": 0,
+      "description": "Soigne 30 PV."
+    },
+    {
+      "id": "skill_power_strike",
+      "name": "Power Strike",
+      "type": "damage",
+      "description": "Coup puissant avec haute pénétration d'armure.",
+      "element": "physical",
+      "mana_cost": 25,
+      "power": 20,
+      "scaling_stat": "atk",
+      "penetration": 15.0,
+      "cooldown": 1,
+      "target": "single",
+      "effectiveness": {},
+      "effects": []
+    },
+    {
+      "id": "skill_ice_lance",
+      "name": "Ice Lance",
+      "type": "damage",
+      "element": "ice",
+      "mana_cost": 30,
+      "power": 35,
+      "scaling_stat": "magic_power",
+      "penetration": 10.0,
+      "target": "single",
+      "effectiveness": {
+        "strong_vs": [
+          "dragon",
+          "elemental"
+        ],
+        "weak_vs": []
+      },
+      "effects": [
+        {
+          "type": "debuff",
+          "stat": "atk",
+          "value": -5,
+          "duration": 2
+        }
+      ],
+      "cooldown": 0,
+      "description": "Lance de glace ralentissant l'ennemi."
+    },
+    {
+      "id": "skill_battle_cry",
+      "name": "Battle Cry",
+      "type": "buff",
+      "element": "neutral",
+      "mana_cost": 20,
+      "power": 0,
+      "target": "self",
+      "effectiveness": {},
+      "effects": [
+        {
+          "type": "buff",
+          "stat": "atk",
+          "value": 8,
+          "duration": 3
+        }
+      ],
+      "cooldown": 0,
+      "description": "Cri de guerre augmentant l'attaque pour 3 tours."
+    },
+    {
+      "id": "skill_lightning_bolt",
+      "name": "Lightning Bolt",
+      "type": "damage",
+      "element": "lightning",
+      "mana_cost": 40,
+      "power": 50,
+      "scaling_stat": "magic_power",
+      "penetration": 20.0,
+      "target": "single",
+      "effectiveness": {
+        "strong_vs": [
+          "construct",
+          "elemental"
+        ],
+        "weak_vs": []
+      },
+      "effects": [],
+      "cooldown": 3,
+      "unlock_requirements": {
+        "level": 10
+      },
+      "description": "Éclair puissant avec forte pénétration magique."
     }
   ]
 }

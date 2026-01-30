@@ -308,6 +308,32 @@ if saved:
     player.base_agility = saved.get('base_agility', getattr(player, 'base_agility', 0))
     # restore canonical base max HP (used for deterministic recalculation)
     player.base_max_hp = saved.get('base_max_hp', getattr(player, 'base_max_hp', getattr(player, 'max_hp', 100)))
+    # restore mana stats
+    player.current_mana = saved.get('current_mana', getattr(player, 'current_mana', 0))
+    player.base_max_mana = saved.get('base_max_mana', getattr(player, 'base_max_mana', 0))
+    player.base_mana_regen = saved.get('base_mana_regen', getattr(player, 'base_mana_regen', 0))
+    player.base_magic_power = saved.get('base_magic_power', getattr(player, 'base_magic_power', 0))
+    player.base_magic_penetration = saved.get('base_magic_penetration', getattr(player, 'base_magic_penetration', 0))
+    # restore skills
+    player.skills = saved.get('skills', [])
+    player.equipped_skills = saved.get('equipped_skills', [])
+    player.skill_cooldowns = saved.get('skill_cooldowns', {})
+    
+    # If skills are empty (old save without skills), load starting_skills from character
+    if not player.skills:
+        try:
+            selected_char_id = saved.get('selected_character')
+            if selected_char_id:
+                characters = load_json('characters.json', {}).get('characters', [])
+                for char in characters:
+                    if char.get('id') == selected_char_id or char.get('name') == saved.get('name'):
+                        starting_skills = char.get('starting_skills', [])
+                        player.skills = list(starting_skills)
+                        print(f"✨ Loaded {len(starting_skills)} starting skills for {char.get('name')}")
+                        break
+        except Exception as e:
+            print(f"Warning: Could not load starting skills: {e}")
+    
     player.unspent_points = saved.get('unspent_points', getattr(player, 'unspent_points', 0))
     player.permanent_upgrades = saved.get('permanent_upgrades', getattr(player, 'permanent_upgrades', {}))
     player.challenge_coins = saved.get('challenge_coins', getattr(player, 'challenge_coins', 0))
@@ -398,6 +424,17 @@ else:
 
     player = Player(player_template)
     player.selected_character = sel_id
+    
+    # Load starting skills from character data
+    starting_skills = player_template.get('starting_skills', [])
+    if starting_skills:
+        player.skills = list(starting_skills)
+        print(f"✨ Learned {len(starting_skills)} starting skills")
+        for skill_id in starting_skills:
+            print(f"  - {skill_id}")
+    else:
+        player.skills = []
+    
     battle = BattleSystem(player)
     # Initialize starting zone for new game
     if zones:
@@ -760,9 +797,16 @@ def main():
                         if hover_item.get('attack'): stats.append(f"Attack: +{hover_item['attack']}")
                         if hover_item.get('defense'): stats.append(f"Defense: +{hover_item['defense']}")
                         if hover_item.get('hp'): stats.append(f"HP: +{hover_item['hp']}")
+                        if hover_item.get('max_hp'): stats.append(f"Max HP: +{hover_item['max_hp']}")
                         if hover_item.get('critchance'): stats.append(f"Crit: +{int(hover_item['critchance']*100)}%")
                         if hover_item.get('critdamage'): stats.append(f"Crit Dmg: +{hover_item['critdamage']}x")
                         if hover_item.get('penetration'): stats.append(f"Pen: +{hover_item['penetration']}")
+                        
+                        # Magic stats
+                        if hover_item.get('magic_power'): stats.append(f"Magic Power: +{hover_item['magic_power']}")
+                        if hover_item.get('magic_penetration'): stats.append(f"Magic Pen: +{hover_item['magic_penetration']}")
+                        if hover_item.get('max_mana'): stats.append(f"Max Mana: +{hover_item['max_mana']}")
+                        if hover_item.get('mana_regen'): stats.append(f"Mana Regen: +{hover_item['mana_regen']}")
                         
                         for stat_text in stats:
                             stat_surf = small_font.render(stat_text, True, (150, 255, 150))
@@ -889,6 +933,33 @@ def main():
             shadow_text = hp_font.render(f"{player.hp}/{player.max_hp}", True, (0, 0, 0))
             screen.blit(shadow_text, (hp_text_rect.x + 1, hp_text_rect.y + 1))
             screen.blit(hp_text, hp_text_rect)
+            
+            # Mana bar below HP bar
+            current_mana = getattr(player, 'current_mana', 0)
+            max_mana = getattr(player, 'max_mana', 0)
+            if max_mana > 0:
+                mana_bar_y = bar_y + bar_height + 5
+                
+                # Background bar (dark blue)
+                pygame.draw.rect(screen, (0, 0, 80), (bar_x, mana_bar_y, bar_width, bar_height), border_radius=4)
+                
+                # Mana bar (blue)
+                mana_ratio = max(0, min(1, current_mana / max_mana)) if max_mana > 0 else 0
+                mana_width = int(bar_width * mana_ratio)
+                if mana_width > 0:
+                    mana_color = (100, 150, 255)
+                    pygame.draw.rect(screen, mana_color, (bar_x, mana_bar_y, mana_width, bar_height), border_radius=4)
+                
+                # Border
+                pygame.draw.rect(screen, (255, 255, 255), (bar_x, mana_bar_y, bar_width, bar_height), width=2, border_radius=4)
+                
+                # Mana Text
+                mana_text = hp_font.render(f"{current_mana}/{max_mana}", True, (255, 255, 255))
+                mana_text_rect = mana_text.get_rect(center=(bar_x + bar_width // 2, mana_bar_y + bar_height // 2))
+                # Draw text shadow
+                mana_shadow = hp_font.render(f"{current_mana}/{max_mana}", True, (0, 0, 0))
+                screen.blit(mana_shadow, (mana_text_rect.x + 1, mana_text_rect.y + 1))
+                screen.blit(mana_text, mana_text_rect)
         
         ui.draw(player, battle)
         pygame.display.flip()

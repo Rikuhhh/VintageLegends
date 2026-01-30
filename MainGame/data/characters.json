@@ -8,8 +8,15 @@
       "base_def": 4,
       "base_crit_chance": 0.05,
       "base_crit_mult": 1.5,
+      "base_mana": 50,
+      "base_mana_regen": 5,
+      "base_magic_power": 2,
+      "base_magic_penetration": 0,
       "starting_attacks": [
         "atk_slash"
+      ],
+      "starting_skills": [
+        "skill_shield_bash"
       ],
       "skill_tree_points_per_level": 1,
       "description": "Personnage tank, facile à prendre en main."
@@ -22,9 +29,17 @@
       "base_def": 2,
       "base_crit_chance": 0.07,
       "base_crit_mult": 1.8,
+      "base_mana": 100,
+      "base_mana_regen": 10,
+      "base_magic_power": 8,
+      "base_magic_penetration": 5,
       "starting_attacks": [
         "atk_fireball",
         "atk_heal"
+      ],
+      "starting_skills": [
+        "skill_arcane_bolt",
+        "skill_mana_shield"
       ],
       "skill_tree_points_per_level": 1,
       "description": "Forte puissance magique, fragile en HP."
@@ -37,8 +52,15 @@
       "base_def": 2,
       "base_crit_chance": 0.25,
       "base_crit_mult": 2.5,
+      "base_mana": 70,
+      "base_mana_regen": 7,
+      "base_magic_power": 3,
+      "base_magic_penetration": 2,
       "starting_attacks": [
         "atk_multi_stab"
+      ],
+      "starting_skills": [
+        "skill_shadow_strike"
       ],
       "skill_tree_points_per_level": 1,
       "description": "Dégâts critiques élevés."

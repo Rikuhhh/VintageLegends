@@ -31,6 +31,8 @@ class Enemy:
         # Defense stored as raw value, will be converted to % when calculating damage
         # Initialized to 0, will be set later when creating from monster data
         self.defense = 0
+        # Magic defense (separate from physical defense)
+        self.magic_defense = 0
         # Penetration stat (most enemies won't have this)
         self.penetration = 0.0
 
@@ -166,12 +168,15 @@ class Enemy:
         gold_base = int(chosen.get('gold_base', 1))
         xp_base = int(chosen.get('xp_base', 1))
         def_base = int(chosen.get('def_base', 0))
+        magic_def_base = int(chosen.get('magic_def_base', 0))
         pen_base = float(chosen.get('pen_base', 0.0))
 
         hp = Enemy._scale_value(hp_base, wave, hp_pct)
         atk = Enemy._scale_value(atk_base, wave, atk_pct)
         # Defense scales slower (0.015 per wave instead of 0.025)
         defense = Enemy._scale_value(def_base, wave, 0.015)
+        # Magic defense scales same as physical defense
+        magic_defense = Enemy._scale_value(magic_def_base, wave, 0.015)
         # gold/xp scaling: use simple formulas if provided in scaling_notes
         try:
             gold = int(round(gold_base * (1 + wave * 0.05)))
@@ -185,6 +190,7 @@ class Enemy:
         e = Enemy(name=f"{chosen.get('name', 'Enemy')} Lv.{wave}", hp=hp, atk=atk, gold=gold, xp=xp, id=chosen.get('id'))
         # Add defense and penetration
         e.defense = defense
+        e.magic_defense = magic_defense
         e.penetration = pen_base  # Penetration doesn't scale with wave for enemies
         # classification comes from monster def (normal/elite/miniboss/boss). Category is an optional tag like 'demon'/'dragon'.
         e.classification = chosen.get('classification', 'normal')
@@ -193,6 +199,11 @@ class Enemy:
         # Add image attribute
         e.image = chosen.get('image', None)
         return e
+    
+    @property
+    def is_boss(self):
+        """Returns True if this enemy is a boss or miniboss"""
+        return self.classification in ('boss', 'miniboss')
 
     @staticmethod
     def _calculate_effective_stat(raw_value, soft_cap, hard_cap):

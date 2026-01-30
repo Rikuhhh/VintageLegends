@@ -59,9 +59,9 @@
       "id": "legendary_staff",
       "name": "Sceptre légendaire",
       "type": "weapon",
-      "description": "Très rare. Ignore une partie de l'armure.",
-      "attack": 5,
-      "penetration": 5.0,
+      "description": "Très rare. Puissance magique légendaire.",
+      "magic_power": 25,
+      "magic_penetration": 20.0,
       "critchance": 0.3,
       "critdamage": 0.5,
       "cost": 600,
@@ -164,15 +164,15 @@
       "id": "spell_tome",
       "name": "Tome de sorts",
       "type": "offhand",
-      "attack": 8,
-      "penetration": 10,
+      "magic_power": 15,
+      "magic_penetration": 10,
       "cost": 90,
       "shopchance": 0.4,
       "goldvariation": [
         -0.15,
         0.2
       ],
-      "description": "Livre magique augmentant la puissance et la pénétration."
+      "description": "Livre magique augmentant la puissance et la pénétration magique."
     },
     {
       "id": "power_ring",
@@ -259,6 +259,193 @@
       "droppable": true,
       "dropped_by": "dragon",
       "drop_chance": 0.15
+    },
+    {
+      "id": "mana_potion",
+      "name": "Potion de mana",
+      "type": "consumable",
+      "cost": 25,
+      "droppable": true,
+      "dropped_by": "demon",
+      "drop_chance": 0.15,
+      "effect": {
+        "restore_mana": 30
+      },
+      "description": "Restaure 30 points de mana."
+    },
+    {
+      "id": "greater_mana_potion",
+      "name": "Grande potion de mana",
+      "type": "consumable",
+      "cost": 50,
+      "droppable": true,
+      "dropped_by": "dragon",
+      "drop_chance": 0.08,
+      "effect": {
+        "restore_mana": 60
+      },
+      "description": "Restaure 60 points de mana."
+    },
+    {
+      "id": "small_health_elixir",
+      "name": "Petit élixir de santé",
+      "type": "consumable",
+      "cost": 30,
+      "shopchance": 0.9,
+      "goldvariation": [-0.1, 0.2],
+      "effect": {
+        "heal_percent": 0.25
+      },
+      "description": "Restaure 25% des PV max."
+    },
+    {
+      "id": "medium_health_elixir",
+      "name": "Élixir de santé moyen",
+      "type": "consumable",
+      "cost": 60,
+      "shopchance": 0.6,
+      "goldvariation": [-0.1, 0.15],
+      "effect": {
+        "heal_percent": 0.50
+      },
+      "description": "Restaure 50% des PV max."
+    },
+    {
+      "id": "large_health_elixir",
+      "name": "Grand élixir de santé",
+      "type": "consumable",
+      "cost": 120,
+      "shopchance": 0.3,
+      "goldvariation": [-0.1, 0.1],
+      "effect": {
+        "heal_percent": 0.75
+      },
+      "description": "Restaure 75% des PV max."
+    },
+    {
+      "id": "wizard_staff",
+      "name": "Bâton de sorcier",
+      "type": "weapon",
+      "description": "Bâton magique augmentant la puissance magique.",
+      "attack": 2,
+      "magic_power": 12,
+      "magic_penetration": 8.0,
+      "cost": 80,
+      "shopchance": 0.5,
+      "goldvariation": [-0.15, 0.2]
+    },
+    {
+      "id": "arcane_tome",
+      "name": "Tome arcanique",
+      "type": "offhand",
+      "description": "Livre de sorts ancien augmentant la puissance et pénétration magique.",
+      "magic_power": 10,
+      "magic_penetration": 12.0,
+      "cost": 100,
+      "shopchance": 0.4,
+      "goldvariation": [-0.1, 0.15]
+    },
+    {
+      "id": "mage_robes",
+      "name": "Robe de mage",
+      "type": "armor",
+      "description": "Robe enchantée augmentant la défense magique et le mana.",
+      "defense": 6,
+      "max_mana": 30,
+      "magic_power": 5,
+      "cost": 90,
+      "shopchance": 0.5,
+      "goldvariation": [-0.15, 0.2]
+    },
+    {
+      "id": "crystal_ring",
+      "name": "Anneau de cristal",
+      "type": "relic",
+      "description": "Anneau magique augmentant la puissance et régénération de mana.",
+      "magic_power": 8,
+      "mana_regen": 3,
+      "cost": 110,
+      "shopchance": 0.35,
+      "goldvariation": [-0.1, 0.15]
+    },
+    {
+      "id": "enchanted_amulet",
+      "name": "Amulette enchantée",
+      "type": "relic",
+      "description": "Amulette augmentant à la fois le mana max et la puissance magique.",
+      "max_mana": 40,
+      "magic_power": 6,
+      "mana_regen": 2,
+      "cost": 130,
+      "shopchance": 0.3,
+      "goldvariation": [-0.1, 0.1]
+    },
+    {
+      "id": "wooden_chest",
+      "name": "Coffre en bois",
+      "type": "container",
+      "description": "Coffre basique contenant potions et objets communs.",
+      "loot_pool": [
+        {"item_id": "potion", "chance": 0.6, "qty": 2},
+        {"item_id": "mana_potion", "chance": 0.4, "qty": 1},
+        {"item_id": "dull_sword", "chance": 0.3, "qty": 1},
+        {"skill_id": "skill_heal_minor", "chance": 0.15}
+      ],
+      "cost": 50,
+      "shopchance": 0.5,
+      "goldvariation": [-0.1, 0.2]
+    },
+    {
+      "id": "iron_chest",
+      "name": "Coffre de fer",
+      "type": "container",
+      "description": "Coffre solide avec équipement et skills de qualité.",
+      "loot_pool": [
+        {"item_id": "iron_sword", "chance": 0.4, "qty": 1},
+        {"item_id": "steel_armor", "chance": 0.3, "qty": 1},
+        {"item_id": "medium_health_elixir", "chance": 0.5, "qty": 1},
+        {"skill_id": "skill_power_strike", "chance": 0.25},
+        {"skill_id": "skill_ice_lance", "chance": 0.2}
+      ],
+      "cost": 150,
+      "shopchance": 0.3,
+      "goldvariation": [-0.1, 0.15],
+      "droppable": true,
+      "dropped_by": "construct",
+      "drop_chance": 0.1
+    },
+    {
+      "id": "golden_chest",
+      "name": "Coffre doré",
+      "type": "container",
+      "description": "Coffre rare rempli de trésors légendaires.",
+      "loot_pool": [
+        {"item_id": "legendary_staff", "chance": 0.3, "qty": 1},
+        {"item_id": "large_health_elixir", "chance": 0.6, "qty": 2},
+        {"item_id": "greater_mana_potion", "chance": 0.5, "qty": 2},
+        {"item_id": "crystal_ring", "chance": 0.4, "qty": 1},
+        {"skill_id": "skill_fireball_advanced", "chance": 0.35},
+        {"skill_id": "skill_lightning_bolt", "chance": 0.25},
+        {"skill_id": "skill_battle_cry", "chance": 0.3}
+      ],
+      "cost": 400,
+      "shopchance": 0.1,
+      "goldvariation": [-0.05, 0.1],
+      "droppable": true,
+      "dropped_by": "dragon",
+      "drop_chance": 0.2
+    },
+    {
+      "id": "skill_scroll_fire",
+      "name": "Parchemin: Fireball Advanced",
+      "type": "container",
+      "description": "Parchemin enseignant Fireball Advanced.",
+      "loot_pool": [
+        {"skill_id": "skill_fireball_advanced", "chance": 1.0}
+      ],
+      "cost": 200,
+      "shopchance": 0.2,
+      "goldvariation": [-0.1, 0.1]
     }
   ]
 }
