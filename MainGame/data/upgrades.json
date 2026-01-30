@@ -3,10 +3,10 @@
     {
       "id": "atk_boost",
       "name": "Offensive Training",
-      "desc": "+2 base ATK per level",
+      "desc": "+1 base ATK per level",
       "cost": 1,
       "max_level": 10,
-      "effect": { "type": "add", "stat": "base_atk", "value": 2 }
+      "effect": { "type": "add", "stat": "base_atk", "value": 1 }
     },
     {
       "id": "hp_boost",
@@ -19,10 +19,10 @@
     {
       "id": "crit_chance",
       "name": "Sharpened Instinct",
-      "desc": "+2% Crit Chance per level",
+      "desc": "+1% Crit Chance per level",
       "cost": 2,
       "max_level": 10,
-      "effect": { "type": "add", "stat": "critchance", "value": 0.02 }
+      "effect": { "type": "add", "stat": "critchance", "value": 0.01 }
     },
     {
       "id": "crit_damage",

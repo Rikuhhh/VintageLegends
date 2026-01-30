@@ -9,8 +9,8 @@
     "starting_wave": 1
   },
   "scaling": {
-    "hp_scale_per_wave_pct": 0.06,
-    "atk_scale_per_wave_pct": 0.025,
+    "hp_scale_per_wave_pct": 0.03,
+    "atk_scale_per_wave_pct": 0.01,
     "gold_scale_per_wave": 0.05,
     "xp_scale_per_wave": 0.06
   },

@@ -15,7 +15,7 @@
       "dropped_by": "beast",
       "drop_chance": 0.12,
       "effect": {
-        "heal": 40
+        "heal": 30
       },
       "description": "Restaure des PV."
     },
@@ -61,7 +61,7 @@
       "type": "weapon",
       "description": "Très rare. Ignore une partie de l'armure.",
       "attack": 5,
-      "penetration": 10.0,
+      "penetration": 5.0,
       "critchance": 0.3,
       "critdamage": 0.5,
       "cost": 600,
@@ -97,7 +97,7 @@
       "id": "iron_sword",
       "name": "Épée de fer",
       "type": "weapon",
-      "attack": 15,
+      "attack": 8,
       "penetration": 5,
       "cost": 50,
       "shopchance": 0.8,
