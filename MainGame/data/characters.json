@@ -2,15 +2,15 @@
   "characters": [
     {
       "id": "warrior",
-      "name": "Module Tanker",
-      "base_hp": 120,
-      "base_atk": 2,
-      "base_def": 4,
-      "base_crit_chance": 0.05,
-      "base_crit_mult": 1.5,
-      "base_mana": 50,
-      "base_mana_regen": 5,
-      "base_magic_power": 2,
+      "name": "Guerrier",
+      "base_hp": 180,
+      "base_atk": 12,
+      "base_def": 3,
+      "base_crit_chance": 0.08,
+      "base_crit_mult": 1.6,
+      "base_mana": 40,
+      "base_mana_regen": 4,
+      "base_magic_power": 1,
       "base_magic_penetration": 0,
       "starting_attacks": [
         "atk_slash"
@@ -19,20 +19,20 @@
         "skill_shield_bash"
       ],
       "skill_tree_points_per_level": 1,
-      "description": "Personnage tank, facile à prendre en main."
+      "description": "Guerrier tanky avec dégâts élevés mais faible magie."
     },
     {
       "id": "mage",
-      "name": "Module Mage",
-      "base_hp": 80,
-      "base_atk": 6,
-      "base_def": 2,
-      "base_crit_chance": 0.07,
-      "base_crit_mult": 1.8,
-      "base_mana": 100,
-      "base_mana_regen": 10,
-      "base_magic_power": 8,
-      "base_magic_penetration": 5,
+      "name": "Mage",
+      "base_hp": 70,
+      "base_atk": 3,
+      "base_def": 1,
+      "base_crit_chance": 0.05,
+      "base_crit_mult": 1.7,
+      "base_mana": 120,
+      "base_mana_regen": 12,
+      "base_magic_power": 18,
+      "base_magic_penetration": 10,
       "starting_attacks": [
         "atk_fireball",
         "atk_heal"
@@ -42,20 +42,20 @@
         "skill_mana_shield"
       ],
       "skill_tree_points_per_level": 1,
-      "description": "Forte puissance magique, fragile en HP."
+      "description": "Puissance magique élevée, très fragile."
     },
     {
       "id": "rogue",
-      "name": "Module Assassin",
-      "base_hp": 90,
-      "base_atk": 4,
-      "base_def": 2,
-      "base_crit_chance": 0.25,
-      "base_crit_mult": 2.5,
-      "base_mana": 70,
-      "base_mana_regen": 7,
-      "base_magic_power": 3,
-      "base_magic_penetration": 2,
+      "name": "Assassin",
+      "base_hp": 65,
+      "base_atk": 5,
+      "base_def": 1,
+      "base_crit_chance": 0.35,
+      "base_crit_mult": 2.8,
+      "base_mana": 60,
+      "base_mana_regen": 6,
+      "base_magic_power": 2,
+      "base_magic_penetration": 0,
       "starting_attacks": [
         "atk_multi_stab"
       ],
@@ -63,7 +63,7 @@
         "skill_shadow_strike"
       ],
       "skill_tree_points_per_level": 1,
-      "description": "Dégâts critiques élevés."
+      "description": "Très fragile mais dégâts critiques élevés."
     }
   ]
 }

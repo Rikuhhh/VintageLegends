@@ -63,6 +63,11 @@ class UIManager:
         self.skills_ui_buttons = []
         self.skills_page = 0
         self.skills_ui_rect = None
+        # Crafting UI modal
+        self.crafting_ui_open = False
+        self.crafting_ui_buttons = []
+        self.crafting_selected_recipe = None
+        self.crafting_ui_rect = None
         # Combat Log UI
         self.combat_log_open = True  # Start open by default
         self.combat_log_dragging = False
@@ -182,6 +187,11 @@ class UIManager:
             self.skills_ui_open = not self.skills_ui_open
             return
         
+        # Toggle crafting UI with 'R' key
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+            self.crafting_ui_open = not self.crafting_ui_open
+            return
+        
         # Toggle combat log with 'L' key
         if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
             self.combat_log_open = not self.combat_log_open
@@ -273,6 +283,11 @@ class UIManager:
                 self.skills_ui_open = not self.skills_ui_open
                 return
             
+            # crafting UI open/close button
+            if getattr(self, 'crafting_ui_rect', None) and self.crafting_ui_rect.collidepoint(event.pos):
+                self.crafting_ui_open = not self.crafting_ui_open
+                return
+            
             # combat log toggle button
             if getattr(self, 'combat_log_toggle_rect', None) and self.combat_log_toggle_rect.collidepoint(event.pos):
                 self.combat_log_open = not self.combat_log_open
@@ -280,6 +295,12 @@ class UIManager:
             
             # skills UI modal buttons
             for btn in getattr(self, 'skills_ui_buttons', []):
+                if btn['rect'].collidepoint(event.pos):
+                    btn['action']()
+                    return
+            
+            # crafting UI modal buttons
+            for btn in getattr(self, 'crafting_ui_buttons', []):
                 if btn['rect'].collidepoint(event.pos):
                     btn['action']()
                     return
@@ -394,7 +415,7 @@ class UIManager:
         # Draw a background panel for UI (image if available, otherwise a semi-transparent rect)
         screen_w, screen_h = self.screen.get_size()
         # larger panel to avoid content overlap - extend to bottom of screen
-        panel_w = 420
+        panel_w = 520  # Increased to fit equipment display with Unequip buttons
         panel_h = screen_h - 20  # 10px margin top and bottom
         panel_x = 10
         panel_y = 10
@@ -441,11 +462,14 @@ class UIManager:
                 # Check if skill is usable (has mana, no cooldown)
                 can_use = True
                 skill_data = None
+                skill_level = 1
                 if hasattr(battle, 'skill_manager'):
                     skill_data = battle.skill_manager.get_skill(skill_id)
+                    skill_level = getattr(player, 'skill_levels', {}).get(skill_id, 1)
                     if skill_data:
-                        mana_cost = skill_data.get('mana_cost', 0)
-                        if player.current_mana < mana_cost:
+                        base_mana_cost = skill_data.get('mana_cost', 0)
+                        actual_mana_cost = int(base_mana_cost * (1 + (skill_level - 1) * 0.2))
+                        if player.current_mana < actual_mana_cost:
                             can_use = False
                 
                 # Color based on usability
@@ -458,6 +482,11 @@ class UIManager:
                 text_color = (255, 255, 255) if can_use else (120, 120, 120)
                 skill_text = pygame.font.Font(None, 18).render(skill_name, True, text_color)
                 self.screen.blit(skill_text, skill_text.get_rect(center=(skill_x + skill_btn_w//2, skill_y + 12)))
+                
+                # Skill level indicator
+                if skill_level > 1:
+                    level_badge = pygame.font.Font(None, 14).render(f"Lv{skill_level}", True, (255, 255, 100))
+                    self.screen.blit(level_badge, (skill_x + skill_btn_w - 22, skill_y + 3))
                 
                 # Key hint
                 key_hint = pygame.font.Font(None, 16).render(f"[{i+1}]", True, (200, 200, 100))
@@ -563,13 +592,18 @@ class UIManager:
             item_data = self.shop_loader.find_item(item_id) if getattr(self, 'shop_loader', None) and item_id else None
             item_name = item_data.get('name') if item_data else (item_id or 'None')
             
+            # Truncate item name if too long to prevent overlap
+            max_name_length = 18
+            if len(item_name) > max_name_length:
+                item_name = item_name[:max_name_length-2] + ".."
+            
             # Slot name and item
             slot_text = f"{slot_label}: {item_name}"
             self._blit_text_outlined(self.screen, self.small_font, slot_text, (x, y), fg=(220,220,220), outline=(0,0,0), outline_width=2)
             
             # Unequip button (only if something is equipped)
             if item_id:
-                unequip_rect = pygame.Rect(x + 200, y - 4, 80, 24)
+                unequip_rect = pygame.Rect(x + 280, y - 4, 80, 24)
                 pygame.draw.rect(self.screen, (180, 80, 80), unequip_rect, border_radius=4)
                 unequip_text = self.small_font.render("Unequip", True, (0, 0, 0))
                 self.screen.blit(unequip_text, unequip_text.get_rect(center=unequip_rect.center))
@@ -662,26 +696,41 @@ class UIManager:
             hp_text = f"{enemy.hp}/{enemy.max_hp}"
             self._blit_text_outlined(self.screen, self.small_font, hp_text, (bar_x + bar_width // 2, bar_y + bar_height // 2), fg=(255,255,255), outline=(0,0,0), outline_width=2, center=True)
 
-        # Single Character Sheet button (replaces Inventory + Stats buttons)
-        char_sheet_btn = pygame.Rect(panel_x + panel_w - 170, panel_y + panel_h - 90, 160, 36)
+        # UI buttons arranged in two rows to prevent overlapping
+        btn_w = 150
+        btn_h = 34
+        btn_spacing = 8
+        
+        # Top row buttons (right side)
+        top_row_y = panel_y + panel_h - 80
+        
+        # Character Sheet button (top right)
+        char_sheet_btn = pygame.Rect(panel_x + panel_w - btn_w - 10, top_row_y, btn_w, btn_h)
         pygame.draw.rect(self.screen, (120, 100, 200), char_sheet_btn, border_radius=8)
         self._blit_text_outlined(self.screen, self.small_font, "Character (C)", char_sheet_btn.center, fg=(255,255,255), outline=(0,0,0), outline_width=2, center=True)
-        # store for clicks
         self.character_sheet_open_rect = char_sheet_btn
         
-        # Skills button
-        skills_btn = pygame.Rect(panel_x + panel_w - 170, panel_y + panel_h - 48, 160, 36)
+        # Skills button (top middle-right)
+        skills_btn = pygame.Rect(panel_x + panel_w - (btn_w * 2) - btn_spacing - 10, top_row_y, btn_w, btn_h)
         pygame.draw.rect(self.screen, (200, 120, 100), skills_btn, border_radius=8)
         self._blit_text_outlined(self.screen, self.small_font, "Skills (K)", skills_btn.center, fg=(255,255,255), outline=(0,0,0), outline_width=2, center=True)
         self.skills_ui_rect = skills_btn
         
-        # Combat Log toggle button
-        log_btn = pygame.Rect(panel_x + 10, panel_y + panel_h - 48, 140, 36)
+        # Bottom row buttons
+        bottom_row_y = panel_y + panel_h - 40
+        
+        # Combat Log toggle button (bottom left)
+        log_btn = pygame.Rect(panel_x + 10, bottom_row_y, btn_w, btn_h)
         log_color = (100, 200, 120) if self.combat_log_open else (80, 80, 80)
         pygame.draw.rect(self.screen, log_color, log_btn, border_radius=8)
         self._blit_text_outlined(self.screen, self.small_font, "Log (L)", log_btn.center, fg=(255,255,255), outline=(0,0,0), outline_width=2, center=True)
-        # Store rect for click detection (don't add to self.buttons - we draw it manually)
         self.combat_log_toggle_rect = log_btn
+        
+        # Crafting button (bottom middle-left)
+        crafting_btn = pygame.Rect(panel_x + btn_w + btn_spacing + 10, bottom_row_y, btn_w, btn_h)
+        pygame.draw.rect(self.screen, (180, 120, 200), crafting_btn, border_radius=8)
+        self._blit_text_outlined(self.screen, self.small_font, "Crafting (R)", crafting_btn.center, fg=(255,255,255), outline=(0,0,0), outline_width=2, center=True)
+        self.crafting_ui_rect = crafting_btn
 
         # Character Sheet Modal (tabbed: Equipment, Inventory, Stats)
         self.character_sheet_buttons = []
@@ -753,6 +802,10 @@ class UIManager:
         # Skills UI Modal
         if getattr(self, 'skills_ui_open', False) and player is not None and battle is not None:
             self._draw_skills_ui(player, battle)
+        
+        # Crafting UI Modal
+        if getattr(self, 'crafting_ui_open', False) and player is not None:
+            self._draw_crafting_ui(player, battle)
         
         # Combat Log Window (draggable)
         if battle is not None:
@@ -1045,7 +1098,10 @@ class UIManager:
                             if battle and hasattr(battle, 'add_log'):
                                 for grant_type, grant_id, qty in granted:
                                     if grant_type == 'skill':
-                                        battle.add_log(f"Learned skill: {grant_id}!", 'buff')
+                                        if qty > 1:
+                                            battle.add_log(f"Skill leveled up: {grant_id} -> Lv{qty}!", 'buff')
+                                        else:
+                                            battle.add_log(f"Learned skill: {grant_id}!", 'buff')
                                     elif grant_type == 'item':
                                         battle.add_log(f"Received: {grant_id} x{qty}!", 'info')
                             self.inventory_selected = None
@@ -1215,13 +1271,26 @@ class UIManager:
             skill_rect = pygame.Rect(sx, sy, skill_w, skill_h)
             pygame.draw.rect(self.screen, box_color, skill_rect, border_radius=6)
             
-            # Skill name
-            skill_name = skill.get('name', skill_id)[:20]
-            self._blit_text_outlined(self.screen, self.small_font, skill_name, (sx + 5, sy + 5), fg=(255, 255, 255), outline=(0,0,0), outline_width=1)
+            # Get skill level
+            skill_level = getattr(player, 'skill_levels', {}).get(skill_id, 1)
             
-            # Mana cost
-            mana_cost = skill.get('mana_cost', 0)
-            mana_text = f"Mana: {mana_cost}"
+            # Skill name with level
+            skill_name = skill.get('name', skill_id)[:18]
+            if skill_level > 1:
+                skill_name_text = f"{skill_name} Lv{skill_level}"
+                name_color = (255, 255, 100)  # Yellow for leveled skills
+            else:
+                skill_name_text = skill_name
+                name_color = (255, 255, 255)
+            self._blit_text_outlined(self.screen, self.small_font, skill_name_text, (sx + 5, sy + 5), fg=name_color, outline=(0,0,0), outline_width=1)
+            
+            # Mana cost (scaled by level)
+            base_mana_cost = skill.get('mana_cost', 0)
+            actual_mana_cost = int(base_mana_cost * (1 + (skill_level - 1) * 0.2))
+            if skill_level > 1:
+                mana_text = f"Mana: {actual_mana_cost} ({base_mana_cost}+{skill_level-1})"
+            else:
+                mana_text = f"Mana: {actual_mana_cost}"
             self._blit_text_outlined(self.screen, self.small_font, mana_text, (sx + 5, sy + 25), fg=(100, 150, 255), outline=(0,0,0), outline_width=1)
             
             # Type and element
@@ -1304,6 +1373,271 @@ class UIManager:
         skill_id = player.equipped_skills[slot_index]
         if hasattr(self.battle, 'player_use_skill'):
             self.battle.player_use_skill(skill_id)
+    
+    def _draw_crafting_ui(self, player, battle):
+        """Draw Crafting UI modal with recipes and crafting functionality"""
+        modal_w, modal_h = 900, 600
+        modal_x = (self.screen.get_width() - modal_w) // 2
+        modal_y = (self.screen.get_height() - modal_h) // 2
+        
+        # Reset buttons list
+        self.crafting_ui_buttons = []
+        
+        # Modal background
+        modal_surf = pygame.Surface((modal_w, modal_h))
+        modal_surf.fill((30, 30, 40))
+        self.screen.blit(modal_surf, (modal_x, modal_y))
+        
+        # Title bar
+        title_bar = pygame.Rect(modal_x, modal_y, modal_w, 45)
+        pygame.draw.rect(self.screen, (40, 40, 60), title_bar)
+        self._blit_text_outlined(self.screen, self.title_font, "Crafting", (modal_x + 20, modal_y + 12), fg=(255,255,255), outline=(0,0,0), outline_width=2)
+        
+        # Close button
+        close_rect = pygame.Rect(modal_x + modal_w - 90, modal_y + 10, 80, 30)
+        pygame.draw.rect(self.screen, (180, 80, 80), close_rect, border_radius=6)
+        ct = self.small_font.render('Close', True, (0, 0, 0))
+        self.screen.blit(ct, ct.get_rect(center=close_rect.center))
+        self.crafting_ui_buttons.append({'rect': close_rect, 'action': lambda: setattr(self, 'crafting_ui_open', False)})
+        
+        # Get crafting system from battle
+        crafting_system = getattr(battle, 'crafting_system', None) if battle else None
+        if not crafting_system:
+            # No crafting system available
+            error_text = "Crafting system not available"
+            self._blit_text_outlined(self.screen, self.title_font, error_text, (modal_x + modal_w // 2, modal_y + modal_h // 2), fg=(255,100,100), outline=(0,0,0), outline_width=2, center=True)
+            return
+        
+        recipes = crafting_system.get_all_recipes()
+        if not recipes:
+            # No recipes available
+            error_text = "No recipes available"
+            self._blit_text_outlined(self.screen, self.title_font, error_text, (modal_x + modal_w // 2, modal_y + modal_h // 2), fg=(255,100,100), outline=(0,0,0), outline_width=2, center=True)
+            return
+        
+        # Get player's inventory
+        player_inventory = getattr(player, 'inventory', {})
+        player_level = getattr(player, 'level', 1)
+        
+        # Initialize crafting page if not exists
+        if not hasattr(self, 'crafting_page'):
+            self.crafting_page = 0
+        
+        # Pagination settings
+        recipes_per_page = 6
+        total_pages = (len(recipes) + recipes_per_page - 1) // recipes_per_page
+        self.crafting_page = max(0, min(self.crafting_page, total_pages - 1))
+        
+        # Get current page recipes
+        start_idx = self.crafting_page * recipes_per_page
+        end_idx = min(start_idx + recipes_per_page, len(recipes))
+        page_recipes = recipes[start_idx:end_idx]
+        
+        # Left panel - Recipe list
+        list_x = modal_x + 20
+        list_y = modal_y + 60
+        list_w = 350
+        list_h = modal_h - 120  # Leave space for pagination buttons
+        
+        # Draw recipe list background
+        pygame.draw.rect(self.screen, (40, 40, 55), (list_x, list_y, list_w, list_h), border_radius=8)
+        
+        # Recipe list title
+        self._blit_text_outlined(self.screen, self.small_font, "Recipes", (list_x + 10, list_y + 5), fg=(255, 220, 100), outline=(0,0,0), outline_width=2)
+        
+        # Draw recipe entries
+        entry_y = list_y + 35
+        entry_h = 70
+        entry_pad = 5
+        
+        for recipe in page_recipes:
+            recipe_id = recipe.get('id')
+            recipe_name = recipe.get('name', recipe_id)
+            category = recipe.get('category', 'misc')
+            
+            # Check if can craft
+            can_craft, reason = crafting_system.can_craft(recipe_id, player_inventory, player_level)
+            
+            # Recipe entry box
+            is_selected = (self.crafting_selected_recipe == recipe_id)
+            if is_selected:
+                box_color = (80, 120, 160)
+            elif can_craft:
+                box_color = (60, 100, 60)
+            else:
+                box_color = (60, 60, 80)
+            
+            entry_rect = pygame.Rect(list_x + 10, entry_y, list_w - 20, entry_h)
+            pygame.draw.rect(self.screen, box_color, entry_rect, border_radius=6)
+            
+            if is_selected:
+                pygame.draw.rect(self.screen, (150, 180, 220), entry_rect, 3, border_radius=6)
+            
+            # Recipe name
+            self._blit_text_outlined(self.screen, self.small_font, recipe_name[:30], (entry_rect.x + 8, entry_rect.y + 8), fg=(255, 255, 255), outline=(0,0,0), outline_width=1)
+            
+            # Category badge
+            cat_color_map = {
+                'weapon': (255, 150, 100),
+                'armor': (150, 200, 255),
+                'consumable': (100, 255, 150),
+                'offhand': (200, 150, 255),
+                'material': (200, 200, 100),
+                'misc': (180, 180, 180)
+            }
+            cat_color = cat_color_map.get(category, (180, 180, 180))
+            cat_text = category.upper()
+            self._blit_text_outlined(self.screen, self.small_font, cat_text, (entry_rect.x + 8, entry_rect.y + 28), fg=cat_color, outline=(0,0,0), outline_width=1)
+            
+            # Craftable status
+            status_text = "✓ Can Craft" if can_craft else f"✗ {reason}"
+            status_color = (100, 255, 100) if can_craft else (255, 100, 100)
+            self._blit_text_outlined(self.screen, self.small_font, status_text[:25], (entry_rect.x + 8, entry_rect.y + 48), fg=status_color, outline=(0,0,0), outline_width=1)
+            
+            # Click to select
+            self.crafting_ui_buttons.append({'rect': entry_rect, 'action': lambda rid=recipe_id: setattr(self, 'crafting_selected_recipe', rid)})
+            
+            entry_y += entry_h + entry_pad
+        
+        # Pagination buttons
+        if total_pages > 1:
+            btn_y = modal_y + modal_h - 50
+            prev_btn = pygame.Rect(list_x + 10, btn_y, 100, 35)
+            next_btn = pygame.Rect(list_x + list_w - 110, btn_y, 100, 35)
+            
+            # Previous button
+            prev_enabled = self.crafting_page > 0
+            prev_color = (80, 120, 200) if prev_enabled else (60, 60, 80)
+            pygame.draw.rect(self.screen, prev_color, prev_btn, border_radius=6)
+            prev_text = self.small_font.render("< Prev", True, (255, 255, 255) if prev_enabled else (120, 120, 120))
+            self.screen.blit(prev_text, prev_text.get_rect(center=prev_btn.center))
+            if prev_enabled:
+                self.crafting_ui_buttons.append({'rect': prev_btn, 'action': lambda: setattr(self, 'crafting_page', max(0, self.crafting_page - 1))})
+            
+            # Next button
+            next_enabled = self.crafting_page < total_pages - 1
+            next_color = (80, 120, 200) if next_enabled else (60, 60, 80)
+            pygame.draw.rect(self.screen, next_color, next_btn, border_radius=6)
+            next_text = self.small_font.render("Next >", True, (255, 255, 255) if next_enabled else (120, 120, 120))
+            self.screen.blit(next_text, next_text.get_rect(center=next_btn.center))
+            if next_enabled:
+                self.crafting_ui_buttons.append({'rect': next_btn, 'action': lambda: setattr(self, 'crafting_page', min(total_pages - 1, self.crafting_page + 1))})
+            
+            # Page indicator
+            page_text = self.small_font.render(f"Page {self.crafting_page + 1}/{total_pages}", True, (200, 200, 220))
+            self.screen.blit(page_text, page_text.get_rect(center=(list_x + list_w // 2, btn_y + 17)))
+        
+        # Right panel - Recipe details and crafting
+        if self.crafting_selected_recipe:
+            selected_recipe = crafting_system.get_recipe_by_id(self.crafting_selected_recipe)
+            if selected_recipe:
+                detail_x = list_x + list_w + 20
+                detail_y = modal_y + 60
+                detail_w = modal_w - (detail_x - modal_x) - 20
+                detail_h = modal_h - 80
+                
+                # Draw detail background
+                pygame.draw.rect(self.screen, (40, 40, 55), (detail_x, detail_y, detail_w, detail_h), border_radius=8)
+                
+                # Recipe name
+                dy = detail_y + 15
+                recipe_name = selected_recipe.get('name', 'Unknown')
+                self._blit_text_outlined(self.screen, self.title_font, recipe_name[:25], (detail_x + 15, dy), fg=(255, 255, 100), outline=(0,0,0), outline_width=2)
+                dy += 40
+                
+                # Description
+                desc = selected_recipe.get('description', 'No description')
+                self._blit_text_outlined(self.screen, self.small_font, desc[:50], (detail_x + 15, dy), fg=(200, 200, 200), outline=(0,0,0), outline_width=1)
+                dy += 30
+                
+                # Divider line
+                pygame.draw.line(self.screen, (100, 100, 120), (detail_x + 15, dy), (detail_x + detail_w - 15, dy), 2)
+                dy += 20
+                
+                # Ingredients section
+                self._blit_text_outlined(self.screen, self.small_font, "Required Ingredients:", (detail_x + 15, dy), fg=(150, 200, 255), outline=(0,0,0), outline_width=2)
+                dy += 30
+                
+                ingredients = selected_recipe.get('ingredients', [])
+                for ingredient in ingredients:
+                    item_id = ingredient.get('item_id')
+                    required_qty = ingredient.get('quantity', 1)
+                    current_qty = player_inventory.get(item_id, 0)
+                    
+                    # Get item name
+                    item_def = self.shop_loader.find_item(item_id) if self.shop_loader else None
+                    item_name = item_def.get('name') if item_def else item_id
+                    
+                    # Ingredient text
+                    has_enough = current_qty >= required_qty
+                    ing_text = f"  • {item_name}: {current_qty}/{required_qty}"
+                    ing_color = (100, 255, 100) if has_enough else (255, 100, 100)
+                    self._blit_text_outlined(self.screen, self.small_font, ing_text[:40], (detail_x + 15, dy), fg=ing_color, outline=(0,0,0), outline_width=1)
+                    dy += 25
+                
+                dy += 20
+                
+                # Result section
+                self._blit_text_outlined(self.screen, self.small_font, "Result:", (detail_x + 15, dy), fg=(150, 255, 200), outline=(0,0,0), outline_width=2)
+                dy += 30
+                
+                result_item_id = selected_recipe.get('result_item_id')
+                result_qty = selected_recipe.get('result_quantity', 1)
+                
+                # Get result item name
+                result_def = self.shop_loader.find_item(result_item_id) if self.shop_loader else None
+                result_name = result_def.get('name') if result_def else result_item_id
+                
+                result_text = f"  {result_name} x{result_qty}"
+                self._blit_text_outlined(self.screen, self.small_font, result_text[:40], (detail_x + 15, dy), fg=(255, 255, 150), outline=(0,0,0), outline_width=1)
+                dy += 40
+                
+                # Level requirement
+                required_level = selected_recipe.get('required_level', 1)
+                if required_level > 1:
+                    level_text = f"Required Level: {required_level}"
+                    level_color = (100, 255, 100) if player_level >= required_level else (255, 100, 100)
+                    self._blit_text_outlined(self.screen, self.small_font, level_text, (detail_x + 15, dy), fg=level_color, outline=(0,0,0), outline_width=1)
+                    dy += 30
+                
+                # Craft button
+                can_craft, reason = crafting_system.can_craft(self.crafting_selected_recipe, player_inventory, player_level)
+                
+                craft_btn_w = 200
+                craft_btn_h = 50
+                craft_btn_x = detail_x + (detail_w - craft_btn_w) // 2
+                craft_btn_y = detail_y + detail_h - craft_btn_h - 20
+                
+                craft_rect = pygame.Rect(craft_btn_x, craft_btn_y, craft_btn_w, craft_btn_h)
+                
+                if can_craft:
+                    pygame.draw.rect(self.screen, (80, 180, 80), craft_rect, border_radius=8)
+                    craft_text = "CRAFT"
+                    text_color = (0, 0, 0)
+                    
+                    def craft_action():
+                        success, msg, result_item, result_count = crafting_system.craft_item(
+                            self.crafting_selected_recipe,
+                            player_inventory,
+                            player_level
+                        )
+                        if success and battle:
+                            battle.add_log(msg, 'buff')
+                        elif not success and battle:
+                            battle.add_log(msg, 'info')
+                    
+                    self.crafting_ui_buttons.append({'rect': craft_rect, 'action': craft_action})
+                else:
+                    pygame.draw.rect(self.screen, (80, 80, 80), craft_rect, border_radius=8)
+                    craft_text = "CANNOT CRAFT"
+                    text_color = (150, 150, 150)
+                
+                self._blit_text_outlined(self.screen, self.title_font, craft_text, craft_rect.center, fg=text_color, outline=(0,0,0) if can_craft else (50,50,50), outline_width=2, center=True)
+                
+                # Show reason if can't craft
+                if not can_craft:
+                    reason_y = craft_btn_y - 25
+                    self._blit_text_outlined(self.screen, self.small_font, reason, (detail_x + detail_w // 2, reason_y), fg=(255, 150, 100), outline=(0,0,0), outline_width=1, center=True)
     
     def _draw_combat_log(self, battle):
         """Draw draggable combat log window"""

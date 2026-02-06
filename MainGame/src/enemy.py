@@ -69,10 +69,17 @@ class Enemy:
         return True
 
     @staticmethod
-    def _scale_value(base_val, wave, per_wave_pct):
+    def _scale_value(base_val, wave, per_wave_pct, flat_per_5waves=0, is_boss=False):
         try:
+            # Reduce percentage scaling for normal mobs (not bosses)
+            if not is_boss:
+                per_wave_pct = per_wave_pct * 0.6  # 40% reduction in % scaling
+            
+            # Add flat scaling every 5 waves
+            flat_bonus = (wave // 5) * flat_per_5waves
+            
             factor = 1.0 + per_wave_pct * wave
-            return max(1, int(round(base_val * factor)))
+            return max(1, int(round(base_val * factor + flat_bonus)))
         except Exception:
             return int(base_val)
 
@@ -171,12 +178,12 @@ class Enemy:
         magic_def_base = int(chosen.get('magic_def_base', 0))
         pen_base = float(chosen.get('pen_base', 0.0))
 
-        hp = Enemy._scale_value(hp_base, wave, hp_pct)
-        atk = Enemy._scale_value(atk_base, wave, atk_pct)
+        hp = Enemy._scale_value(hp_base, wave, hp_pct, flat_per_5waves=10, is_boss=(chosen.get('classification') in ('boss', 'miniboss')))
+        atk = Enemy._scale_value(atk_base, wave, atk_pct, flat_per_5waves=1, is_boss=(chosen.get('classification') in ('boss', 'miniboss')))
         # Defense scales slower (0.015 per wave instead of 0.025)
-        defense = Enemy._scale_value(def_base, wave, 0.015)
+        defense = Enemy._scale_value(def_base, wave, 0.015, flat_per_5waves=1, is_boss=(chosen.get('classification') in ('boss', 'miniboss')))
         # Magic defense scales same as physical defense
-        magic_defense = Enemy._scale_value(magic_def_base, wave, 0.015)
+        magic_defense = Enemy._scale_value(magic_def_base, wave, 0.015, flat_per_5waves=1, is_boss=(chosen.get('classification') in ('boss', 'miniboss')))
         # gold/xp scaling: use simple formulas if provided in scaling_notes
         try:
             gold = int(round(gold_base * (1 + wave * 0.05)))

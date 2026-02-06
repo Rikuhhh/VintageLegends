@@ -86,6 +86,11 @@ class Player:
         if not isinstance(self.skills, list):
             self.skills = []
         
+        # Track skill levels (skill_id -> level)
+        self.skill_levels = data.get('skill_levels', {})
+        if not isinstance(self.skill_levels, dict):
+            self.skill_levels = {}
+        
         # Equipped skills (max 5, displayed on skill bar)
         self.equipped_skills = data.get('equipped_skills', [])
         if not isinstance(self.equipped_skills, list):
@@ -346,11 +351,13 @@ class Player:
 
     def level_up(self):
         self.level += 1
-        # Accorde un boost de vie de base et soigne le joueur
+        # Accorde un boost de vie de base et soigne le joueur partiellement
         # increase the canonical base max hp so recalculation is deterministic
         self.base_max_hp = getattr(self, 'base_max_hp', self.max_hp) + 10
         self.max_hp = self.base_max_hp
-        self.hp = self.max_hp
+        # Heal 50% of max HP + 100 flat HP instead of full heal
+        heal_amount = int(self.max_hp * 0.5) + 100
+        self.hp = min(self.hp + heal_amount, self.max_hp)
         # Accord de points de compétence à dépenser manuellement (via l'UI)
         self.unspent_points += 3
         
@@ -360,7 +367,9 @@ class Player:
             self.base_defense += 1
             self.base_max_hp += 5
             self.max_hp = self.base_max_hp
-            self.hp = self.max_hp
+            # Heal on milestone too (50% + 100)
+            heal_amount = int(self.max_hp * 0.5) + 100
+            self.hp = min(self.hp + heal_amount, self.max_hp)
             self.base_agility = getattr(self, 'base_agility', 0) + 1
             print(f"🎉 Milestone! Level {self.level}: +1 to all stats!")
         
@@ -732,14 +741,25 @@ class Player:
         return self.hp <= 0
     
     def unlock_skill(self, skill_id):
-        """Unlock a new skill. Returns True if newly unlocked, False if already known."""
+        """Unlock a new skill or level it up. Returns ('new'/'levelup'/'none', level)."""
         if not hasattr(self, 'skills'):
             self.skills = []
+        if not hasattr(self, 'skill_levels'):
+            self.skill_levels = {}
+        
         if skill_id not in self.skills:
+            # New skill unlock
             self.skills.append(skill_id)
+            self.skill_levels[skill_id] = 1
             print(f"✨ New skill unlocked: {skill_id}")
-            return True
-        return False
+            return ('new', 1)
+        else:
+            # Skill already known - level it up!
+            current_level = self.skill_levels.get(skill_id, 1)
+            new_level = current_level + 1
+            self.skill_levels[skill_id] = new_level
+            print(f"⬆️ Skill leveled up: {skill_id} -> Level {new_level}")
+            return ('levelup', new_level)
     
     def _check_level_unlocks(self):
         """Check all skills and unlock any that require current level or lower"""
@@ -819,8 +839,9 @@ class Player:
                         print(f"📦 Container grants: {item_def.get('name', item_id)} x{qty}")
                 
                 if skill_id:
-                    # Grant skill
-                    if self.unlock_skill(skill_id):
-                        granted_items.append(('skill', skill_id, 1))
+                    # Grant skill (or level it up)
+                    result, level = self.unlock_skill(skill_id)
+                    if result in ('new', 'levelup'):
+                        granted_items.append(('skill', skill_id, level))
         
         return granted_items

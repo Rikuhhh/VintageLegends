@@ -59,11 +59,16 @@ class BattleSystem:
             return
         self.turn_processed = True
         
-        # Regenerate mana
-        if hasattr(self.player, 'regenerate_mana'):
-            mana_gained = self.player.regenerate_mana()
-            if mana_gained and mana_gained > 0:
-                self.add_log(f"+{mana_gained} mana", 'buff')
+        # Regenerate mana (only if no skill was used last turn)
+        skill_used_last_turn = getattr(self, 'skill_used_this_turn', False)
+        if not skill_used_last_turn:
+            if hasattr(self.player, 'regenerate_mana'):
+                mana_gained = self.player.regenerate_mana()
+                if mana_gained and mana_gained > 0:
+                    self.add_log(f"+{mana_gained} mana", 'buff')
+        else:
+            # Reset the flag for next turn
+            self.skill_used_this_turn = False
         
         # Reduce skill cooldowns
         if hasattr(self.player, 'skill_cooldowns'):
@@ -110,14 +115,34 @@ class BattleSystem:
             return
         # base damage
         base_dmg = getattr(self.player, 'atk', 0)
-        # roll for critical hit using player's crit chance (0.0 - 1.0)
+        
+        # Overcrit mechanic: crit chance >100% converts to bonuses
+        crit_chance = float(getattr(self.player, 'critchance', 0.0))
+        base_crit_damage = float(getattr(self.player, 'critdamage', 1.5))
+        
+        # Calculate overcrit bonuses
+        is_overcrit = False
+        if crit_chance > 1.0:
+            overcrit_amount = crit_chance - 1.0
+            # 1% crit damage per 1% overcrit
+            bonus_crit_damage = overcrit_amount
+            # 0.5% chance to deal 3x total crit damage
+            overcrit_chance = overcrit_amount * 0.5
+            effective_crit_chance = 1.0  # Always crit when >100%
+            effective_crit_damage = base_crit_damage + bonus_crit_damage
+            is_overcrit = random.random() < overcrit_chance
+        else:
+            effective_crit_chance = crit_chance
+            effective_crit_damage = base_crit_damage
+        
+        # Roll for critical hit
         try:
-            is_crit = random.random() < float(getattr(self.player, 'critchance', 0.0))
+            is_crit = random.random() < effective_crit_chance
         except Exception:
             is_crit = False
 
         if is_crit:
-            crit_mult = float(getattr(self.player, 'critdamage', 1.5))
+            crit_mult = effective_crit_damage * (3.0 if is_overcrit else 1.0)
             dmg = int(round(base_dmg * crit_mult))
         else:
             dmg = int(base_dmg)
@@ -136,8 +161,9 @@ class BattleSystem:
         except Exception:
             pass
         if is_crit:
-            print(f"CRIT! {self.player.name} inflige {dmg_dealt} (x{crit_mult}) à {self.enemy.name} !")
-            self.add_log(f"CRIT! {dmg_dealt} damage!", 'damage')
+            crit_label = "OVERCRIT!!!" if is_overcrit else "CRIT!"
+            print(f"{crit_label} {self.player.name} inflige {dmg_dealt} (x{crit_mult:.1f}) à {self.enemy.name} !")
+            self.add_log(f"{crit_label} {dmg_dealt} damage!", 'damage')
         else:
             print(f"{self.player.name} inflige {dmg_dealt} à {self.enemy.name} !")
             self.add_log(f"Dealt {dmg_dealt} damage", 'damage')
@@ -213,8 +239,10 @@ class BattleSystem:
             self.add_log(msg, 'debuff')
             return
         
-        # Check mana cost
-        mana_cost = skill.get('mana_cost', 0)
+        # Check mana cost (scaled by skill level)
+        base_mana_cost = skill.get('mana_cost', 0)
+        skill_level = self.skill_manager.get_skill_level(self.player, skill_id)
+        mana_cost = int(base_mana_cost * (1 + (skill_level - 1) * 0.2))
         if not self.player.consume_mana(mana_cost):
             print(f"Not enough mana! Need {mana_cost}, have {self.player.current_mana}")
             self.add_log(f"Not enough mana for {skill_id}!", 'debuff')
@@ -222,6 +250,9 @@ class BattleSystem:
         
         # Use the skill
         result, msg = self.skill_manager.use_skill(self.player, self.enemy, skill_id, self.effect_manager)
+        
+        # Mark that a skill was used this turn (prevents mana regen)
+        self.skill_used_this_turn = True
         
         # Log the skill usage
         if result:

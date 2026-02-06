@@ -292,7 +292,10 @@
       "type": "consumable",
       "cost": 30,
       "shopchance": 0.9,
-      "goldvariation": [-0.1, 0.2],
+      "goldvariation": [
+        -0.1,
+        0.2
+      ],
       "effect": {
         "heal_percent": 0.25
       },
@@ -304,9 +307,12 @@
       "type": "consumable",
       "cost": 60,
       "shopchance": 0.6,
-      "goldvariation": [-0.1, 0.15],
+      "goldvariation": [
+        -0.1,
+        0.15
+      ],
       "effect": {
-        "heal_percent": 0.50
+        "heal_percent": 0.5
       },
       "description": "Restaure 50% des PV max."
     },
@@ -316,7 +322,10 @@
       "type": "consumable",
       "cost": 120,
       "shopchance": 0.3,
-      "goldvariation": [-0.1, 0.1],
+      "goldvariation": [
+        -0.1,
+        0.1
+      ],
       "effect": {
         "heal_percent": 0.75
       },
@@ -332,7 +341,10 @@
       "magic_penetration": 8.0,
       "cost": 80,
       "shopchance": 0.5,
-      "goldvariation": [-0.15, 0.2]
+      "goldvariation": [
+        -0.15,
+        0.2
+      ]
     },
     {
       "id": "arcane_tome",
@@ -343,7 +355,10 @@
       "magic_penetration": 12.0,
       "cost": 100,
       "shopchance": 0.4,
-      "goldvariation": [-0.1, 0.15]
+      "goldvariation": [
+        -0.1,
+        0.15
+      ]
     },
     {
       "id": "mage_robes",
@@ -355,7 +370,10 @@
       "magic_power": 5,
       "cost": 90,
       "shopchance": 0.5,
-      "goldvariation": [-0.15, 0.2]
+      "goldvariation": [
+        -0.15,
+        0.2
+      ]
     },
     {
       "id": "crystal_ring",
@@ -366,7 +384,10 @@
       "mana_regen": 3,
       "cost": 110,
       "shopchance": 0.35,
-      "goldvariation": [-0.1, 0.15]
+      "goldvariation": [
+        -0.1,
+        0.15
+      ]
     },
     {
       "id": "enchanted_amulet",
@@ -378,7 +399,10 @@
       "mana_regen": 2,
       "cost": 130,
       "shopchance": 0.3,
-      "goldvariation": [-0.1, 0.1]
+      "goldvariation": [
+        -0.1,
+        0.1
+      ]
     },
     {
       "id": "wooden_chest",
@@ -386,14 +410,32 @@
       "type": "container",
       "description": "Coffre basique contenant potions et objets communs.",
       "loot_pool": [
-        {"item_id": "potion", "chance": 0.6, "qty": 2},
-        {"item_id": "mana_potion", "chance": 0.4, "qty": 1},
-        {"item_id": "dull_sword", "chance": 0.3, "qty": 1},
-        {"skill_id": "skill_heal_minor", "chance": 0.15}
+        {
+          "item_id": "potion",
+          "chance": 0.6,
+          "qty": 2
+        },
+        {
+          "item_id": "mana_potion",
+          "chance": 0.4,
+          "qty": 1
+        },
+        {
+          "item_id": "dull_sword",
+          "chance": 0.3,
+          "qty": 1
+        },
+        {
+          "skill_id": "skill_heal_minor",
+          "chance": 0.15
+        }
       ],
       "cost": 50,
       "shopchance": 0.5,
-      "goldvariation": [-0.1, 0.2]
+      "goldvariation": [
+        -0.1,
+        0.2
+      ]
     },
     {
       "id": "iron_chest",
@@ -401,15 +443,36 @@
       "type": "container",
       "description": "Coffre solide avec équipement et skills de qualité.",
       "loot_pool": [
-        {"item_id": "iron_sword", "chance": 0.4, "qty": 1},
-        {"item_id": "steel_armor", "chance": 0.3, "qty": 1},
-        {"item_id": "medium_health_elixir", "chance": 0.5, "qty": 1},
-        {"skill_id": "skill_power_strike", "chance": 0.25},
-        {"skill_id": "skill_ice_lance", "chance": 0.2}
+        {
+          "item_id": "iron_sword",
+          "chance": 0.4,
+          "qty": 1
+        },
+        {
+          "item_id": "steel_armor",
+          "chance": 0.3,
+          "qty": 1
+        },
+        {
+          "item_id": "medium_health_elixir",
+          "chance": 0.5,
+          "qty": 1
+        },
+        {
+          "skill_id": "skill_power_strike",
+          "chance": 0.25
+        },
+        {
+          "skill_id": "skill_ice_lance",
+          "chance": 0.2
+        }
       ],
       "cost": 150,
       "shopchance": 0.3,
-      "goldvariation": [-0.1, 0.15],
+      "goldvariation": [
+        -0.1,
+        0.15
+      ],
       "droppable": true,
       "dropped_by": "construct",
       "drop_chance": 0.1
@@ -420,17 +483,45 @@
       "type": "container",
       "description": "Coffre rare rempli de trésors légendaires.",
       "loot_pool": [
-        {"item_id": "legendary_staff", "chance": 0.3, "qty": 1},
-        {"item_id": "large_health_elixir", "chance": 0.6, "qty": 2},
-        {"item_id": "greater_mana_potion", "chance": 0.5, "qty": 2},
-        {"item_id": "crystal_ring", "chance": 0.4, "qty": 1},
-        {"skill_id": "skill_fireball_advanced", "chance": 0.35},
-        {"skill_id": "skill_lightning_bolt", "chance": 0.25},
-        {"skill_id": "skill_battle_cry", "chance": 0.3}
+        {
+          "item_id": "legendary_staff",
+          "chance": 0.3,
+          "qty": 1
+        },
+        {
+          "item_id": "large_health_elixir",
+          "chance": 0.6,
+          "qty": 2
+        },
+        {
+          "item_id": "greater_mana_potion",
+          "chance": 0.5,
+          "qty": 2
+        },
+        {
+          "item_id": "crystal_ring",
+          "chance": 0.4,
+          "qty": 1
+        },
+        {
+          "skill_id": "skill_fireball_advanced",
+          "chance": 0.35
+        },
+        {
+          "skill_id": "skill_lightning_bolt",
+          "chance": 0.25
+        },
+        {
+          "skill_id": "skill_battle_cry",
+          "chance": 0.3
+        }
       ],
       "cost": 400,
       "shopchance": 0.1,
-      "goldvariation": [-0.05, 0.1],
+      "goldvariation": [
+        -0.05,
+        0.1
+      ],
       "droppable": true,
       "dropped_by": "dragon",
       "drop_chance": 0.2
@@ -441,11 +532,654 @@
       "type": "container",
       "description": "Parchemin enseignant Fireball Advanced.",
       "loot_pool": [
-        {"skill_id": "skill_fireball_advanced", "chance": 1.0}
+        {
+          "skill_id": "skill_fireball_advanced",
+          "chance": 1.0
+        }
       ],
       "cost": 200,
       "shopchance": 0.2,
-      "goldvariation": [-0.1, 0.1]
+      "goldvariation": [
+        -0.1,
+        0.1
+      ]
+    },
+    {
+      "id": "herb_healing",
+      "name": "Healing Herb",
+      "type": "material",
+      "description": "A common herb with healing properties.",
+      "droppable": true,
+      "dropped_by": "beast",
+      "drop_chance": 0.3
+    },
+    {
+      "id": "beast_hide",
+      "name": "Beast Hide",
+      "type": "material",
+      "description": "Tough hide from wild beasts, useful for armor crafting.",
+      "droppable": true,
+      "dropped_by": "beast"
+    },
+    {
+      "id": "scrap_metal",
+      "name": "Scrap Metal",
+      "type": "material",
+      "description": "Pieces of scavenged metal from defeated enemies.",
+      "droppable": true,
+      "dropped_by": "horde"
+    },
+    {
+      "id": "water_crystal",
+      "name": "Water Crystal",
+      "type": "material",
+      "description": "A crystallized drop of pure water.",
+      "droppable": true,
+      "dropped_by": "construct",
+      "drop_chance": 0.15
+    },
+    {
+      "id": "potion_health",
+      "name": "Health Potion",
+      "type": "consumable",
+      "description": "Restores 50 HP.",
+      "effect": {
+        "heal": 50
+      },
+      "cost": 30
+    },
+    {
+      "id": "iron_ore",
+      "name": "Iron Ore",
+      "type": "material",
+      "description": "Raw iron ore for forging.",
+      "droppable": true,
+      "dropped_by": "construct",
+      "drop_chance": 0.25
+    },
+    {
+      "id": "wood_plank",
+      "name": "Wood Plank",
+      "type": "material",
+      "description": "A sturdy wooden plank.",
+      "droppable": true,
+      "dropped_by": "beast",
+      "drop_chance": 0.4
+    },
+    {
+      "id": "greatscraphammer",
+      "name": "Scrap GreatHammer",
+      "type": "weapon",
+      "description": "Un marteau fait en matériaux divers",
+      "attack": 20,
+      "penetration": 0.0,
+      "critchance": 0.0,
+      "critdamage": 0.5,
+      "magic_power": 0,
+      "magic_penetration": 0.0
+    },
+    {
+      "id": "dragon_scale",
+      "name": "Dragon Scale",
+      "type": "material",
+      "description": "Rare scale from a dragon",
+      "droppable": true,
+      "dropped_by": "dragon",
+      "drop_chance": 0.08
+    },
+    {
+      "id": "demon_horn",
+      "name": "Demon Horn",
+      "type": "material",
+      "description": "Cursed horn radiating dark energy",
+      "droppable": true,
+      "dropped_by": "demon",
+      "drop_chance": 0.12
+    },
+    {
+      "id": "undead_essence",
+      "name": "Undead Essence",
+      "type": "material",
+      "description": "Ghostly essence of the undead",
+      "droppable": true,
+      "dropped_by": "undead",
+      "drop_chance": 0.2
+    },
+    {
+      "id": "elemental_core",
+      "name": "Elemental Core",
+      "type": "material",
+      "description": "Crystallized elemental power",
+      "droppable": true,
+      "dropped_by": "elemental",
+      "drop_chance": 0.15
+    },
+    {
+      "id": "mythril_ore",
+      "name": "Mythril Ore",
+      "type": "material",
+      "description": "Legendary lightweight metal ore",
+      "cost": 200
+    },
+    {
+      "id": "shadow_essence",
+      "name": "Shadow Essence",
+      "type": "material",
+      "description": "Pure concentrated darkness",
+      "cost": 120
+    },
+    {
+      "id": "crystal_shard",
+      "name": "Crystal Shard",
+      "type": "material",
+      "description": "Magical crystal fragment",
+      "cost": 60
+    },
+    {
+      "id": "ancient_rune",
+      "name": "Ancient Rune",
+      "type": "material",
+      "description": "Mysterious rune with forgotten power",
+      "cost": 250
+    },
+    {
+      "id": "mythril_blade",
+      "name": "Mythril Blade",
+      "type": "weapon",
+      "description": "Lightweight yet incredibly sharp blade",
+      "attack": 15,
+      "penetration": 8.0,
+      "critchance": 0.12,
+      "critdamage": 0.3
+    },
+    {
+      "id": "shadow_dagger",
+      "name": "Shadow Dagger",
+      "type": "weapon",
+      "description": "Dagger forged from pure darkness",
+      "attack": 10,
+      "penetration": 5.0,
+      "critchance": 0.25,
+      "critdamage": 0.8
+    },
+    {
+      "id": "flame_staff",
+      "name": "Flame Staff",
+      "type": "weapon",
+      "description": "Staff imbued with fire magic",
+      "attack": 2,
+      "magic_power": 15,
+      "magic_penetration": 8.0
+    },
+    {
+      "id": "arcane_orb",
+      "name": "Arcane Orb",
+      "type": "offhand",
+      "description": "Floating orb of pure magic",
+      "magic_power": 12,
+      "magic_penetration": 5.0,
+      "max_mana": 30,
+      "mana_regen": 3
+    },
+    {
+      "id": "dragon_plate",
+      "name": "Dragon Plate Armor",
+      "type": "armor",
+      "description": "Heavy armor forged from dragon scales",
+      "defense": 25,
+      "max_hp": 80
+    },
+    {
+      "id": "shadow_cloak",
+      "name": "Shadow Cloak",
+      "type": "armor",
+      "description": "Cloak that blends with shadows",
+      "defense": 8,
+      "critchance": 0.15,
+      "max_hp": 20
+    },
+    {
+      "id": "mage_robe",
+      "name": "Archmage Robe",
+      "type": "armor",
+      "description": "Robe woven with arcane threads",
+      "defense": 5,
+      "magic_power": 10,
+      "max_mana": 50,
+      "mana_regen": 5
+    },
+    {
+      "id": "guardian_shield",
+      "name": "Guardian Shield",
+      "type": "offhand",
+      "description": "Massive shield for ultimate protection",
+      "defense": 20,
+      "max_hp": 50
+    },
+    {
+      "id": "vampiric_ring",
+      "name": "Vampiric Ring",
+      "type": "relic",
+      "description": "Drains life from enemies",
+      "attack": 5,
+      "max_hp": 30,
+      "lifesteal": 12,
+      "cost": 550
+    },
+    {
+      "id": "phoenix_feather",
+      "name": "Phoenix Feather",
+      "type": "relic",
+      "description": "Grants regeneration powers",
+      "max_hp": 40,
+      "mana_regen": 4,
+      "cost": 600
+    },
+    {
+      "id": "elixir_strength",
+      "name": "Strength Elixir",
+      "type": "consumable",
+      "description": "Temporarily boosts attack",
+      "effect": {
+        "atk_boost": 10,
+        "duration": 3
+      },
+      "cost": 80
+    },
+    {
+      "id": "elixir_defense",
+      "name": "Defense Elixir",
+      "type": "consumable",
+      "description": "Temporarily boosts defense",
+      "effect": {
+        "def_boost": 15,
+        "duration": 3
+      },
+      "cost": 80
+    },
+    {
+      "id": "mana_potion_large",
+      "name": "Large Mana Potion",
+      "type": "consumable",
+      "description": "Restores 100 mana",
+      "effect": {
+        "mana_restore": 100
+      }
+    },
+    {
+      "id": "full_restore",
+      "name": "Full Restore Potion",
+      "type": "consumable",
+      "description": "Fully restores HP and Mana",
+      "effect": {
+        "full_heal": true,
+        "full_mana": true
+      }
+    },
+    {
+      "id": "aberrant_tissue",
+      "name": "Aberrant Tissue",
+      "type": "material",
+      "description": "Twisted flesh from aberrations, used in dark crafting",
+      "droppable": true,
+      "dropped_by": "aberration"
+    },
+    {
+      "id": "void_crystal",
+      "name": "Void Crystal",
+      "type": "material",
+      "description": "A crystal pulsing with void energy",
+      "droppable": true,
+      "dropped_by": "aberration"
+    },
+    {
+      "id": "holy_essence",
+      "name": "Holy Essence",
+      "type": "material",
+      "description": "Pure celestial energy condensed into liquid form",
+      "droppable": true,
+      "dropped_by": "celestial"
+    },
+    {
+      "id": "starlight_shard",
+      "name": "Starlight Shard",
+      "type": "material",
+      "description": "A fragment of crystallized starlight",
+      "droppable": true,
+      "dropped_by": "celestial"
+    },
+    {
+      "id": "fey_dust",
+      "name": "Fey Dust",
+      "type": "material",
+      "description": "Magical dust from fey creatures",
+      "droppable": true,
+      "dropped_by": "fey"
+    },
+    {
+      "id": "moonstone",
+      "name": "Moonstone",
+      "type": "material",
+      "description": "A gem that glows softly with moonlight",
+      "droppable": true,
+      "dropped_by": "fey"
+    },
+    {
+      "id": "infernal_steel",
+      "name": "Infernal Steel",
+      "type": "material",
+      "description": "Metal forged in the fires of the infernal realm",
+      "droppable": true,
+      "dropped_by": "infernal"
+    },
+    {
+      "id": "hellfire_core",
+      "name": "Hellfire Core",
+      "type": "material",
+      "description": "A core burning with eternal hellfire",
+      "droppable": true,
+      "dropped_by": "infernal"
+    },
+    {
+      "id": "celestial_lootbox",
+      "name": "Celestial Cache",
+      "type": "container",
+      "description": "A divine container filled with holy treasures and powerful artifacts",
+      "loot_pool": [
+        {
+          "item_id": "holy_essence",
+          "chance": 0.9,
+          "qty": 5
+        },
+        {
+          "item_id": "starlight_shard",
+          "chance": 0.7,
+          "qty": 3
+        },
+        {
+          "item_id": "large_health_elixir",
+          "chance": 0.6,
+          "qty": 2
+        },
+        {
+          "item_id": "angelic_blade",
+          "chance": 0.4,
+          "qty": 1
+        },
+        {
+          "skill_id": "skill_heal_advanced",
+          "chance": 0.35
+        },
+        {
+          "skill_id": "skill_divine_shield",
+          "chance": 0.25
+        }
+      ],
+      "droppable": true,
+      "dropped_by": "celestial"
+    },
+    {
+      "id": "fey_lootbox",
+      "name": "Fey Treasure Box",
+      "type": "container",
+      "description": "An enchanted box from the fey realm filled with magical wonders",
+      "loot_pool": [
+        {
+          "item_id": "fey_dust",
+          "chance": 0.9,
+          "qty": 6
+        },
+        {
+          "item_id": "moonstone",
+          "chance": 0.8,
+          "qty": 4
+        },
+        {
+          "item_id": "greater_mana_potion",
+          "chance": 0.7,
+          "qty": 3
+        },
+        {
+          "item_id": "moonlight_staff",
+          "chance": 0.5,
+          "qty": 1
+        },
+        {
+          "skill_id": "skill_nature_blessing",
+          "chance": 0.4
+        },
+        {
+          "skill_id": "skill_illusion",
+          "chance": 0.3
+        }
+      ],
+      "droppable": true,
+      "dropped_by": "fey"
+    },
+    {
+      "id": "infernal_lootbox",
+      "name": "Infernal Vault",
+      "type": "container",
+      "description": "A dark vault containing weapons and artifacts from the infernal realm",
+      "loot_pool": [
+        {
+          "item_id": "infernal_steel",
+          "chance": 0.95,
+          "qty": 8
+        },
+        {
+          "item_id": "hellfire_core",
+          "chance": 0.85,
+          "qty": 5
+        },
+        {
+          "item_id": "demon_blade",
+          "chance": 0.5,
+          "qty": 1
+        },
+        {
+          "item_id": "infernal_armor",
+          "chance": 0.45,
+          "qty": 1
+        },
+        {
+          "skill_id": "skill_hellfire",
+          "chance": 0.4
+        },
+        {
+          "skill_id": "skill_dark_pact",
+          "chance": 0.3
+        }
+      ],
+      "droppable": true,
+      "dropped_by": "infernal"
+    },
+    {
+      "id": "aberration_lootbox",
+      "name": "Void Cache",
+      "type": "container",
+      "description": "A mysterious container from beyond reality",
+      "loot_pool": [
+        {
+          "item_id": "aberrant_tissue",
+          "chance": 0.9,
+          "qty": 7
+        },
+        {
+          "item_id": "void_crystal",
+          "chance": 0.75,
+          "qty": 4
+        },
+        {
+          "item_id": "void_dagger",
+          "chance": 0.5,
+          "qty": 1
+        },
+        {
+          "item_id": "eldritch_tome",
+          "chance": 0.4,
+          "qty": 1
+        },
+        {
+          "skill_id": "skill_void_bolt",
+          "chance": 0.35
+        }
+      ],
+      "droppable": true,
+      "dropped_by": "aberration",
+      "cost": 350,
+      "shopchance": 0.05,
+      "goldvariation": [-0.05, 0.1]
+    },
+    {
+      "id": "angelic_blade",
+      "name": "Angelic Blade",
+      "type": "weapon",
+      "description": "A holy sword blessed by celestial beings",
+      "attack": 35,
+      "magic_power": 12,
+      "crit_chance": 8.0,
+      "droppable": true,
+      "dropped_by": "celestial"
+    },
+    {
+      "id": "moonlight_staff",
+      "name": "Moonlight Staff",
+      "type": "weapon",
+      "description": "A staff channeling the power of the moon",
+      "magic_power": 28,
+      "mana_regen": 6,
+      "max_mana": 50,
+      "droppable": true,
+      "dropped_by": "fey"
+    },
+    {
+      "id": "demon_blade",
+      "name": "Demon Blade",
+      "type": "weapon",
+      "description": "A cursed blade forged in hellfire",
+      "attack": 48,
+      "crit_damage": 0.4,
+      "lifesteal": 8,
+      "droppable": true,
+      "dropped_by": "infernal"
+    },
+    {
+      "id": "void_dagger",
+      "name": "Void Dagger",
+      "type": "weapon",
+      "description": "A dagger that seems to cut through reality itself",
+      "attack": 32,
+      "magic_power": 18,
+      "penetration": 20.0,
+      "droppable": true,
+      "dropped_by": "aberration"
+    },
+    {
+      "id": "infernal_armor",
+      "name": "Infernal Armor",
+      "type": "armor",
+      "description": "Heavy armor forged from infernal steel",
+      "defense": 35,
+      "max_hp": 80,
+      "attack": 10,
+      "droppable": true,
+      "dropped_by": "infernal"
+    },
+    {
+      "id": "eldritch_tome",
+      "name": "Eldritch Tome",
+      "type": "offhand",
+      "description": "A forbidden book containing dark knowledge",
+      "magic_power": 22,
+      "max_mana": 70,
+      "magic_penetration": 18.0,
+      "droppable": true,
+      "dropped_by": "aberration"
+    },
+    {
+      "id": "mystery_lootbox",
+      "name": "Mystery Box",
+      "type": "container",
+      "description": "A mysterious box that could contain anything",
+      "loot_pool": [
+        {
+          "item_id": "potion",
+          "chance": 0.5,
+          "qty": 3
+        },
+        {
+          "item_id": "mana_potion",
+          "chance": 0.5,
+          "qty": 3
+        },
+        {
+          "item_id": "iron_sword",
+          "chance": 0.3,
+          "qty": 1
+        },
+        {
+          "item_id": "steel_armor",
+          "chance": 0.25,
+          "qty": 1
+        },
+        {
+          "item_id": "crystal_ring",
+          "chance": 0.2,
+          "qty": 1
+        },
+        {
+          "skill_id": "skill_power_strike",
+          "chance": 0.2
+        }
+      ],
+      "cost": 100,
+      "shopchance": 0.4,
+      "goldvariation": [-0.1, 0.15]
+    },
+    {
+      "id": "legendary_lootbox",
+      "name": "Legendary Chest",
+      "type": "container",
+      "description": "An extremely rare chest containing legendary treasures",
+      "loot_pool": [
+        {
+          "item_id": "legendary_staff",
+          "chance": 0.5,
+          "qty": 1
+        },
+        {
+          "item_id": "angelic_blade",
+          "chance": 0.4,
+          "qty": 1
+        },
+        {
+          "item_id": "demon_blade",
+          "chance": 0.4,
+          "qty": 1
+        },
+        {
+          "item_id": "large_health_elixir",
+          "chance": 0.8,
+          "qty": 3
+        },
+        {
+          "item_id": "greater_mana_potion",
+          "chance": 0.8,
+          "qty": 3
+        },
+        {
+          "skill_id": "skill_fireball_advanced",
+          "chance": 0.5
+        },
+        {
+          "skill_id": "skill_lightning_bolt",
+          "chance": 0.4
+        }
+      ],
+      "cost": 800,
+      "shopchance": 0.02,
+      "goldvariation": [-0.05, 0.05]
     }
   ]
 }

@@ -43,6 +43,12 @@
           "chance": 0.12,
           "qty_min": 1,
           "qty_max": 1
+        },
+        {
+          "item_id": "beast_hide",
+          "chance": 0.4,
+          "qty_min": 1,
+          "qty_max": 2
         }
       ],
       "attacks": [
@@ -90,6 +96,12 @@
         {
           "item_id": "iron_core",
           "chance": 0.6,
+          "qty_min": 1,
+          "qty_max": 1
+        },
+        {
+          "item_id": "iron_chest",
+          "chance": 0.15,
           "qty_min": 1,
           "qty_max": 1
         }
@@ -227,8 +239,21 @@
       "min_wave": 5,
       "max_wave": 0,
       "image": "goblin1.png",
-      "attacks": [],
-      "drops": []
+      "attacks": ["atk_slash"],
+      "drops": [
+        {
+          "item_id": "broken_tool",
+          "chance": 0.3,
+          "qty_min": 1,
+          "qty_max": 2
+        },
+        {
+          "item_id": "scrap_metal",
+          "chance": 0.2,
+          "qty_min": 1,
+          "qty_max": 1
+        }
+      ]
     },
     {
       "id": "fireelemental",
@@ -248,6 +273,669 @@
       "image": "fireelemental1",
       "attacks": [],
       "drops": []
+    },
+    {
+      "id": "goldengoblin",
+      "name": "Golden Goblin",
+      "classification": "normal",
+      "category": "horde",
+      "hp_base": 5,
+      "atk_base": 5,
+      "def_base": 2000,
+      "pen_base": 500.0,
+      "magic_def_base": 2000,
+      "xp_base": 0,
+      "gold_base": 250,
+      "min_wave": 5,
+      "max_wave": 0,
+      "spawn_on_wave_multiple_of": 16,
+      "attacks": [],
+      "drops": []
+    },
+    {
+      "id": "shadow_wraith",
+      "name": "Shadow Wraith",
+      "classification": "elite",
+      "category": "undead",
+      "min_wave": 15,
+      "hp_base": 45,
+      "atk_base": 12,
+      "def_base": 2,
+      "magic_def_base": 8,
+      "xp_base": 40,
+      "gold_base": 25,
+      "drops": [
+        {
+          "item_id": "undead_essence",
+          "chance": 0.4,
+          "qty_min": 1,
+          "qty_max": 3
+        },
+        {
+          "item_id": "shadow_essence",
+          "chance": 0.25,
+          "qty_min": 1,
+          "qty_max": 2
+        }
+      ],
+      "attacks": ["atk_fireball"]
+    },
+    {
+      "id": "flame_elemental",
+      "name": "Flame Elemental",
+      "classification": "normal",
+      "category": "elemental",
+      "min_wave": 10,
+      "hp_base": 30,
+      "atk_base": 14,
+      "def_base": 3,
+      "magic_def_base": 10,
+      "xp_base": 22,
+      "gold_base": 15,
+      "drops": [
+        {
+          "item_id": "elemental_core",
+          "chance": 0.35,
+          "qty_min": 1,
+          "qty_max": 2
+        },
+        {
+          "item_id": "crystal_shard",
+          "chance": 0.2,
+          "qty_min": 1,
+          "qty_max": 1
+        }
+      ],
+      "attacks": ["atk_fireball"]
+    },
+    {
+      "id": "ice_elemental",
+      "name": "Ice Elemental",
+      "classification": "normal",
+      "category": "elemental",
+      "min_wave": 12,
+      "hp_base": 35,
+      "atk_base": 12,
+      "def_base": 5,
+      "magic_def_base": 12,
+      "xp_base": 25,
+      "gold_base": 16,
+      "drops": [
+        {
+          "item_id": "elemental_core",
+          "chance": 0.35,
+          "qty_min": 1,
+          "qty_max": 2
+        },
+        {
+          "item_id": "water_crystal",
+          "chance": 0.3,
+          "qty_min": 1,
+          "qty_max": 2
+        }
+      ],
+      "attacks": ["atk_slash"]
+    },
+    {
+      "id": "demon_imp",
+      "name": "Demon Imp",
+      "classification": "normal",
+      "category": "demon",
+      "min_wave": 20,
+      "hp_base": 35,
+      "atk_base": 16,
+      "def_base": 4,
+      "magic_def_base": 6,
+      "xp_base": 28,
+      "gold_base": 18,
+      "drops": [
+        {
+          "item_id": "demon_horn",
+          "chance": 0.3,
+          "qty_min": 1,
+          "qty_max": 2
+        }
+      ],
+      "attacks": ["atk_fireball"]
+    },
+    {
+      "id": "demon_lord",
+      "name": "Demon Lord",
+      "classification": "miniboss",
+      "category": "demon",
+      "min_wave": 25,
+      "hp_base": 120,
+      "atk_base": 25,
+      "def_base": 8,
+      "magic_def_base": 10,
+      "pen_base": 5.0,
+      "xp_base": 100,
+      "gold_base": 60,
+      "drops": [
+        {
+          "item_id": "demon_horn",
+          "chance": 0.8,
+          "qty_min": 2,
+          "qty_max": 4
+        },
+        {
+          "item_id": "ancient_rune",
+          "chance": 0.15,
+          "qty_min": 1,
+          "qty_max": 1
+        }
+      ],
+      "attacks": ["atk_multi_stab"]
+    },
+    {
+      "id": "young_dragon",
+      "name": "Young Dragon",
+      "classification": "elite",
+      "category": "dragon",
+      "min_wave": 30,
+      "hp_base": 80,
+      "atk_base": 20,
+      "def_base": 10,
+      "magic_def_base": 8,
+      "pen_base": 8.0,
+      "xp_base": 70,
+      "gold_base": 45,
+      "drops": [
+        {
+          "item_id": "dragon_scale",
+          "chance": 0.3,
+          "qty_min": 1,
+          "qty_max": 3
+        },
+        {
+          "item_id": "crystal_shard",
+          "chance": 0.4,
+          "qty_min": 2,
+          "qty_max": 3
+        }
+      ],
+      "attacks": ["atk_fireball"]
+    },
+    {
+      "id": "ancient_dragon",
+      "name": "Ancient Dragon",
+      "classification": "boss",
+      "category": "dragon",
+      "min_wave": 40,
+      "hp_base": 300,
+      "atk_base": 40,
+      "def_base": 20,
+      "magic_def_base": 15,
+      "pen_base": 15.0,
+      "xp_base": 250,
+      "gold_base": 150,
+      "drops": [
+        {
+          "item_id": "dragon_scale",
+          "chance": 0.9,
+          "qty_min": 5,
+          "qty_max": 10
+        },
+        {
+          "item_id": "ancient_rune",
+          "chance": 0.4,
+          "qty_min": 1,
+          "qty_max": 2
+        },
+        {
+          "item_id": "mythril_ore",
+          "chance": 0.3,
+          "qty_min": 1,
+          "qty_max": 2
+        }
+      ],
+      "attacks": ["atk_fireball"]
+    },
+    {
+      "id": "skeleton_warrior",
+      "name": "Skeleton Warrior",
+      "classification": "normal",
+      "category": "undead",
+      "min_wave": 8,
+      "hp_base": 25,
+      "atk_base": 10,
+      "def_base": 6,
+      "magic_def_base": 2,
+      "xp_base": 18,
+      "gold_base": 12,
+      "drops": [
+        {
+          "item_id": "undead_essence",
+          "chance": 0.3,
+          "qty_min": 1,
+          "qty_max": 2
+        },
+        {
+          "item_id": "broken_tool",
+          "chance": 0.4,
+          "qty_min": 1,
+          "qty_max": 3
+        }
+      ],
+      "attacks": ["atk_slash"]
+    },
+    {
+      "id": "lich",
+      "name": "Lich",
+      "classification": "miniboss",
+      "category": "undead",
+      "min_wave": 35,
+      "hp_base": 100,
+      "atk_base": 28,
+      "def_base": 5,
+      "magic_def_base": 20,
+      "pen_base": 10.0,
+      "xp_base": 120,
+      "gold_base": 70,
+      "drops": [
+        {
+          "item_id": "undead_essence",
+          "chance": 0.8,
+          "qty_min": 3,
+          "qty_max": 5
+        },
+        {
+          "item_id": "ancient_rune",
+          "chance": 0.3,
+          "qty_min": 1,
+          "qty_max": 2
+        },
+        {
+          "item_id": "shadow_essence",
+          "chance": 0.5,
+          "qty_min": 2,
+          "qty_max": 4
+        }
+      ],
+      "attacks": ["atk_fireball"]
+    },
+    {
+      "id": "crystal_golem",
+      "name": "Crystal Golem",
+      "classification": "elite",
+      "category": "construct",
+      "min_wave": 18,
+      "hp_base": 65,
+      "atk_base": 15,
+      "def_base": 15,
+      "magic_def_base": 12,
+      "xp_base": 50,
+      "gold_base": 35,
+      "drops": [
+        {
+          "item_id": "crystal_shard",
+          "chance": 0.6,
+          "qty_min": 2,
+          "qty_max": 4
+        },
+        {
+          "item_id": "iron_core",
+          "chance": 0.5,
+          "qty_min": 1,
+          "qty_max": 3
+        }
+      ],
+      "attacks": ["atk_slash"]
+    },
+    {
+      "id": "dire_wolf",
+      "name": "Dire Wolf",
+      "classification": "elite",
+      "category": "beast",
+      "min_wave": 14,
+      "hp_base": 50,
+      "atk_base": 18,
+      "def_base": 4,
+      "magic_def_base": 3,
+      "xp_base": 35,
+      "gold_base": 22,
+      "drops": [
+        {
+          "item_id": "herb_healing",
+          "chance": 0.4,
+          "qty_min": 2,
+          "qty_max": 3
+        },
+        {
+          "item_id": "wood_plank",
+          "chance": 0.3,
+          "qty_min": 1,
+          "qty_max": 2
+        }
+      ],
+      "attacks": ["atk_multi_stab"]
+    },
+    {
+      "id": "giant_spider",
+      "name": "Giant Spider",
+      "classification": "normal",
+      "category": "beast",
+      "min_wave": 12,
+      "hp_base": 32,
+      "atk_base": 13,
+      "def_base": 3,
+      "magic_def_base": 2,
+      "xp_base": 24,
+      "gold_base": 14,
+      "drops": [
+        {
+          "item_id": "herb_healing",
+          "chance": 0.25,
+          "qty_min": 1,
+          "qty_max": 2
+        }
+      ],
+      "attacks": ["atk_slash"]
+    },
+    {
+      "id": "corrupted_treant",
+      "name": "Corrupted Treant",
+      "classification": "elite",
+      "category": "beast",
+      "min_wave": 22,
+      "hp_base": 90,
+      "atk_base": 16,
+      "def_base": 12,
+      "magic_def_base": 6,
+      "xp_base": 55,
+      "gold_base": 38,
+      "drops": [
+        {
+          "item_id": "wood_plank",
+          "chance": 0.7,
+          "qty_min": 3,
+          "qty_max": 6
+        },
+        {
+          "item_id": "herb_healing",
+          "chance": 0.5,
+          "qty_min": 2,
+          "qty_max": 4
+        }
+      ],
+      "attacks": ["atk_slash"]
+    },
+    {
+      "id": "void_horror",
+      "name": "Void Horror",
+      "classification": "boss",
+      "category": "demon",
+      "min_wave": 50,
+      "hp_base": 400,
+      "atk_base": 50,
+      "def_base": 25,
+      "magic_def_base": 20,
+      "pen_base": 20.0,
+      "xp_base": 350,
+      "gold_base": 200,
+      "drops": [
+        {
+          "item_id": "shadow_essence",
+          "chance": 0.95,
+          "qty_min": 8,
+          "qty_max": 12
+        },
+        {
+          "item_id": "demon_horn",
+          "chance": 0.9,
+          "qty_min": 6,
+          "qty_max": 10
+        },
+        {
+          "item_id": "ancient_rune",
+          "chance": 0.6,
+          "qty_min": 2,
+          "qty_max": 4
+        },
+        {
+          "item_id": "mythril_ore",
+          "chance": 0.5,
+          "qty_min": 2,
+          "qty_max": 3
+        }
+      ],
+      "attacks": ["atk_multi_stab"]
+    },
+    {
+      "id": "aberration_eye",
+      "name": "Aberrant Eye",
+      "classification": "elite",
+      "category": "aberration",
+      "min_wave": 45,
+      "hp_base": 140,
+      "atk_base": 30,
+      "def_base": 8,
+      "magic_def_base": 25,
+      "pen_base": 12.0,
+      "xp_base": 180,
+      "gold_base": 85,
+      "drops": [
+        {
+          "item_id": "aberrant_tissue",
+          "chance": 0.7,
+          "qty_min": 2,
+          "qty_max": 5
+        },
+        {
+          "item_id": "void_crystal",
+          "chance": 0.3,
+          "qty_min": 1,
+          "qty_max": 2
+        }
+      ],
+      "attacks": ["atk_magic_bolt"]
+    },
+    {
+      "id": "celestial_guardian",
+      "name": "Celestial Guardian",
+      "classification": "elite",
+      "category": "celestial",
+      "min_wave": 60,
+      "hp_base": 200,
+      "atk_base": 28,
+      "def_base": 22,
+      "magic_def_base": 30,
+      "xp_base": 220,
+      "gold_base": 100,
+      "drops": [
+        {
+          "item_id": "holy_essence",
+          "chance": 0.8,
+          "qty_min": 3,
+          "qty_max": 6
+        },
+        {
+          "item_id": "starlight_shard",
+          "chance": 0.4,
+          "qty_min": 1,
+          "qty_max": 3
+        }
+      ],
+      "attacks": ["atk_holy_smite"]
+    },
+    {
+      "id": "fey_trickster",
+      "name": "Fey Trickster",
+      "classification": "normal",
+      "category": "fey",
+      "min_wave": 35,
+      "hp_base": 85,
+      "atk_base": 22,
+      "def_base": 6,
+      "magic_def_base": 18,
+      "xp_base": 95,
+      "gold_base": 45,
+      "drops": [
+        {
+          "item_id": "fey_dust",
+          "chance": 0.65,
+          "qty_min": 2,
+          "qty_max": 4
+        },
+        {
+          "item_id": "moonstone",
+          "chance": 0.25,
+          "qty_min": 1,
+          "qty_max": 2
+        }
+      ],
+      "attacks": ["atk_multi_stab"]
+    },
+    {
+      "id": "infernal_knight",
+      "name": "Infernal Knight",
+      "classification": "elite",
+      "category": "infernal",
+      "min_wave": 70,
+      "hp_base": 250,
+      "atk_base": 40,
+      "def_base": 28,
+      "magic_def_base": 22,
+      "pen_base": 18.0,
+      "xp_base": 280,
+      "gold_base": 130,
+      "drops": [
+        {
+          "item_id": "infernal_steel",
+          "chance": 0.75,
+          "qty_min": 2,
+          "qty_max": 4
+        },
+        {
+          "item_id": "hellfire_core",
+          "chance": 0.5,
+          "qty_min": 1,
+          "qty_max": 2
+        }
+      ],
+      "attacks": ["atk_slash", "atk_roar"]
+    },
+    {
+      "id": "abyssal_spawn",
+      "name": "Abyssal Spawn",
+      "classification": "normal",
+      "category": "aberration",
+      "min_wave": 55,
+      "hp_base": 120,
+      "atk_base": 26,
+      "def_base": 10,
+      "magic_def_base": 20,
+      "xp_base": 105,
+      "gold_base": 55,
+      "drops": [
+        {
+          "item_id": "aberrant_tissue",
+          "chance": 0.6,
+          "qty_min": 1,
+          "qty_max": 3
+        }
+      ],
+      "attacks": ["atk_slash"]
+    },
+    {
+      "id": "angelic_sentinel",
+      "name": "Angelic Sentinel",
+      "classification": "miniboss",
+      "category": "celestial",
+      "min_wave": 75,
+      "spawn_on_wave_multiple_of": 15,
+      "hp_base": 320,
+      "atk_base": 35,
+      "def_base": 30,
+      "magic_def_base": 35,
+      "xp_base": 380,
+      "gold_base": 180,
+      "drops": [
+        {
+          "item_id": "holy_essence",
+          "chance": 0.9,
+          "qty_min": 5,
+          "qty_max": 8
+        },
+        {
+          "item_id": "celestial_lootbox",
+          "chance": 0.35,
+          "qty_min": 1,
+          "qty_max": 1
+        }
+      ],
+      "attacks": ["atk_holy_smite", "atk_roar"]
+    },
+    {
+      "id": "fairy_queen",
+      "name": "Fairy Queen",
+      "classification": "boss",
+      "category": "fey",
+      "min_wave": 80,
+      "hp_base": 380,
+      "atk_base": 32,
+      "def_base": 18,
+      "magic_def_base": 40,
+      "pen_base": 15.0,
+      "xp_base": 420,
+      "gold_base": 220,
+      "drops": [
+        {
+          "item_id": "fey_dust",
+          "chance": 0.95,
+          "qty_min": 8,
+          "qty_max": 12
+        },
+        {
+          "item_id": "moonstone",
+          "chance": 0.7,
+          "qty_min": 3,
+          "qty_max": 5
+        },
+        {
+          "item_id": "fey_lootbox",
+          "chance": 0.5,
+          "qty_min": 1,
+          "qty_max": 1
+        }
+      ],
+      "attacks": ["atk_magic_bolt", "atk_multi_stab"]
+    },
+    {
+      "id": "demon_lord",
+      "name": "Demon Lord",
+      "classification": "boss",
+      "category": "infernal",
+      "min_wave": 100,
+      "spawn_on_wave_multiple_of": 25,
+      "hp_base": 500,
+      "atk_base": 55,
+      "def_base": 35,
+      "magic_def_base": 30,
+      "pen_base": 25.0,
+      "xp_base": 550,
+      "gold_base": 280,
+      "drops": [
+        {
+          "item_id": "infernal_steel",
+          "chance": 0.9,
+          "qty_min": 6,
+          "qty_max": 10
+        },
+        {
+          "item_id": "hellfire_core",
+          "chance": 0.85,
+          "qty_min": 4,
+          "qty_max": 6
+        },
+        {
+          "item_id": "infernal_lootbox",
+          "chance": 0.6,
+          "qty_min": 1,
+          "qty_max": 1
+        }
+      ],
+      "attacks": ["atk_fireball", "atk_slash", "atk_roar"]
     }
   ],
   "scaling_notes": {

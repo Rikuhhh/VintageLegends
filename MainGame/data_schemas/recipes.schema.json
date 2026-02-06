@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Recipes Schema",
+  "description": "Schema for crafting recipes in VintageLegends",
+  "type": "object",
+  "properties": {
+    "recipes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the recipe"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the recipe"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of what the recipe creates"
+          },
+          "result_item_id": {
+            "type": "string",
+            "description": "ID of the item that will be crafted"
+          },
+          "result_quantity": {
+            "type": "integer",
+            "description": "Quantity of the result item",
+            "minimum": 1,
+            "default": 1
+          },
+          "ingredients": {
+            "type": "array",
+            "description": "List of required ingredients",
+            "items": {
+              "type": "object",
+              "properties": {
+                "item_id": {
+                  "type": "string",
+                  "description": "ID of the required item"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "description": "Quantity required",
+                  "minimum": 1
+                }
+              },
+              "required": ["item_id", "quantity"]
+            }
+          },
+          "required_level": {
+            "type": "integer",
+            "description": "Minimum player level required to craft",
+            "minimum": 1,
+            "default": 1
+          },
+          "category": {
+            "type": "string",
+            "description": "Category of the recipe for organization",
+            "enum": ["weapon", "armor", "consumable", "material", "misc"]
+          }
+        },
+        "required": ["id", "name", "result_item_id", "ingredients"]
+      }
+    }
+  },
+  "required": ["recipes"]
+}

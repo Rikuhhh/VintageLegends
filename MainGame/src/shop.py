@@ -56,7 +56,11 @@ class Shop:
                 final_cost = max(1, int(cost * (1.0 + factor)))
             
             # Apply cumulative price increase from waves (scales all prices)
-            final_cost = max(1, int(final_cost * (1.0 + cumulative_increase)))
+            # After wave 50, double the price increase every 5 waves
+            adjusted_increase = cumulative_increase
+            if wave > 50 and wave % 5 == 0:
+                adjusted_increase = cumulative_increase * 2
+            final_cost = max(1, int(final_cost * (1.0 + adjusted_increase)))
 
             offers.append({**i, '_final_cost': final_cost})
 

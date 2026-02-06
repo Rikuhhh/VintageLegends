@@ -31,14 +31,23 @@ class SkillManager:
         """Get skill definition by ID"""
         return self.skills.get(skill_id)
     
+    def get_skill_level(self, caster, skill_id):
+        """Get the level of a skill for the caster (default 1)"""
+        if not hasattr(caster, 'skill_levels'):
+            return 1
+        return caster.skill_levels.get(skill_id, 1)
+    
     def can_use_skill(self, caster, skill_id):
         """Check if caster can use this skill (mana, cooldown)"""
         skill = self.get_skill(skill_id)
         if not skill:
             return False, "Skill not found"
         
-        # Check mana
-        mana_cost = skill.get('mana_cost', 0)
+        # Check mana (scaled by skill level)
+        base_mana_cost = skill.get('mana_cost', 0)
+        skill_level = self.get_skill_level(caster, skill_id)
+        # Mana cost increases by 20% per level
+        mana_cost = int(base_mana_cost * (1 + (skill_level - 1) * 0.2))
         current_mana = getattr(caster, 'current_mana', 0)
         if current_mana < mana_cost:
             return False, f"Not enough mana ({current_mana}/{mana_cost})"
@@ -59,28 +68,52 @@ class SkillManager:
         base_power = skill.get('power', 0)
         scaling_stat = skill.get('scaling_stat', 'atk')
         
+        # Get skill level and apply damage bonus (25% per level)
+        skill_id = skill.get('id')
+        skill_level = self.get_skill_level(caster, skill_id)
+        level_multiplier = 1 + (skill_level - 1) * 0.25
+        
         # Get scaling stat value from caster
         if scaling_stat == 'magic_power':
             stat_value = getattr(caster, 'magic_power', 0)
+            # Magic skills scale 1.5x better with magic_power
+            stat_value = int(stat_value * 1.5)
         elif scaling_stat == 'atk':
             stat_value = getattr(caster, 'atk', 0)
         else:
             stat_value = getattr(caster, scaling_stat, 0)
         
-        # Base damage calculation: base_power + stat_value
-        raw_damage = base_power + stat_value
+        # Base damage calculation: (base_power + stat_value) * level_multiplier
+        raw_damage = int((base_power + stat_value) * level_multiplier)
         
         # Apply effectiveness multiplier
         multiplier = self.get_effectiveness_multiplier(skill, target)
         raw_damage = int(raw_damage * multiplier)
         
-        # Check for critical hit (caster's crit chance)
+        # Check for critical hit (caster's crit chance with overcrit mechanic)
         is_crit = False
+        is_overcrit = False
         try:
             crit_chance = getattr(caster, 'critchance', 0.0)
-            if random.random() < crit_chance:
+            base_crit_damage = getattr(caster, 'critdamage', 1.5)
+            
+            # Overcrit mechanic: crit chance >100%
+            if crit_chance > 1.0:
+                overcrit_amount = crit_chance - 1.0
+                # 1% crit damage per 1% overcrit
+                bonus_crit_damage = overcrit_amount
+                # 0.5% chance to deal 3x total crit damage
+                overcrit_chance = overcrit_amount * 0.5
+                effective_crit_chance = 1.0  # Always crit when >100%
+                effective_crit_damage = base_crit_damage + bonus_crit_damage
+                is_overcrit = random.random() < overcrit_chance
+            else:
+                effective_crit_chance = crit_chance
+                effective_crit_damage = base_crit_damage
+            
+            if random.random() < effective_crit_chance:
                 is_crit = True
-                crit_mult = getattr(caster, 'critdamage', 1.5)
+                crit_mult = effective_crit_damage * (3.0 if is_overcrit else 1.0)
                 raw_damage = int(raw_damage * crit_mult)
         except Exception:
             pass
@@ -211,6 +244,9 @@ class SkillManager:
         if not skill:
             return None, "Skill not found"
         
+        # Get skill level for scaling
+        skill_level = self.get_skill_level(caster, skill_id)
+        
         # Calculate damage (if applicable)
         damage = 0
         is_crit = False
@@ -222,16 +258,18 @@ class SkillManager:
         # Apply effects
         effect_results = self.apply_skill_effects(skill, caster, target, effect_manager)
         
-        # Set cooldown
+        # Set cooldown (tripled to prevent spamming)
         cooldown = skill.get('cooldown', 0)
         if cooldown > 0:
             if not hasattr(caster, 'skill_cooldowns'):
                 caster.skill_cooldowns = {}
-            caster.skill_cooldowns[skill_id] = cooldown
+            # Triple the cooldown to make skills more strategic
+            caster.skill_cooldowns[skill_id] = cooldown * 3
         
         # Return result summary
         result = {
             'skill': skill,
+            'skill_level': skill_level,
             'damage': damage,
             'is_crit': is_crit,
             'effects': effect_results,

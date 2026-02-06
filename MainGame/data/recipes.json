@@ -1,0 +1,291 @@
+{
+  "recipes": [
+    {
+      "id": "health_potion",
+      "name": "Health Potion",
+      "description": "Craft a basic health potion",
+      "result_item_id": "potion_health",
+      "result_quantity": 1,
+      "ingredients": [
+        {
+          "item_id": "herb_healing",
+          "quantity": 2
+        },
+        {
+          "item_id": "water_crystal",
+          "quantity": 1
+        }
+      ],
+      "required_level": 1,
+      "category": "consumable"
+    },
+    {
+      "id": "iron_sword",
+      "name": "Iron Sword",
+      "description": "Forge a basic iron sword",
+      "result_item_id": "iron_sword",
+      "result_quantity": 1,
+      "ingredients": [
+        {
+          "item_id": "iron_ore",
+          "quantity": 3
+        },
+        {
+          "item_id": "wood_plank",
+          "quantity": 1
+        }
+      ],
+      "required_level": 3,
+      "category": "weapon"
+    },
+    {
+      "id": "greatscraphammercraft",
+      "name": "Scrap GreatHammer",
+      "description": "Un marteau fait de divers matériaux.",
+      "category": "weapon",
+      "result_item_id": "greatscraphammer",
+      "result_quantity": 1,
+      "required_level": 5,
+      "ingredients": [
+        {
+          "item_id": "broken_tool",
+          "quantity": 5
+        },
+        {
+          "item_id": "iron_core",
+          "quantity": 2
+        }
+      ]
+    },
+    {
+      "id": "mythril_blade_craft",
+      "name": "Mythril Blade",
+      "description": "Forge a legendary mythril blade",
+      "category": "weapon",
+      "result_item_id": "mythril_blade",
+      "result_quantity": 1,
+      "required_level": 10,
+      "ingredients": [
+        {
+          "item_id": "mythril_ore",
+          "quantity": 3
+        },
+        {
+          "item_id": "iron_ore",
+          "quantity": 5
+        },
+        {
+          "item_id": "crystal_shard",
+          "quantity": 2
+        }
+      ]
+    },
+    {
+      "id": "shadow_dagger_craft",
+      "name": "Shadow Dagger",
+      "description": "Craft a dagger from shadow essence",
+      "category": "weapon",
+      "result_item_id": "shadow_dagger",
+      "result_quantity": 1,
+      "required_level": 8,
+      "ingredients": [
+        {
+          "item_id": "shadow_essence",
+          "quantity": 4
+        },
+        {
+          "item_id": "iron_ore",
+          "quantity": 2
+        },
+        {
+          "item_id": "undead_essence",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "flame_staff_craft",
+      "name": "Flame Staff",
+      "description": "Create a fire-imbued staff",
+      "category": "weapon",
+      "result_item_id": "flame_staff",
+      "result_quantity": 1,
+      "required_level": 12,
+      "ingredients": [
+        {
+          "item_id": "wood_plank",
+          "quantity": 3
+        },
+        {
+          "item_id": "elemental_core",
+          "quantity": 2
+        },
+        {
+          "item_id": "crystal_shard",
+          "quantity": 3
+        }
+      ]
+    },
+    {
+      "id": "arcane_orb_craft",
+      "name": "Arcane Orb",
+      "description": "Conjure an arcane orb",
+      "category": "offhand",
+      "result_item_id": "arcane_orb",
+      "result_quantity": 1,
+      "required_level": 15,
+      "ingredients": [
+        {
+          "item_id": "crystal_shard",
+          "quantity": 5
+        },
+        {
+          "item_id": "ancient_rune",
+          "quantity": 1
+        },
+        {
+          "item_id": "water_crystal",
+          "quantity": 3
+        }
+      ]
+    },
+    {
+      "id": "dragon_plate_craft",
+      "name": "Dragon Plate Armor",
+      "description": "Forge armor from dragon scales",
+      "category": "armor",
+      "result_item_id": "dragon_plate",
+      "result_quantity": 1,
+      "required_level": 18,
+      "ingredients": [
+        {
+          "item_id": "dragon_scale",
+          "quantity": 8
+        },
+        {
+          "item_id": "iron_ore",
+          "quantity": 10
+        },
+        {
+          "item_id": "mythril_ore",
+          "quantity": 2
+        }
+      ]
+    },
+    {
+      "id": "shadow_cloak_craft",
+      "name": "Shadow Cloak",
+      "description": "Weave a cloak from shadows",
+      "category": "armor",
+      "result_item_id": "shadow_cloak",
+      "result_quantity": 1,
+      "required_level": 12,
+      "ingredients": [
+        {
+          "item_id": "shadow_essence",
+          "quantity": 6
+        },
+        {
+          "item_id": "undead_essence",
+          "quantity": 3
+        }
+      ]
+    },
+    {
+      "id": "mage_robe_craft",
+      "name": "Archmage Robe",
+      "description": "Weave an arcane robe",
+      "category": "armor",
+      "result_item_id": "mage_robe",
+      "result_quantity": 1,
+      "required_level": 15,
+      "ingredients": [
+        {
+          "item_id": "crystal_shard",
+          "quantity": 4
+        },
+        {
+          "item_id": "elemental_core",
+          "quantity": 2
+        },
+        {
+          "item_id": "ancient_rune",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "guardian_shield_craft",
+      "name": "Guardian Shield",
+      "description": "Forge a massive protective shield",
+      "category": "offhand",
+      "result_item_id": "guardian_shield",
+      "result_quantity": 1,
+      "required_level": 10,
+      "ingredients": [
+        {
+          "item_id": "iron_ore",
+          "quantity": 8
+        },
+        {
+          "item_id": "wood_plank",
+          "quantity": 5
+        },
+        {
+          "item_id": "mythril_ore",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "mana_potion_large_craft",
+      "name": "Large Mana Potion",
+      "description": "Brew a powerful mana potion",
+      "category": "consumable",
+      "result_item_id": "mana_potion_large",
+      "result_quantity": 1,
+      "required_level": 8,
+      "ingredients": [
+        {
+          "item_id": "herb_healing",
+          "quantity": 3
+        },
+        {
+          "item_id": "water_crystal",
+          "quantity": 2
+        },
+        {
+          "item_id": "elemental_core",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "id": "full_restore_craft",
+      "name": "Full Restore Potion",
+      "description": "Create the ultimate recovery potion",
+      "category": "consumable",
+      "result_item_id": "full_restore",
+      "result_quantity": 1,
+      "required_level": 20,
+      "ingredients": [
+        {
+          "item_id": "herb_healing",
+          "quantity": 5
+        },
+        {
+          "item_id": "water_crystal",
+          "quantity": 5
+        },
+        {
+          "item_id": "elemental_core",
+          "quantity": 2
+        },
+        {
+          "item_id": "ancient_rune",
+          "quantity": 1
+        }
+      ]
+    }
+  ]
+}

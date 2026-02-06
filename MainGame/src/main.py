@@ -13,6 +13,7 @@ try:
     from src.battle_system import BattleSystem
     from src.save_manager import SaveManager
     from src.shop import Shop
+    from src.crafting_system import CraftingSystem
 except Exception:
     from player import Player
     from enemy import Enemy
@@ -20,6 +21,7 @@ except Exception:
     from battle_system import BattleSystem
     from save_manager import SaveManager
     from shop import Shop
+    from crafting_system import CraftingSystem
 
 # --- CONFIGURATION DE BASE ---
 BASE_PATH = Path(__file__).resolve().parent.parent
@@ -120,10 +122,10 @@ user_settings = load_json("usersettings.json", {"volume": 0.8, "language": "fr"}
 
 # Validate and sanitize settings
 try:
-    width = max(640, min(3840, int(user_settings.get("width", 1280))))
-    height = max(480, min(2160, int(user_settings.get("height", 720))))
+    width = max(640, min(3840, int(user_settings.get("width", 1600))))
+    height = max(480, min(2160, int(user_settings.get("height", 900))))
 except (ValueError, TypeError):
-    width, height = 1280, 720
+    width, height = 1600, 900
 
 title = str(game_settings.get("title", "Vintage Legends"))
 
@@ -444,10 +446,16 @@ else:
             background = load_background_for_zone(starting_zone, screen)
             print(f"🗺️ Starting in zone: {starting_zone.get('name', 'Unknown')}")
 
-# Create shared UI and shop instances
+# Create shared instances
+shop = Shop(DATA_PATH)
+crafting_system = CraftingSystem(DATA_PATH)
+
+# Attach crafting system to battle so UI can access it
+battle.crafting_system = crafting_system
+
+# Create UI after battle is set up
 ui = UIManager(screen, assets_path=ASSETS_PATH, data_path=DATA_PATH)
 ui.set_actions(battle)
-shop = Shop(DATA_PATH)
 
 # --- BOUCLE PRINCIPALE ---
 def main():
@@ -697,8 +705,11 @@ def main():
                         item_h = 85
                         item_rect = pygame.Rect(panel_x + 20, item_y, panel_w - 40, item_h)
                         
-                        # Check if mouse is hovering over this item
+                        # Check if mouse is hovering over this item (but not over pagination buttons)
                         is_hovering = item_rect.collidepoint((mx, my))
+                        # Don't show tooltip if hovering over pagination buttons
+                        if prev_page_rect.collidepoint((mx, my)) or next_page_rect.collidepoint((mx, my)):
+                            is_hovering = False
                         if is_hovering:
                             hover_item = item
                         
@@ -878,16 +889,26 @@ def main():
         # --- AFFICHAGE ---
         screen.blit(background, (0, 0))
         
-        # Display current zone name at top of screen
+        # Display current zone name at top right (visible area)
         if battle.current_zone:
-            zone_font = pygame.font.Font(None, 24)
+            zone_font = pygame.font.Font(None, 32)
             zone_name = battle.current_zone.get('name', 'Unknown Zone')
-            zone_text = zone_font.render(zone_name, True, (100, 255, 100))
-            zone_rect = zone_text.get_rect(center=(width // 2, 15))
-            # Draw shadow for better visibility
-            shadow_text = zone_font.render(zone_name, True, (0, 0, 0))
-            screen.blit(shadow_text, (zone_rect.x + 1, zone_rect.y + 1))
-            screen.blit(zone_text, zone_rect)
+            zone_text = zone_font.render(zone_name, True, (255, 255, 150))
+            
+            # Position at top right, away from left panel
+            zone_x = width - zone_text.get_width() - 40
+            zone_y = 20
+            
+            # Draw background box for better visibility
+            box_padding = 15
+            box_rect = pygame.Rect(zone_x - box_padding, zone_y - box_padding // 2,
+                                  zone_text.get_width() + box_padding * 2,
+                                  zone_text.get_height() + box_padding)
+            pygame.draw.rect(screen, (20, 20, 30, 200), box_rect, border_radius=8)
+            pygame.draw.rect(screen, (100, 255, 100), box_rect, 2, border_radius=8)
+            
+            # Draw text
+            screen.blit(zone_text, (zone_x, zone_y))
         
         if player_sprite:
             # Scale down player sprite to 30% of original size
@@ -1092,6 +1113,7 @@ def main():
                             except Exception:
                                 pass
                             battle = BattleSystem(player)
+                            battle.crafting_system = crafting_system  # Attach crafting system
                             ui.set_actions(battle)
                             game_over = False
                             break

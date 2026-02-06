@@ -27,17 +27,20 @@ class AdminInterface:
         self.monsters_frame = ttk.Frame(self.notebook)
         self.skills_frame = ttk.Frame(self.notebook)
         self.zones_frame = ttk.Frame(self.notebook)
+        self.recipes_frame = ttk.Frame(self.notebook)
         
         self.notebook.add(self.items_frame, text='Items')
         self.notebook.add(self.monsters_frame, text='Monsters')
         self.notebook.add(self.skills_frame, text='Skills')
         self.notebook.add(self.zones_frame, text='Zones')
+        self.notebook.add(self.recipes_frame, text='Recipes')
         
         # Setup tabs
         self.setup_items_tab()
         self.setup_monsters_tab()
         self.setup_skills_tab()
         self.setup_zones_tab()
+        self.setup_recipes_tab()
     
     def get_monster_categories(self):
         """Get unique monster categories from monsters.json"""
@@ -1451,6 +1454,294 @@ class AdminInterface:
                 self.clear_zone_form()
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete zone: {e}")
+    
+    def setup_recipes_tab(self):
+        """Setup the Recipes tab with form fields"""
+        # Left side - Recipe list
+        left_frame = ttk.Frame(self.recipes_frame)
+        left_frame.pack(side='left', fill='both', expand=False, padx=5, pady=5)
+        
+        ttk.Label(left_frame, text="Existing Recipes:", font=('Arial', 10, 'bold')).pack()
+        
+        self.recipes_listbox = tk.Listbox(left_frame, width=30, height=25)
+        self.recipes_listbox.pack(fill='both', expand=True)
+        self.recipes_listbox.bind('<<ListboxSelect>>', self.load_selected_recipe)
+        
+        btn_frame = ttk.Frame(left_frame)
+        btn_frame.pack(fill='x', pady=5)
+        ttk.Button(btn_frame, text="New Recipe", command=self.new_recipe).pack(side='left', padx=2)
+        ttk.Button(btn_frame, text="Delete", command=self.delete_recipe).pack(side='left', padx=2)
+        
+        # Right side - Recipe editor
+        right_frame = ttk.Frame(self.recipes_frame)
+        right_frame.pack(side='right', fill='both', expand=True, padx=5, pady=5)
+        
+        # Create scrollable frame
+        canvas = tk.Canvas(right_frame)
+        scrollbar = ttk.Scrollbar(right_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Recipe fields
+        self.recipe_fields = {}
+        row = 0
+        
+        # ID
+        ttk.Label(scrollable_frame, text="ID*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.recipe_fields['id'] = ttk.Entry(scrollable_frame, width=40)
+        self.recipe_fields['id'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Name
+        ttk.Label(scrollable_frame, text="Name*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.recipe_fields['name'] = ttk.Entry(scrollable_frame, width=40)
+        self.recipe_fields['name'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Description
+        ttk.Label(scrollable_frame, text="Description:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.recipe_fields['description'] = ttk.Entry(scrollable_frame, width=40)
+        self.recipe_fields['description'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Category
+        ttk.Label(scrollable_frame, text="Category*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.recipe_fields['category'] = ttk.Combobox(scrollable_frame, width=37,
+                                                      values=['weapon', 'armor', 'consumable', 'material', 'misc'])
+        self.recipe_fields['category'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Result Item ID
+        ttk.Label(scrollable_frame, text="Result Item ID*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.recipe_fields['result_item_id'] = ttk.Entry(scrollable_frame, width=40)
+        self.recipe_fields['result_item_id'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Result Quantity
+        ttk.Label(scrollable_frame, text="Result Quantity:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.recipe_fields['result_quantity'] = ttk.Entry(scrollable_frame, width=40)
+        self.recipe_fields['result_quantity'].insert(0, '1')
+        self.recipe_fields['result_quantity'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Required Level
+        ttk.Label(scrollable_frame, text="Required Level:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.recipe_fields['required_level'] = ttk.Entry(scrollable_frame, width=40)
+        self.recipe_fields['required_level'].insert(0, '1')
+        self.recipe_fields['required_level'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        # Ingredients section
+        ingredients_frame = ttk.LabelFrame(scrollable_frame, text="Ingredients")
+        ingredients_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        self.recipe_fields['ingredients'] = []
+        self.ingredient_entries = []
+        
+        # Add button for ingredients
+        ttk.Button(ingredients_frame, text="Add Ingredient", command=self.add_ingredient_field).pack(pady=5)
+        
+        # Container for ingredient rows
+        self.ingredients_container = ttk.Frame(ingredients_frame)
+        self.ingredients_container.pack(fill='both', expand=True, padx=5, pady=5)
+        
+        # Save button
+        save_btn = ttk.Button(scrollable_frame, text="Save Recipe", command=self.save_recipe)
+        save_btn.grid(row=row, column=0, columnspan=2, pady=20)
+        
+        # Load recipes
+        self.load_recipes_list()
+    
+    def add_ingredient_field(self):
+        """Add a new ingredient input row"""
+        row_frame = ttk.Frame(self.ingredients_container)
+        row_frame.pack(fill='x', pady=2)
+        
+        ttk.Label(row_frame, text="Item ID:", width=10).pack(side='left', padx=2)
+        item_id_entry = ttk.Entry(row_frame, width=20)
+        item_id_entry.pack(side='left', padx=2)
+        
+        ttk.Label(row_frame, text="Qty:", width=5).pack(side='left', padx=2)
+        qty_entry = ttk.Entry(row_frame, width=10)
+        qty_entry.insert(0, '1')
+        qty_entry.pack(side='left', padx=2)
+        
+        # Remove button
+        def remove_this():
+            row_frame.destroy()
+            self.ingredient_entries.remove((item_id_entry, qty_entry))
+        
+        ttk.Button(row_frame, text="Remove", command=remove_this).pack(side='left', padx=2)
+        
+        self.ingredient_entries.append((item_id_entry, qty_entry))
+    
+    def load_recipes_list(self):
+        """Load recipes from recipes.json into listbox"""
+        self.recipes_listbox.delete(0, tk.END)
+        try:
+            with open(self.data_path / 'recipes.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.recipes_data = data.get('recipes', [])
+                for recipe in self.recipes_data:
+                    display_name = f"{recipe.get('name', 'Unnamed')} ({recipe.get('id', 'no-id')})"
+                    self.recipes_listbox.insert(tk.END, display_name)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load recipes: {e}")
+            self.recipes_data = []
+    
+    def load_selected_recipe(self, event):
+        """Load selected recipe into form"""
+        selection = self.recipes_listbox.curselection()
+        if not selection:
+            return
+        
+        idx = selection[0]
+        recipe = self.recipes_data[idx]
+        
+        # Clear form
+        self.clear_recipe_form()
+        
+        # Populate basic fields
+        self.recipe_fields['id'].insert(0, recipe.get('id', ''))
+        self.recipe_fields['name'].insert(0, recipe.get('name', ''))
+        self.recipe_fields['description'].insert(0, recipe.get('description', ''))
+        self.recipe_fields['category'].set(recipe.get('category', 'misc'))
+        self.recipe_fields['result_item_id'].insert(0, recipe.get('result_item_id', ''))
+        self.recipe_fields['result_quantity'].delete(0, tk.END)
+        self.recipe_fields['result_quantity'].insert(0, str(recipe.get('result_quantity', 1)))
+        self.recipe_fields['required_level'].delete(0, tk.END)
+        self.recipe_fields['required_level'].insert(0, str(recipe.get('required_level', 1)))
+        
+        # Load ingredients
+        for ingredient in recipe.get('ingredients', []):
+            self.add_ingredient_field()
+            item_id_entry, qty_entry = self.ingredient_entries[-1]
+            item_id_entry.insert(0, ingredient.get('item_id', ''))
+            qty_entry.delete(0, tk.END)
+            qty_entry.insert(0, str(ingredient.get('quantity', 1)))
+    
+    def clear_recipe_form(self):
+        """Clear all recipe form fields"""
+        for key in ['id', 'name', 'description', 'result_item_id']:
+            self.recipe_fields[key].delete(0, tk.END)
+        self.recipe_fields['category'].set('')
+        self.recipe_fields['result_quantity'].delete(0, tk.END)
+        self.recipe_fields['result_quantity'].insert(0, '1')
+        self.recipe_fields['required_level'].delete(0, tk.END)
+        self.recipe_fields['required_level'].insert(0, '1')
+        
+        # Clear ingredient fields
+        for widget in self.ingredients_container.winfo_children():
+            widget.destroy()
+        self.ingredient_entries = []
+    
+    def new_recipe(self):
+        """Create a new recipe"""
+        self.clear_recipe_form()
+    
+    def save_recipe(self):
+        """Save current recipe to recipes.json"""
+        # Validate required fields
+        if not self.recipe_fields['id'].get():
+            messagebox.showwarning("Warning", "Recipe ID is required")
+            return
+        if not self.recipe_fields['name'].get():
+            messagebox.showwarning("Warning", "Recipe name is required")
+            return
+        if not self.recipe_fields['result_item_id'].get():
+            messagebox.showwarning("Warning", "Result item ID is required")
+            return
+        
+        # Parse numeric fields
+        try:
+            result_quantity = int(self.recipe_fields['result_quantity'].get() or '1')
+            required_level = int(self.recipe_fields['required_level'].get() or '1')
+        except ValueError:
+            messagebox.showerror("Error", "Result quantity and required level must be integers")
+            return
+        
+        # Build ingredients list
+        ingredients = []
+        for item_id_entry, qty_entry in self.ingredient_entries:
+            item_id = item_id_entry.get().strip()
+            if item_id:
+                try:
+                    qty = int(qty_entry.get() or '1')
+                    ingredients.append({
+                        'item_id': item_id,
+                        'quantity': qty
+                    })
+                except ValueError:
+                    messagebox.showerror("Error", f"Invalid quantity for ingredient {item_id}")
+                    return
+        
+        if not ingredients:
+            messagebox.showwarning("Warning", "At least one ingredient is required")
+            return
+        
+        # Build recipe dict
+        recipe = {
+            'id': self.recipe_fields['id'].get(),
+            'name': self.recipe_fields['name'].get(),
+            'description': self.recipe_fields['description'].get(),
+            'category': self.recipe_fields['category'].get() or 'misc',
+            'result_item_id': self.recipe_fields['result_item_id'].get(),
+            'result_quantity': result_quantity,
+            'required_level': required_level,
+            'ingredients': ingredients
+        }
+        
+        # Find if updating or creating new
+        recipe_id = recipe['id']
+        found = False
+        for i, existing in enumerate(self.recipes_data):
+            if existing.get('id') == recipe_id:
+                self.recipes_data[i] = recipe
+                found = True
+                break
+        
+        if not found:
+            self.recipes_data.append(recipe)
+        
+        # Save to file
+        try:
+            with open(self.data_path / 'recipes.json', 'w', encoding='utf-8') as f:
+                json.dump({'recipes': self.recipes_data}, f, indent=2, ensure_ascii=False)
+            messagebox.showinfo("Success", f"Recipe '{recipe['name']}' saved successfully!")
+            self.load_recipes_list()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save recipe: {e}")
+    
+    def delete_recipe(self):
+        """Delete selected recipe"""
+        selection = self.recipes_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Warning", "Please select a recipe to delete")
+            return
+        
+        idx = selection[0]
+        recipe = self.recipes_data[idx]
+        
+        if messagebox.askyesno("Confirm Delete", f"Delete recipe '{recipe.get('name')}'?"):
+            self.recipes_data.pop(idx)
+            try:
+                with open(self.data_path / 'recipes.json', 'w', encoding='utf-8') as f:
+                    json.dump({'recipes': self.recipes_data}, f, indent=2, ensure_ascii=False)
+                self.load_recipes_list()
+                self.clear_recipe_form()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to delete recipe: {e}")
 
 
 if __name__ == "__main__":
