@@ -23,6 +23,9 @@ class SaveManager:
             "base_penetration": getattr(player, 'base_penetration', getattr(player, 'penetration', 0.0)),
             # agility base stat
             "base_agility": getattr(player, 'base_agility', getattr(player, 'agility', 0)),
+            # lifesteal and HP regen base stats
+            "base_lifesteal": getattr(player, 'base_lifesteal', getattr(player, 'lifesteal', 0.0)),
+            "base_hp_regen": getattr(player, 'base_hp_regen', getattr(player, 'hp_regen', 0.0)),
             # canonical base max HP
             "base_max_hp": getattr(player, 'base_max_hp', getattr(player, 'max_hp', 100)),
             # mana stats

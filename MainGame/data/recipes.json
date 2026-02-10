@@ -20,25 +20,6 @@
       "category": "consumable"
     },
     {
-      "id": "iron_sword",
-      "name": "Iron Sword",
-      "description": "Forge a basic iron sword",
-      "result_item_id": "iron_sword",
-      "result_quantity": 1,
-      "ingredients": [
-        {
-          "item_id": "iron_ore",
-          "quantity": 3
-        },
-        {
-          "item_id": "wood_plank",
-          "quantity": 1
-        }
-      ],
-      "required_level": 3,
-      "category": "weapon"
-    },
-    {
       "id": "greatscraphammercraft",
       "name": "Scrap GreatHammer",
       "description": "Un marteau fait de divers matériaux.",

@@ -23,6 +23,8 @@ class BattleSystem:
         self.turn = "player"
         self.last_action_time = 0
         self.action_delay = 0.9  # petit délai visuel — make turns less instant
+        # Block player action for a short time after certain events (e.g., new wave)
+        self.player_action_cooldown_until = 0.0
         # Whether the next wave is a shop instead of a fight
         self.in_shop = False
         # Queue of recent damage events for UI (list of dicts: target, amount, time, is_crit)
@@ -37,6 +39,7 @@ class BattleSystem:
         self.effect_manager = EffectManager()
         # Track if turn start effects have been processed
         self.turn_processed = False
+        self.enemy_turn_processed = False
     
     def add_log(self, message, category='info'):
         """Add a message to combat log"""
@@ -93,18 +96,55 @@ class BattleSystem:
                 self.effect_manager.tick_effects(self.player)
             except Exception as e:
                 print(f"Warning: Failed to tick player effects: {e}")
-        
-        # Tick enemy effects
-        if self.enemy and hasattr(self, 'effect_manager') and self.effect_manager:
+
+        # Process player DoT effects at start of player turn
+        if hasattr(self, 'effect_manager') and self.effect_manager:
             try:
-                self.effect_manager.tick_effects(self.enemy)
+                dot_damage = self.effect_manager.process_dot_effects(self.player)
+                if dot_damage > 0:
+                    self.add_log(f"{dot_damage} DoT damage", 'debuff')
+                    try:
+                        self.damage_events.append({
+                            'target': 'player',
+                            'amount': int(dot_damage),
+                            'time': time.time(),
+                            'is_crit': False,
+                        })
+                    except Exception:
+                        pass
             except Exception as e:
-                print(f"Warning: Failed to tick enemy effects: {e}")
+                print(f"Warning: Failed to process player DoT: {e}")
+        
+        # Apply HP regeneration at turn start
+        player_hp_regen = getattr(self.player, 'hp_regen', 0.0)
+        if player_hp_regen > 0:
+            regen_amount = int(player_hp_regen)
+            if regen_amount > 0:
+                old_hp = self.player.hp
+                self.player.hp = min(self.player.max_hp, self.player.hp + regen_amount)
+                actual_regen = self.player.hp - old_hp
+                if actual_regen > 0:
+                    self.add_log(f"+{actual_regen} HP (regen)", 'heal')
+                    # Add healing counter
+                    try:
+                        self.damage_events.append({
+                            'target': 'player',
+                            'amount': actual_regen,
+                            'time': time.time(),
+                            'is_heal': True,
+                        })
+                    except Exception:
+                        pass
+        
+        # Enemy effects are processed at the start of the enemy's turn
 
     def player_attack(self):
         """Action du joueur via un bouton."""
         if self.turn != "player":
             return  # ignore si ce n'est pas ton tour
+
+        if time.time() < self.player_action_cooldown_until:
+            return
         
         # Process turn start effects (mana regen, cooldowns, etc.)
         self.start_player_turn()
@@ -113,8 +153,12 @@ class BattleSystem:
         if not self.enemy or self.enemy.is_dead():
             print("No enemy to attack!")
             return
-        # base damage
-        base_dmg = getattr(self.player, 'atk', 0)
+        
+        # Apply active effect modifiers to player stats
+        player_modifiers = self.effect_manager.apply_active_effects(self.player)
+        
+        # base damage with buffs applied
+        base_dmg = getattr(self.player, 'atk', 0) + player_modifiers.get('atk', 0)
         
         # Overcrit mechanic: crit chance >100% converts to bonuses
         crit_chance = float(getattr(self.player, 'critchance', 0.0))
@@ -147,9 +191,32 @@ class BattleSystem:
         else:
             dmg = int(base_dmg)
 
-        # apply damage to enemy (pass player penetration)
+        # apply damage to enemy (pass player penetration and effect manager)
         player_pen = getattr(self.player, 'penetration', 0)
-        dmg_dealt = self.enemy.take_damage(dmg, player_pen)
+        enemy_modifiers = self.effect_manager.apply_active_effects(self.enemy)
+        # Apply defense debuffs to enemy
+        dmg_dealt = self.enemy.take_damage(dmg, player_pen, self.effect_manager)
+        
+        # Apply lifesteal if player has it
+        player_lifesteal = getattr(self.player, 'lifesteal', 0.0)
+        if player_lifesteal > 0 and dmg_dealt > 0:
+            lifesteal_amount = int(dmg_dealt * (player_lifesteal / 100.0))
+            if lifesteal_amount > 0:
+                old_hp = self.player.hp
+                self.player.hp = min(self.player.max_hp, self.player.hp + lifesteal_amount)
+                actual_heal = self.player.hp - old_hp
+                if actual_heal > 0:
+                    self.add_log(f"Lifesteal: +{actual_heal} HP", 'heal')
+                    # Add healing counter
+                    try:
+                        self.damage_events.append({
+                            'target': 'player',
+                            'amount': actual_heal,
+                            'time': time.time(),
+                            'is_heal': True,
+                        })
+                    except Exception:
+                        pass
         # register damage event for UI
         try:
             self.damage_events.append({
@@ -179,13 +246,21 @@ class BattleSystem:
             # handle potential drops before moving to next wave
             self._process_drops(self.enemy)
             self.next_wave()
+            # Short delay after killing enemy (less than other actions)
+            self.action_delay = 0.3
         else:
             self.turn = "enemy"
             self.last_action_time = time.time()
+            # Standard action delay
+            self.action_delay = 0.9
+            self.enemy_turn_processed = False
     
     def player_block(self):
         """Player blocks, adding +300 defense for the next enemy turn"""
         if self.turn != "player":
+            return
+
+        if time.time() < self.player_action_cooldown_until:
             return
         
         # Process turn start effects (mana regen, cooldowns, etc.)
@@ -203,10 +278,15 @@ class BattleSystem:
         # Pass turn to enemy
         self.turn = "enemy"
         self.last_action_time = time.time()
+        self.action_delay = 0.9
+        self.enemy_turn_processed = False
     
     def player_use_skill(self, skill_id):
         """Player uses a skill"""
         if self.turn != "player":
+            return
+
+        if time.time() < self.player_action_cooldown_until:
             return
         
         # Process turn start effects (mana regen, cooldowns, etc.)
@@ -258,9 +338,15 @@ class BattleSystem:
         if result:
             damage = result.get('damage', 0)
             healing = result.get('healing', 0)
+            effects = result.get('effects', [])
+            skill_name = skill.get('name', skill_id)
+            
+            # Log skill activation (for buff/support skills without damage)
+            if damage == 0 and healing == 0 and effects:
+                self.add_log(f"Used {skill_name}!", 'skill')
             
             if damage > 0:
-                self.add_log(f"Used {skill.get('name', skill_id)}: {damage} damage!", 'skill')
+                self.add_log(f"Used {skill_name}: {damage} damage!", 'skill')
                 print(f"{self.player.name} used {skill_id} for {damage} damage!")
                 
                 # Register damage event for UI
@@ -275,8 +361,33 @@ class BattleSystem:
                     pass
             
             if healing > 0:
-                self.add_log(f"Used {skill.get('name', skill_id)}: healed {healing}!", 'heal')
+                self.add_log(f"Used {skill_name}: healed {healing}!", 'heal')
                 print(f"{self.player.name} healed {healing} HP!")
+                # Add healing counter
+                try:
+                    self.damage_events.append({
+                        'target': 'player',
+                        'amount': int(healing),
+                        'time': time.time(),
+                        'is_heal': True,
+                    })
+                except Exception:
+                    pass
+            
+            # Log buff/debuff effects
+            for effect_data in effects:
+                effect_type = effect_data[0] if effect_data else None
+                if effect_type == 'buff':
+                    stat, value = effect_data[1], effect_data[2]
+                    self.add_log(f"Buff: +{value} {stat.upper()}!", 'buff')
+                elif effect_type == 'debuff':
+                    stat, value = effect_data[1], effect_data[2]
+                    self.add_log(f"Debuff: {value} {stat.upper()} on enemy!", 'debuff')
+                elif effect_type == 'counter':
+                    self.add_log(f"Counter stance activated!", 'buff')
+                elif effect_type == 'dot':
+                    damage_per_turn = effect_data[1]
+                    self.add_log(f"DoT: {damage_per_turn} dmg/turn!", 'skill')
             
             # Check if enemy died
             if self.enemy.is_dead():
@@ -288,10 +399,15 @@ class BattleSystem:
                     self._try_boss_skill_unlock()
                 self._process_drops(self.enemy)
                 self.next_wave()
+                # Short delay after killing enemy (less than other actions)
+                self.player_action_cooldown_until = time.time() + 0.3
             else:
                 # Pass turn to enemy
                 self.turn = "enemy"
                 self.last_action_time = time.time()
+                # Standard action delay
+                self.action_delay = 0.9
+                self.enemy_turn_processed = False
         else:
             print(f"Failed to use skill: {msg}")
             self.add_log(f"Skill failed: {msg}", 'debuff')
@@ -306,6 +422,44 @@ class BattleSystem:
                 return
             
             if time.time() - self.last_action_time >= self.action_delay:
+                # Process enemy turn start effects once
+                if not self.enemy_turn_processed:
+                    self.enemy_turn_processed = True
+                    if hasattr(self, 'effect_manager') and self.effect_manager:
+                        try:
+                            self.effect_manager.tick_effects(self.enemy)
+                        except Exception as e:
+                            print(f"Warning: Failed to tick enemy effects: {e}")
+
+                        # Process enemy DoT effects at start of enemy turn
+                        try:
+                            dot_damage = self.effect_manager.process_dot_effects(self.enemy)
+                            if dot_damage > 0:
+                                self.add_log(f"{dot_damage} DoT damage to enemy", 'skill')
+                                try:
+                                    self.damage_events.append({
+                                        'target': 'enemy',
+                                        'amount': int(dot_damage),
+                                        'time': time.time(),
+                                        'is_crit': False,
+                                    })
+                                except Exception:
+                                    pass
+                        except Exception as e:
+                            print(f"Warning: Failed to process enemy DoT: {e}")
+
+                    # If enemy dies from DoT, resolve defeat and skip attack
+                    if self.enemy and self.enemy.is_dead():
+                        self.add_log(f"{self.enemy.name} defeated by DoT!", 'info')
+                        self.player.gold += self.enemy.gold
+                        self.player.gain_xp(self.enemy.xp)
+                        if self.enemy.is_boss:
+                            self._try_boss_skill_unlock()
+                        self._process_drops(self.enemy)
+                        self.next_wave()
+                        self.player_action_cooldown_until = time.time() + 0.3
+                        return
+
                 # Check if player dodges the attack
                 player_dodge = getattr(self.player, 'dodge_chance', 0.0)
                 dodged = random.random() < player_dodge
@@ -335,7 +489,7 @@ class BattleSystem:
                     # Enemies don't have penetration (for now), pass 0
                     enemy_pen = getattr(self.enemy, 'penetration', 0)
                     # apply damage and capture the actual damage taken after defense
-                    dmg_taken = self.player.take_damage(dmg, enemy_pen)
+                    dmg_taken = self.player.take_damage(dmg, enemy_pen, self.effect_manager)
                     
                     # Restore original defense and clear block bonus
                     if self.block_defense_bonus > 0:
@@ -361,6 +515,9 @@ class BattleSystem:
 
                 self.turn = "player"
                 self.turn_processed = False  # Reset for next player turn
+                self.enemy_turn_processed = False
+                # Slight pause after enemy turn before player can act
+                self.player_action_cooldown_until = time.time() + 0.2
 
     def next_wave(self):
         self.wave += 1
@@ -417,6 +574,8 @@ class BattleSystem:
             print(f"👹 Nouvelle vague : {self.enemy.name}")
             self.turn = "player"
             self.turn_processed = False  # Reset for new wave
+            # Brief pause before the player can act after a new enemy appears
+            self.player_action_cooldown_until = time.time() + 0.3
         else:
             self.enemy = None
             print(f"🛒 Shop opens at wave {self.wave}")

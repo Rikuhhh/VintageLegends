@@ -11,12 +11,32 @@ from pathlib import Path
 class AdminInterface:
     def __init__(self, root):
         self.root = root
-        self.root.title("VintageLegends - Admin Interface")
-        self.root.geometry("900x700")
+        self.root.title("VintageLegends - Admin Interface v2.0")
+        self.root.geometry("1100x750")
+        
+        # Style configuration
+        style = ttk.Style()
+        style.configure('Header.TLabel', font=('Arial', 12, 'bold'), foreground='#2E86AB')
+        style.configure('Section.TLabelframe.Label', font=('Arial', 10, 'bold'))
+        style.configure('Save.TButton', font=('Arial', 10, 'bold'), foreground='green')
+        
+        # Add header
+        header_frame = ttk.Frame(root, relief='raised', borderwidth=2)
+        header_frame.pack(fill='x', padx=5, pady=5)
+        ttk.Label(header_frame, text="VintageLegends Admin Interface", 
+                 font=('Arial', 14, 'bold')).pack(pady=5)
+        ttk.Label(header_frame, text="Complete Game Data Editor - Items, Monsters, Skills, Zones & Recipes", 
+                 font=('Arial', 9, 'italic')).pack(pady=(0, 5))
         
         # Paths
         self.base_path = Path(__file__).resolve().parents[1]
         self.data_path = self.base_path / "data"
+        
+        # Status bar at bottom
+        status_frame = ttk.Frame(root, relief='sunken', borderwidth=1)
+        status_frame.pack(fill='x', side='bottom', padx=5, pady=5)
+        ttk.Label(status_frame, text=f"Data Path: {self.data_path}", 
+                 font=('Arial', 8)).pack(side='left', padx=10, pady=2)
         
         # Create main notebook (tabs)
         self.notebook = ttk.Notebook(root)
@@ -73,14 +93,27 @@ class AdminInterface:
         
         ttk.Label(left_frame, text="Existing Items:", font=('Arial', 10, 'bold')).pack()
         
-        self.items_listbox = tk.Listbox(left_frame, width=30, height=25)
+        # Search box
+        search_frame = ttk.Frame(left_frame)
+        search_frame.pack(fill='x', pady=5)
+        ttk.Label(search_frame, text="Search:").pack(side='left', padx=2)
+        self.item_search_var = tk.StringVar()
+        self.item_search_var.trace('w', self.filter_items)
+        ttk.Entry(search_frame, textvariable=self.item_search_var, width=20).pack(side='left', padx=2)
+        
+        self.items_listbox = tk.Listbox(left_frame, width=35, height=25)
         self.items_listbox.pack(fill='both', expand=True)
         self.items_listbox.bind('<<ListboxSelect>>', self.load_selected_item)
         
         btn_frame = ttk.Frame(left_frame)
         btn_frame.pack(fill='x', pady=5)
         ttk.Button(btn_frame, text="New Item", command=self.new_item).pack(side='left', padx=2)
+        ttk.Button(btn_frame, text="Duplicate", command=self.duplicate_item).pack(side='left', padx=2)
         ttk.Button(btn_frame, text="Delete", command=self.delete_item).pack(side='left', padx=2)
+        
+        # Status label
+        self.item_count_label = ttk.Label(left_frame, text="Items: 0", font=('Arial', 8, 'italic'))
+        self.item_count_label.pack(pady=5)
         
         # Right side - Item editor
         right_frame = ttk.Frame(self.items_frame)
@@ -161,8 +194,18 @@ class AdminInterface:
         self.item_fields['magic_penetration'] = ttk.Entry(self.weapon_frame, width=15)
         self.item_fields['magic_penetration'].grid(row=1, column=3, padx=5, pady=3)
         
+        ttk.Label(self.weapon_frame, text="Lifesteal (%):").grid(row=2, column=2, sticky='w', padx=5, pady=3)
+        self.item_fields['lifesteal'] = ttk.Entry(self.weapon_frame, width=15)
+        self.item_fields['lifesteal'].grid(row=2, column=3, padx=5, pady=3)
+        ttk.Label(self.weapon_frame, text="(% of dmg as HP)", font=('Arial', 7, 'italic')).grid(row=2, column=4, sticky='w', padx=2)
+        
+        ttk.Label(self.weapon_frame, text="Agility:").grid(row=3, column=2, sticky='w', padx=5, pady=3)
+        self.item_fields['agility'] = ttk.Entry(self.weapon_frame, width=15)
+        self.item_fields['agility'].grid(row=3, column=3, padx=5, pady=3)
+        ttk.Label(self.weapon_frame, text="(boosts crit & dodge)", font=('Arial', 7, 'italic')).grid(row=3, column=4, sticky='w', padx=2)
+        
         # Armor stats (shown conditionally)
-        self.armor_frame = ttk.LabelFrame(scrollable_frame, text="Armor Stats")
+        self.armor_frame = ttk.LabelFrame(scrollable_frame, text="🛡️ Defensive Stats (Armor/Relics/Offhand)", style='Section.TLabelframe')
         self.armor_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
         row += 1
         
@@ -186,8 +229,18 @@ class AdminInterface:
         self.item_fields['mana_regen'] = ttk.Entry(self.armor_frame, width=15)
         self.item_fields['mana_regen'].grid(row=1, column=3, padx=5, pady=3)
         
+        ttk.Label(self.armor_frame, text="HP Regen:").grid(row=2, column=2, sticky='w', padx=5, pady=3)
+        self.item_fields['hp_regen'] = ttk.Entry(self.armor_frame, width=15)
+        self.item_fields['hp_regen'].grid(row=2, column=3, padx=5, pady=3)
+        ttk.Label(self.armor_frame, text="(HP/turn)", font=('Arial', 7, 'italic')).grid(row=2, column=4, sticky='w', padx=2)
+        
+        ttk.Label(self.armor_frame, text="Dodge Chance (%):").grid(row=3, column=2, sticky='w', padx=5, pady=3)
+        self.item_fields['dodge_chance'] = ttk.Entry(self.armor_frame, width=15)
+        self.item_fields['dodge_chance'].grid(row=3, column=3, padx=5, pady=3)
+        ttk.Label(self.armor_frame, text="(avoid attacks)", font=('Arial', 7, 'italic')).grid(row=3, column=4, sticky='w', padx=2)
+        
         # Consumable stats (shown conditionally)
-        self.consumable_frame = ttk.LabelFrame(scrollable_frame, text="Consumable Effects")
+        self.consumable_frame = ttk.LabelFrame(scrollable_frame, text="🧪 Consumable Effects", style='Section.TLabelframe')
         self.consumable_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
         row += 1
         
@@ -204,7 +257,7 @@ class AdminInterface:
         self.item_fields['restore_mana'].grid(row=2, column=1, padx=5, pady=3)
         
         # Container settings (shown conditionally)
-        self.container_frame = ttk.LabelFrame(scrollable_frame, text="Container Loot Pool")
+        self.container_frame = ttk.LabelFrame(scrollable_frame, text="📦 Container Loot Pool", style='Section.TLabelframe')
         self.container_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
         row += 1
         
@@ -243,7 +296,7 @@ class AdminInterface:
             })
         
         # Shop settings
-        shop_frame = ttk.LabelFrame(scrollable_frame, text="Shop Settings")
+        shop_frame = ttk.LabelFrame(scrollable_frame, text="🛒 Shop Settings", style='Section.TLabelframe')
         shop_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
         row += 1
         
@@ -283,7 +336,7 @@ class AdminInterface:
                               row=zone_row + (i // 2), column=i % 2, sticky='w', padx=10, pady=3)
         
         # Drop settings
-        drop_frame = ttk.LabelFrame(scrollable_frame, text="Drop Settings")
+        drop_frame = ttk.LabelFrame(scrollable_frame, text="💎 Drop Settings (Monster Loot)", style='Section.TLabelframe')
         drop_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
         row += 1
         
@@ -312,8 +365,8 @@ class AdminInterface:
                  font=('Arial', 8)).grid(row=1, column=0, columnspan=2, sticky='w', padx=5, pady=3)
         
         # Save button
-        ttk.Button(scrollable_frame, text="Save Item", command=self.save_item, 
-                  style='Accent.TButton').grid(row=row, column=0, columnspan=2, pady=20)
+        ttk.Button(scrollable_frame, text="💾 Save Item", command=self.save_item, 
+                  style='Save.TButton').grid(row=row, column=0, columnspan=2, pady=20)
         
         # Load items
         self.load_items_list()
@@ -326,14 +379,27 @@ class AdminInterface:
         
         ttk.Label(left_frame, text="Existing Monsters:", font=('Arial', 10, 'bold')).pack()
         
-        self.monsters_listbox = tk.Listbox(left_frame, width=30, height=25)
+        # Search box
+        search_frame = ttk.Frame(left_frame)
+        search_frame.pack(fill='x', pady=5)
+        ttk.Label(search_frame, text="Search:").pack(side='left', padx=2)
+        self.monster_search_var = tk.StringVar()
+        self.monster_search_var.trace('w', self.filter_monsters)
+        ttk.Entry(search_frame, textvariable=self.monster_search_var, width=20).pack(side='left', padx=2)
+        
+        self.monsters_listbox = tk.Listbox(left_frame, width=35, height=25)
         self.monsters_listbox.pack(fill='both', expand=True)
         self.monsters_listbox.bind('<<ListboxSelect>>', self.load_selected_monster)
         
         btn_frame = ttk.Frame(left_frame)
         btn_frame.pack(fill='x', pady=5)
         ttk.Button(btn_frame, text="New Monster", command=self.new_monster).pack(side='left', padx=2)
+        ttk.Button(btn_frame, text="Duplicate", command=self.duplicate_monster).pack(side='left', padx=2)
         ttk.Button(btn_frame, text="Delete", command=self.delete_monster).pack(side='left', padx=2)
+        
+        # Status label
+        self.monster_count_label = ttk.Label(left_frame, text="Monsters: 0", font=('Arial', 8, 'italic'))
+        self.monster_count_label.pack(pady=5)
         
         # Right side - Monster editor
         right_frame = ttk.Frame(self.monsters_frame)
@@ -386,7 +452,7 @@ class AdminInterface:
         row += 1
         
         # Base stats frame
-        stats_frame = ttk.LabelFrame(scrollable_frame, text="Base Stats")
+        stats_frame = ttk.LabelFrame(scrollable_frame, text="📊 Base Stats", style='Section.TLabelframe')
         stats_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
         row += 1
         
@@ -419,7 +485,7 @@ class AdminInterface:
         self.monster_fields['gold_base'].grid(row=1, column=3, padx=5, pady=3)
         
         # Spawn settings
-        spawn_frame = ttk.LabelFrame(scrollable_frame, text="Spawn Settings")
+        spawn_frame = ttk.LabelFrame(scrollable_frame, text="🌍 Spawn Settings", style='Section.TLabelframe')
         spawn_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
         row += 1
         
@@ -446,9 +512,49 @@ class AdminInterface:
         ttk.Label(image_frame, text="(e.g. wolf.png - in assets/images/monsters/)", 
                  font=('Arial', 8)).grid(row=1, column=0, columnspan=2, sticky='w', padx=5, pady=3)
         
+        # Drop settings
+        drops_frame = ttk.LabelFrame(scrollable_frame, text="💎 Item Drops Configuration", style='Section.TLabelframe')
+        drops_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        # Drops pool editor
+        self.monster_drop_entries = []
+        drops_info = ttk.Label(drops_frame, text="Configure item drops (item_id, chance 0-1, qty_min, qty_max)", 
+                             font=('Arial', 8, 'italic'))
+        drops_info.grid(row=0, column=0, columnspan=6, sticky='w', padx=5, pady=5)
+        
+        # Headers
+        ttk.Label(drops_frame, text="Item ID", font=('Arial', 8, 'bold')).grid(row=1, column=0, padx=5)
+        ttk.Label(drops_frame, text="Chance", font=('Arial', 8, 'bold')).grid(row=1, column=1, padx=5)
+        ttk.Label(drops_frame, text="Qty Min", font=('Arial', 8, 'bold')).grid(row=1, column=2, padx=5)
+        ttk.Label(drops_frame, text="Qty Max", font=('Arial', 8, 'bold')).grid(row=1, column=3, padx=5)
+        
+        # Add 8 drop entry rows
+        for i in range(8):
+            drop_row = 2 + i
+            
+            entry_id = ttk.Entry(drops_frame, width=25)
+            entry_id.grid(row=drop_row, column=0, padx=2, pady=2)
+            
+            entry_chance = ttk.Entry(drops_frame, width=8)
+            entry_chance.grid(row=drop_row, column=1, padx=2, pady=2)
+            
+            entry_qty_min = ttk.Entry(drops_frame, width=8)
+            entry_qty_min.grid(row=drop_row, column=2, padx=2, pady=2)
+            
+            entry_qty_max = ttk.Entry(drops_frame, width=8)
+            entry_qty_max.grid(row=drop_row, column=3, padx=2, pady=2)
+            
+            self.monster_drop_entries.append({
+                'id': entry_id,
+                'chance': entry_chance,
+                'qty_min': entry_qty_min,
+                'qty_max': entry_qty_max
+            })
+        
         # Save button
-        ttk.Button(scrollable_frame, text="Save Monster", command=self.save_monster,
-                  style='Accent.TButton').grid(row=row, column=0, columnspan=2, pady=20)
+        ttk.Button(scrollable_frame, text="💾 Save Monster", command=self.save_monster,
+                  style='Save.TButton').grid(row=row, column=0, columnspan=2, pady=20)
         
         # Load monsters
         self.load_monsters_list()
@@ -493,9 +599,20 @@ class AdminInterface:
                 self.items_data = data.get('items', [])
                 for item in self.items_data:
                     self.items_listbox.insert(tk.END, f"{item.get('id')} - {item.get('name')}")
+                self.item_count_label.config(text=f"Items: {len(self.items_data)}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load items: {e}")
             self.items_data = []
+            self.item_count_label.config(text="Items: 0")
+    
+    def filter_items(self, *args):
+        """Filter items list based on search"""
+        search_term = self.item_search_var.get().lower()
+        self.items_listbox.delete(0, tk.END)
+        for item in self.items_data:
+            item_text = f"{item.get('id')} - {item.get('name')}"
+            if search_term in item_text.lower():
+                self.items_listbox.insert(tk.END, item_text)
     
     def load_monsters_list(self):
         """Load monsters from monsters.json into the listbox"""
@@ -506,9 +623,20 @@ class AdminInterface:
                 self.monsters_data = data.get('enemies', [])
                 for monster in self.monsters_data:
                     self.monsters_listbox.insert(tk.END, f"{monster.get('id')} - {monster.get('name')}")
+                self.monster_count_label.config(text=f"Monsters: {len(self.monsters_data)}")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load monsters: {e}")
             self.monsters_data = []
+            self.monster_count_label.config(text="Monsters: 0")
+    
+    def filter_monsters(self, *args):
+        """Filter monsters list based on search"""
+        search_term = self.monster_search_var.get().lower()
+        self.monsters_listbox.delete(0, tk.END)
+        for monster in self.monsters_data:
+            monster_text = f"{monster.get('id')} - {monster.get('name')}"
+            if search_term in monster_text.lower():
+                self.monsters_listbox.insert(tk.END, monster_text)
     
     def load_selected_item(self, event):
         """Load selected item into the form"""
@@ -541,6 +669,10 @@ class AdminInterface:
             self.item_fields['magic_power'].insert(0, str(item.get('magic_power')))
         if item.get('magic_penetration'):
             self.item_fields['magic_penetration'].insert(0, str(item.get('magic_penetration')))
+        if item.get('lifesteal'):
+            self.item_fields['lifesteal'].insert(0, str(item.get('lifesteal')))
+        if item.get('agility'):
+            self.item_fields['agility'].insert(0, str(item.get('agility')))
         
         # Armor stats
         if item.get('defense'):
@@ -553,6 +685,10 @@ class AdminInterface:
             self.item_fields['max_mana'].insert(0, str(item.get('max_mana')))
         if item.get('mana_regen'):
             self.item_fields['mana_regen'].insert(0, str(item.get('mana_regen')))
+        if item.get('hp_regen'):
+            self.item_fields['hp_regen'].insert(0, str(item.get('hp_regen')))
+        if item.get('dodge_chance'):
+            self.item_fields['dodge_chance'].insert(0, str(item.get('dodge_chance')))
         
         # Consumable stats
         effect = item.get('effect', {})
@@ -640,6 +776,15 @@ class AdminInterface:
         self.monster_fields['max_wave'].insert(0, str(monster.get('max_wave', '')))
         self.monster_fields['spawn_multiple'].insert(0, str(monster.get('spawn_on_wave_multiple_of', '')))
         self.monster_fields['image'].insert(0, str(monster.get('image', '')))
+        
+        # Load drops
+        drops = monster.get('drops', [])
+        for i, drop in enumerate(drops[:8]):  # Max 8 entries in UI
+            if i < len(self.monster_drop_entries):
+                self.monster_drop_entries[i]['id'].insert(0, drop.get('item_id', ''))
+                self.monster_drop_entries[i]['chance'].insert(0, str(drop.get('chance', '')))
+                self.monster_drop_entries[i]['qty_min'].insert(0, str(drop.get('qty_min', 1)))
+                self.monster_drop_entries[i]['qty_max'].insert(0, str(drop.get('qty_max', 1)))
     
     def clear_item_form(self):
         """Clear all item form fields"""
@@ -664,16 +809,51 @@ class AdminInterface:
         for key, field in self.monster_fields.items():
             if isinstance(field, (ttk.Entry, ttk.Combobox)):
                 field.delete(0, tk.END)
+        
+        # Clear drop entries
+        for entry in self.monster_drop_entries:
+            entry['id'].delete(0, tk.END)
+            entry['chance'].delete(0, tk.END)
+            entry['qty_min'].delete(0, tk.END)
+            entry['qty_max'].delete(0, tk.END)
     
     def new_item(self):
         """Clear form for new item creation"""
         self.clear_item_form()
         self.items_listbox.selection_clear(0, tk.END)
     
+    def duplicate_item(self):
+        """Duplicate the selected item with a new ID"""
+        selection = self.items_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Warning", "Please select an item to duplicate")
+            return
+        
+        # Item is already loaded in the form, just clear the ID to force new entry
+        current_id = self.item_fields['id'].get()
+        self.item_fields['id'].delete(0, tk.END)
+        self.item_fields['id'].insert(0, f"{current_id}_copy")
+        self.items_listbox.selection_clear(0, tk.END)
+        messagebox.showinfo("Duplicate", "Item duplicated! Change the ID before saving.")
+    
     def new_monster(self):
         """Clear form for new monster creation"""
         self.clear_monster_form()
         self.monsters_listbox.selection_clear(0, tk.END)
+    
+    def duplicate_monster(self):
+        """Duplicate the selected monster with a new ID"""
+        selection = self.monsters_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Warning", "Please select a monster to duplicate")
+            return
+        
+        # Monster is already loaded in the form, just clear the ID to force new entry
+        current_id = self.monster_fields['id'].get()
+        self.monster_fields['id'].delete(0, tk.END)
+        self.monster_fields['id'].insert(0, f"{current_id}_copy")
+        self.monsters_listbox.selection_clear(0, tk.END)
+        messagebox.showinfo("Duplicate", "Monster duplicated! Change the ID before saving.")
     
     def save_item(self):
         """Save item to items.json"""
@@ -709,6 +889,10 @@ class AdminInterface:
                 item['magic_power'] = int(self.item_fields['magic_power'].get())
             if self.item_fields['magic_penetration'].get():
                 item['magic_penetration'] = float(self.item_fields['magic_penetration'].get())
+            if self.item_fields['lifesteal'].get():
+                item['lifesteal'] = float(self.item_fields['lifesteal'].get())
+            if self.item_fields['agility'].get():
+                item['agility'] = int(self.item_fields['agility'].get())
         
         # Armor/defensive stats
         if itype in ['armor', 'offhand', 'relic']:
@@ -722,6 +906,10 @@ class AdminInterface:
                 item['max_mana'] = int(self.item_fields['max_mana'].get())
             if self.item_fields['mana_regen'].get():
                 item['mana_regen'] = int(self.item_fields['mana_regen'].get())
+            if self.item_fields['hp_regen'].get():
+                item['hp_regen'] = float(self.item_fields['hp_regen'].get())
+            if self.item_fields['dodge_chance'].get():
+                item['dodge_chance'] = float(self.item_fields['dodge_chance'].get())
         
         # Consumable stats
         if itype == 'consumable':
@@ -855,6 +1043,36 @@ class AdminInterface:
         if self.monster_fields['image'].get():
             monster['image'] = self.monster_fields['image'].get()
         
+        # Drops
+        drops = []
+        for entry in self.monster_drop_entries:
+            item_id = entry['id'].get()
+            chance = entry['chance'].get()
+            
+            if item_id and chance:  # Must have item_id and chance
+                drop_entry = {
+                    'item_id': item_id,
+                    'chance': float(chance)
+                }
+                
+                qty_min = entry['qty_min'].get()
+                qty_max = entry['qty_max'].get()
+                
+                if qty_min:
+                    drop_entry['qty_min'] = int(qty_min)
+                else:
+                    drop_entry['qty_min'] = 1
+                    
+                if qty_max:
+                    drop_entry['qty_max'] = int(qty_max)
+                else:
+                    drop_entry['qty_max'] = 1
+                
+                drops.append(drop_entry)
+        
+        if drops:
+            monster['drops'] = drops
+        
         # Placeholder for attacks and drops (can be extended)
         if 'attacks' not in monster:
             monster['attacks'] = []
@@ -866,11 +1084,9 @@ class AdminInterface:
         found = False
         for i, existing in enumerate(self.monsters_data):
             if existing.get('id') == monster_id:
-                # Preserve attacks and drops if they exist
-                if 'attacks' in existing:
+                # Preserve attacks if they exist (drops are now from UI)
+                if 'attacks' in existing and not monster.get('attacks'):
                     monster['attacks'] = existing['attacks']
-                if 'drops' in existing:
-                    monster['drops'] = existing['drops']
                 self.monsters_data[i] = monster
                 found = True
                 break
@@ -1055,8 +1271,8 @@ class AdminInterface:
         self.skill_fields['unlock_item'].grid(row=1, column=1, padx=5, pady=3)
         
         # Save button
-        ttk.Button(scrollable_frame, text="Save Skill", command=self.save_skill,
-                  style='Accent.TButton').grid(row=row, column=0, columnspan=2, pady=20)
+        ttk.Button(scrollable_frame, text="💾 Save Skill", command=self.save_skill,
+                  style='Save.TButton').grid(row=row, column=0, columnspan=2, pady=20)
         
         # Load skills
         self.load_skills_list()
@@ -1311,8 +1527,8 @@ class AdminInterface:
                               row=i // 2, column=i % 2, sticky='w', padx=10, pady=5)
         
         # Save button
-        ttk.Button(scrollable_frame, text="Save Zone", command=self.save_zone,
-                  style='Accent.TButton').grid(row=row, column=0, columnspan=2, pady=20)
+        ttk.Button(scrollable_frame, text="💾 Save Zone", command=self.save_zone,
+                  style='Save.TButton').grid(row=row, column=0, columnspan=2, pady=20)
         
         # Load zones
         self.load_zones_list()
@@ -1557,7 +1773,7 @@ class AdminInterface:
         self.ingredients_container.pack(fill='both', expand=True, padx=5, pady=5)
         
         # Save button
-        save_btn = ttk.Button(scrollable_frame, text="Save Recipe", command=self.save_recipe)
+        save_btn = ttk.Button(scrollable_frame, text="💾 Save Recipe", command=self.save_recipe, style='Save.TButton')
         save_btn.grid(row=row, column=0, columnspan=2, pady=20)
         
         # Load recipes

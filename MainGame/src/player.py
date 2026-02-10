@@ -55,6 +55,20 @@ class Player:
         # Dodge chance (computed from agility)
         self.dodge_chance = 0.0
         
+        # Lifesteal stat (steals % of damage dealt as HP)
+        try:
+            self.base_lifesteal = max(0.0, float(data.get('lifesteal', 0.0)))
+        except (ValueError, TypeError):
+            self.base_lifesteal = 0.0
+        self.lifesteal = self.base_lifesteal
+        
+        # HP Regen stat (regenerates HP per turn)
+        try:
+            self.base_hp_regen = max(0.0, float(data.get('hp_regen', 0.0)))
+        except (ValueError, TypeError):
+            self.base_hp_regen = 0.0
+        self.hp_regen = self.base_hp_regen
+        
         # === NEW: MANA SYSTEM ===
         # Mana stats
         try:
@@ -209,18 +223,26 @@ class Player:
         """Get effective penetration as percentage (0-75) with soft cap at 50."""
         return self._calculate_effective_stat(self.penetration, 50, 75)
 
-    def take_damage(self, dmg, attacker_penetration=0):
+    def take_damage(self, dmg, attacker_penetration=0, effect_manager=None):
         """Take damage with percentage-based defense reduction.
         
         Args:
             dmg: Raw damage amount
             attacker_penetration: Attacker's penetration stat (reduces defense effectiveness)
+            effect_manager: EffectManager to apply active buff/debuff modifiers
         
         Returns:
             Actual damage taken after defense
         """
-        # Calculate effective defense percentage (0-75%)
-        defense_percent = self.get_effective_defense_percent()
+        # Apply active effect modifiers to defense
+        defense_modifiers = 0
+        if effect_manager:
+            stat_modifiers = effect_manager.apply_active_effects(self)
+            defense_modifiers = stat_modifiers.get('def', 0)
+        
+        # Calculate effective defense percentage (0-75%) with buffs
+        effective_defense_stat = self.defense + defense_modifiers
+        defense_percent = self._calculate_effective_stat(effective_defense_stat, 30, 75)
         
         # Calculate effective penetration from attacker (0-75%)
         if attacker_penetration > 0:
@@ -230,10 +252,10 @@ class Player:
         
         # Penetration reduces defense effectiveness
         # Example: 50% pen vs 80% defense = 80% * (1 - 0.50) = 40% effective defense
-        effective_defense = defense_percent * (1.0 - (pen_percent / 100.0))
+        final_defense = defense_percent * (1.0 - (pen_percent / 100.0))
         
         # Apply damage reduction
-        damage_multiplier = 1.0 - (effective_defense / 100.0)
+        damage_multiplier = 1.0 - (final_defense / 100.0)
         dmg_taken = max(1, int(dmg * damage_multiplier))  # Minimum 1 damage
         
         self.hp = max(0, self.hp - dmg_taken)
@@ -254,13 +276,19 @@ class Player:
             return True
         return False
     
-    def use_item(self, item_id):
+    def use_item(self, item_id, effect_manager=None):
         """Use a consumable item from inventory
         
         Handles:
         - Fixed healing (heal: int)
         - Percentage healing (heal_percent: float 0.0-1.0)
-        - Mana restoration (restore_mana: int)
+        - Mana restoration (restore_mana: int or mana_restore: int)
+        - Temporary stat buffs (atk_boost, def_boost, etc. with duration)
+        - Full restore effects (full_heal, full_mana)
+        
+        Args:
+            item_id: ID of the item to use
+            effect_manager: Optional EffectManager for applying temporary buffs
         
         Returns True if item was used successfully
         """
@@ -292,12 +320,61 @@ class Player:
             self.hp = min(self.max_hp, self.hp + heal_amount)
             print(f"Healed {self.hp - old_hp} HP ({int(heal_percent * 100)}%)")
         
-        # Mana restoration
-        if 'restore_mana' in effect:
-            mana_amount = effect['restore_mana']
+        # Full heal
+        if effect.get('full_heal'):
+            old_hp = self.hp
+            self.hp = self.max_hp
+            print(f"Fully healed! (+{self.hp - old_hp} HP)")
+        
+        # Mana restoration (support both 'restore_mana' and 'mana_restore')
+        mana_amount = effect.get('restore_mana') or effect.get('mana_restore')
+        if mana_amount:
             old_mana = self.current_mana
             self.current_mana = min(self.max_mana, self.current_mana + mana_amount)
             print(f"Restored {self.current_mana - old_mana} mana")
+        
+        # Full mana restore
+        if effect.get('full_mana'):
+            old_mana = self.current_mana
+            self.current_mana = self.max_mana
+            print(f"Fully restored mana! (+{self.current_mana - old_mana})")
+        
+        # Temporary stat buffs (requires effect_manager)
+        if effect_manager:
+            duration = effect.get('duration', 0)
+            
+            # Attack boost
+            if 'atk_boost' in effect:
+                effect_manager.add_effect(self, {
+                    'type': 'buff',
+                    'stat': 'atk',
+                    'value': effect['atk_boost'],
+                    'duration': duration,
+                    'source': item.get('name', item_id)
+                })
+                print(f"Attack boosted by {effect['atk_boost']} for {duration} turns!")
+            
+            # Defense boost
+            if 'def_boost' in effect:
+                effect_manager.add_effect(self, {
+                    'type': 'buff',
+                    'stat': 'def',
+                    'value': effect['def_boost'],
+                    'duration': duration,
+                    'source': item.get('name', item_id)
+                })
+                print(f"Defense boosted by {effect['def_boost']} for {duration} turns!")
+            
+            # Magic power boost
+            if 'magic_power_boost' in effect:
+                effect_manager.add_effect(self, {
+                    'type': 'buff',
+                    'stat': 'magic_power',
+                    'value': effect['magic_power_boost'],
+                    'duration': duration,
+                    'source': item.get('name', item_id)
+                })
+                print(f"Magic power boosted by {effect['magic_power_boost']} for {duration} turns!")
         
         # Remove item from inventory
         self.remove_item(item_id, 1)
@@ -371,6 +448,9 @@ class Player:
             heal_amount = int(self.max_hp * 0.5) + 100
             self.hp = min(self.hp + heal_amount, self.max_hp)
             self.base_agility = getattr(self, 'base_agility', 0) + 1
+            # Increase HP regen very slightly when gaining HP through level up (+0.02 per HP point gained)
+            hp_gained = 5
+            self.base_hp_regen = getattr(self, 'base_hp_regen', 0.0) + (hp_gained * 0.02)
             print(f"🎉 Milestone! Level {self.level}: +1 to all stats!")
         
         # Auto-unlock skills that require this level
@@ -394,6 +474,8 @@ class Player:
         elif stat == "hp":
             # increase canonical base max HP without healing the player
             self.base_max_hp = getattr(self, 'base_max_hp', self.max_hp) + 5
+            # Increase HP regen very slightly when gaining HP (+0.1 per 5 HP, so +0.02 per point effectively)
+            self.base_hp_regen = getattr(self, 'base_hp_regen', 0.0) + 0.1
         elif stat == "agi" or stat == "agility":
             # increase base agility
             self.base_agility = getattr(self, 'base_agility', 0) + 1
@@ -575,8 +657,10 @@ class Player:
         self.critchance = getattr(self, 'base_critchance', 0.0)
         self.critdamage = getattr(self, 'base_critdamage', 1.5)
         # reset penetration to base
-        self.penetration = getattr(self, 'base_penetration', 0.0)
-        # reset agility to base
+        self.penetration = getattr(self, 'base_penetration', 0.0)        # Reset lifesteal and hp_regen to base (will be modified by equipment)
+        self.lifesteal = getattr(self, 'base_lifesteal', 0.0)
+        self.hp_regen = getattr(self, 'base_hp_regen', 0.0)
+                # reset agility to base
         self.agility = getattr(self, 'base_agility', 0)
         # reset mana stats to base
         self.max_mana = getattr(self, 'base_max_mana', 100)
@@ -637,6 +721,24 @@ class Player:
             if equipped_item.get('mana_regen'):
                 try:
                     self.mana_regen += int(equipped_item.get('mana_regen', 0))
+                except Exception:
+                    pass
+            # Agility stat from equipment
+            if equipped_item.get('agility'):
+                try:
+                    self.agility += int(equipped_item.get('agility', 0))
+                except Exception:
+                    pass
+            # Lifesteal stat from equipment
+            if equipped_item.get('lifesteal'):
+                try:
+                    self.lifesteal += float(equipped_item.get('lifesteal', 0.0))
+                except Exception:
+                    pass
+            # HP Regen stat from equipment  
+            if equipped_item.get('hp_regen'):
+                try:
+                    self.hp_regen += float(equipped_item.get('hp_regen', 0.0))
                 except Exception:
                     pass
 

@@ -1,9 +1,17 @@
 # src/main.py
 import pygame
+import threading
 import time
 import sys
 import json
 from pathlib import Path
+
+try:
+    import tkinter as tk
+    from tkinter import ttk
+except Exception:
+    tk = None
+    ttk = None
 
 # Internal imports: try package-style (src.*) first, then fall back to direct module imports
 try:
@@ -84,6 +92,16 @@ def select_zone(wave, zones):
     
     return None  # Don't change zone
 
+def resolve_zone_for_wave(wave, zones):
+    """Resolve a stable zone for the current wave when no saved zone is available."""
+    if not zones:
+        return None
+    eligible = [z for z in zones if z.get('min_wave', 1) <= wave]
+    if not eligible:
+        return None
+    # Pick the zone with the highest min_wave to represent the last unlocked zone.
+    return max(eligible, key=lambda z: z.get('min_wave', 1))
+
 def load_background_for_zone(zone, screen):
     """Load background image for a specific zone"""
     if not zone:
@@ -131,11 +149,152 @@ title = str(game_settings.get("title", "Vintage Legends"))
 
 # --- INITIALISATION PYGAME ---
 pygame.init()
+# Initialize mixer for music playback
+try:
+    pygame.mixer.init()
+except Exception:
+    pass
 # Initialize clock early so it's available for character selection
 clock = pygame.time.Clock()
 # Utilisation des paramètres validés
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption(title)
+
+def start_music_controller(music_dir, volume=0.2):
+    """Launch a small playlist controller window for background music."""
+    if tk is None:
+        return
+
+    try:
+        volume = float(volume)
+    except Exception:
+        volume = 0.2
+    volume = 0.2
+
+    def run():
+        root = tk.Tk()
+        root.title("Music")
+        root.resizable(False, False)
+
+        try:
+            sw = root.winfo_screenwidth()
+            sh = root.winfo_screenheight()
+            x = max(0, sw - 280)
+            y = max(0, sh // 3)
+            root.geometry(f"260x240+{x}+{y}")
+        except Exception:
+            root.geometry("260x240")
+
+        # Build playlist
+        tracks = []
+        try:
+            if music_dir.exists():
+                for p in sorted(music_dir.iterdir()):
+                    if p.is_file() and p.suffix.lower() in (".ogg", ".mp3", ".wav", ".flac"):
+                        tracks.append(p)
+        except Exception:
+            tracks = []
+
+        current_index = 0
+        paused = False
+
+        def set_status(text):
+            status_var.set(text)
+
+        def load_track(index):
+            nonlocal current_index, paused
+            if not tracks:
+                set_status("No tracks found")
+                return
+            current_index = index % len(tracks)
+            try:
+                if pygame.mixer.get_init() is None:
+                    try:
+                        pygame.mixer.init()
+                    except Exception as e:
+                        set_status(f"Mixer init failed: {e}")
+                        return
+                pygame.mixer.music.load(str(tracks[current_index]))
+                pygame.mixer.music.set_volume(volume)
+                pygame.mixer.music.play()
+                paused = False
+                set_status(f"Playing: {tracks[current_index].stem}")
+                playlist.selection_clear(0, tk.END)
+                playlist.selection_set(current_index)
+                playlist.see(current_index)
+            except Exception as e:
+                set_status(f"Failed to play: {e}")
+
+        def play_pause():
+            nonlocal paused
+            if not tracks:
+                set_status("No tracks found")
+                return
+            if pygame.mixer.get_init() is None:
+                try:
+                    pygame.mixer.init()
+                except Exception as e:
+                    set_status(f"Mixer init failed: {e}")
+                    return
+            if pygame.mixer.music.get_busy() and not paused:
+                pygame.mixer.music.pause()
+                paused = True
+                set_status("Paused")
+            else:
+                if paused:
+                    pygame.mixer.music.unpause()
+                    paused = False
+                    set_status(f"Playing: {tracks[current_index].stem}")
+                else:
+                    load_track(current_index)
+
+        def stop():
+            pygame.mixer.music.stop()
+            set_status("Stopped")
+
+        def next_track():
+            if tracks:
+                load_track(current_index + 1)
+
+        def prev_track():
+            if tracks:
+                load_track(current_index - 1)
+
+        def on_double_click(event):
+            sel = playlist.curselection()
+            if sel:
+                load_track(sel[0])
+
+        title_lbl = ttk.Label(root, text="Music Player", font=("Arial", 10, "bold"))
+        title_lbl.pack(pady=(6, 2))
+
+        status_var = tk.StringVar(value="Ready")
+        status_lbl = ttk.Label(root, textvariable=status_var, font=("Arial", 8))
+        status_lbl.pack(pady=(0, 6))
+
+        playlist = tk.Listbox(root, height=6, width=32)
+        playlist.pack(padx=8, pady=4)
+        for t in tracks:
+            playlist.insert(tk.END, t.stem)
+        playlist.bind("<Double-Button-1>", on_double_click)
+
+        btn_frame = ttk.Frame(root)
+        btn_frame.pack(pady=6)
+
+        ttk.Button(btn_frame, text="Prev", command=prev_track, width=6).grid(row=0, column=0, padx=2)
+        ttk.Button(btn_frame, text="Play/Pause", command=play_pause, width=10).grid(row=0, column=1, padx=2)
+        ttk.Button(btn_frame, text="Next", command=next_track, width=6).grid(row=0, column=2, padx=2)
+        ttk.Button(btn_frame, text="Stop", command=stop, width=6).grid(row=0, column=3, padx=2)
+
+        if tracks:
+            load_track(0)
+        else:
+            set_status("No tracks found")
+
+        root.mainloop()
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
 
 # --- ZONES SYSTEM ---
 zones = load_zones()
@@ -144,6 +303,9 @@ current_zone = None
 # --- CHARGEMENT DES RESSOURCES ---
 # Prefer an explicit 'flowerfield.png' background if present, otherwise fall back to default_bg.png
 background = load_background_for_zone(None, screen)
+
+# Start music controller window (playlist from assets/sounds/music)
+start_music_controller(ASSETS_PATH / "sounds" / "music", volume=user_settings.get("volume", 0.8))
 
 # Exemple de personnage
 mage_path = ASSETS_PATH / "images" / "characters" / "mage.png"
@@ -308,6 +470,8 @@ if saved:
     player.base_critdamage = saved.get('base_critdamage', getattr(player, 'base_critdamage', 1.5))
     player.base_penetration = saved.get('base_penetration', getattr(player, 'base_penetration', 0.0))
     player.base_agility = saved.get('base_agility', getattr(player, 'base_agility', 0))
+    player.base_lifesteal = saved.get('base_lifesteal', getattr(player, 'base_lifesteal', 0.0))
+    player.base_hp_regen = saved.get('base_hp_regen', getattr(player, 'base_hp_regen', 0.0))
     # restore canonical base max HP (used for deterministic recalculation)
     player.base_max_hp = saved.get('base_max_hp', getattr(player, 'base_max_hp', getattr(player, 'max_hp', 100)))
     # restore mana stats
@@ -395,6 +559,8 @@ if saved:
             # If no saved zone or zone not found, select one based on current wave
             if not battle.current_zone and zones:
                 loaded_zone = select_zone(battle.wave, zones)
+                if not loaded_zone:
+                    loaded_zone = resolve_zone_for_wave(battle.wave, zones)
                 if loaded_zone:
                     battle.current_zone = loaded_zone
                     background = load_background_for_zone(loaded_zone, screen)
@@ -403,9 +569,19 @@ if saved:
             if battle.current_zone:
                 enemy_types = battle.current_zone.get('enemy_types', {})
                 allowed_categories = [cat for cat, allowed in enemy_types.items() if allowed]
-            battle.enemy = Enemy.random_enemy(battle.wave, allowed_categories=allowed_categories)
-            if 'enemy_hp' in saved:
-                battle.enemy.hp = int(saved.get('enemy_hp', battle.enemy.hp))
+            saved_enemy_id = saved.get('enemy_id')
+            if saved_enemy_id:
+                restored_enemy = Enemy.from_id(saved_enemy_id, battle.wave)
+                battle.enemy = restored_enemy or Enemy.random_enemy(battle.wave, allowed_categories=allowed_categories)
+            else:
+                battle.enemy = Enemy.random_enemy(battle.wave, allowed_categories=allowed_categories)
+
+            if 'enemy_hp' in saved and battle.enemy:
+                try:
+                    saved_enemy_hp = int(saved.get('enemy_hp', battle.enemy.hp))
+                    battle.enemy.hp = min(saved_enemy_hp, battle.enemy.max_hp)
+                except Exception:
+                    pass
         except Exception:
             pass
 else:
@@ -1023,6 +1199,17 @@ def main():
                             my0 = height//2 - mh//2
                             # precompute static rects for buttons
                             close_c_rect = pygame.Rect(mx0 + mw - 90, my0 + mh - 44, 80, 32)
+                            # filter + scroll state
+                            challenge_filter = 'all'
+                            scroll_offset = 0
+                            visible_count = 5
+                            filter_buttons = [
+                                ('all', 'ALL'),
+                                ('offense', 'OFFENSE'),
+                                ('defense', 'DEFENSE'),
+                                ('magic', 'MAGIC'),
+                                ('utility', 'UTILITY'),
+                            ]
                             # enter modal loop
                             while open_challenge_shop:
                                 for ce in pygame.event.get():
@@ -1034,9 +1221,37 @@ def main():
                                         if close_c_rect.collidepoint((mx2, my2)):
                                             open_challenge_shop = False
                                             break
+                                        # filter buttons
+                                        fbx = mx0 + 16
+                                        fby = my0 + 86
+                                        fbw = 90
+                                        fbh = 26
+                                        fbgap = 8
+                                        for i, (fkey, flabel) in enumerate(filter_buttons):
+                                            frect = pygame.Rect(fbx + i * (fbw + fbgap), fby, fbw, fbh)
+                                            if frect.collidepoint((mx2, my2)):
+                                                challenge_filter = fkey
+                                                scroll_offset = 0
+                                                break
+                                        # scroll up/down
+                                        up_rect = pygame.Rect(mx0 + mw - 50, my0 + 100, 30, 30)
+                                        down_rect = pygame.Rect(mx0 + mw - 50, my0 + 100 + (visible_count * 56) - 10, 30, 30)
+                                        if up_rect.collidepoint((mx2, my2)):
+                                            scroll_offset = max(0, scroll_offset - 1)
+                                        if down_rect.collidepoint((mx2, my2)):
+                                            scroll_offset += 1
                                         # iterate upgrades clickable areas
-                                        for i, u in enumerate(up_defs):
-                                            uy = my0 + 100 + i * 56
+                                        # filter upgrades list
+                                        if challenge_filter == 'all':
+                                            filtered_defs = up_defs
+                                        else:
+                                            filtered_defs = [u for u in up_defs if u.get('category') == challenge_filter]
+                                        max_scroll = max(0, len(filtered_defs) - visible_count)
+                                        scroll_offset = max(0, min(scroll_offset, max_scroll))
+                                        visible_defs = filtered_defs[scroll_offset:scroll_offset + visible_count]
+
+                                        for i, u in enumerate(visible_defs):
+                                            uy = my0 + 120 + i * 56
                                             buy_rect = pygame.Rect(mx0 + 420, uy, 100, 40)
                                             if buy_rect.collidepoint((mx2, my2)):
                                                 base_cost = int(u.get('cost', 1))
@@ -1053,6 +1268,11 @@ def main():
                                                         save_manager.save(player)
                                                     except Exception:
                                                         pass
+                                    if ce.type == pygame.MOUSEBUTTONDOWN and ce.button in (4, 5):
+                                        if ce.button == 4:
+                                            scroll_offset = max(0, scroll_offset - 1)
+                                        elif ce.button == 5:
+                                            scroll_offset += 1
                                 # draw challenge shop
                                 screen.blit(background, (0,0))
                                 ui.draw(player, battle)
@@ -1062,13 +1282,40 @@ def main():
                                 # coin count
                                 coin_t = pygame.font.Font(None, 28).render(f'Coins: {player.challenge_coins}', True, (255,215,0))
                                 screen.blit(coin_t, (mx0 + 16, my0 + 56))
-                                # list upgrades
-                                for i, u in enumerate(up_defs):
-                                    uy = my0 + 100 + i * 56
+                                # filter buttons
+                                fbx = mx0 + 16
+                                fby = my0 + 86
+                                fbw = 90
+                                fbh = 26
+                                fbgap = 8
+                                for i, (fkey, flabel) in enumerate(filter_buttons):
+                                    frect = pygame.Rect(fbx + i * (fbw + fbgap), fby, fbw, fbh)
+                                    active = (challenge_filter == fkey)
+                                    fcolor = (90, 120, 180) if active else (60, 60, 80)
+                                    pygame.draw.rect(screen, fcolor, frect, border_radius=6)
+                                    pygame.draw.rect(screen, (160, 160, 200), frect, 2, border_radius=6)
+                                    ftext = pygame.font.Font(None, 20).render(flabel, True, (255,255,255))
+                                    screen.blit(ftext, ftext.get_rect(center=frect.center))
+
+                                # list upgrades (filtered + paged)
+                                if challenge_filter == 'all':
+                                    filtered_defs = up_defs
+                                else:
+                                    filtered_defs = [u for u in up_defs if u.get('category') == challenge_filter]
+                                max_scroll = max(0, len(filtered_defs) - visible_count)
+                                scroll_offset = max(0, min(scroll_offset, max_scroll))
+                                visible_defs = filtered_defs[scroll_offset:scroll_offset + visible_count]
+
+                                for i, u in enumerate(visible_defs):
+                                    uy = my0 + 120 + i * 56
                                     name = u.get('name')
+                                    desc = u.get('desc', '')
                                     cur = player.permanent_upgrades.get(u.get('id'), 0)
-                                    lvl = pygame.font.Font(None, 28).render(f"{name} (Lv {cur})", True, (220,220,220))
+                                    lvl = pygame.font.Font(None, 26).render(f"{name} (Lv {cur})", True, (220,220,220))
                                     screen.blit(lvl, (mx0 + 16, uy))
+                                    if desc:
+                                        desc_text = pygame.font.Font(None, 20).render(desc[:38], True, (160,160,180))
+                                        screen.blit(desc_text, (mx0 + 16, uy + 24))
                                     # cost and buy - dynamic cost based on current level
                                     base_cost = int(u.get('cost', 1))
                                     dynamic_cost = base_cost * (cur + 1)
@@ -1081,6 +1328,16 @@ def main():
                                     pygame.draw.rect(screen, btn_color, buy_rect, border_radius=6)
                                     bt = pygame.font.Font(None, 28).render('Buy', True, (255,255,255) if can_buy else (150,150,150))
                                     screen.blit(bt, bt.get_rect(center=buy_rect.center))
+
+                                # scroll buttons
+                                up_rect = pygame.Rect(mx0 + mw - 50, my0 + 100, 30, 30)
+                                down_rect = pygame.Rect(mx0 + mw - 50, my0 + 100 + (visible_count * 56) - 10, 30, 30)
+                                pygame.draw.rect(screen, (80, 80, 100), up_rect, border_radius=4)
+                                pygame.draw.rect(screen, (80, 80, 100), down_rect, border_radius=4)
+                                up_t = pygame.font.Font(None, 26).render('^', True, (255,255,255))
+                                down_t = pygame.font.Font(None, 26).render('v', True, (255,255,255))
+                                screen.blit(up_t, up_t.get_rect(center=up_rect.center))
+                                screen.blit(down_t, down_t.get_rect(center=down_rect.center))
                                 # close button
                                 pygame.draw.rect(screen, (200,80,80), close_c_rect, border_radius=6)
                                 ct = pygame.font.Font(None, 28).render('Close', True, (0,0,0))
@@ -1113,6 +1370,19 @@ def main():
                             except Exception:
                                 pass
                             battle = BattleSystem(player)
+                            # Reset starting zone and background on respawn
+                            if zones:
+                                starting_zone = select_zone(1, zones)
+                                if starting_zone:
+                                    battle.current_zone = starting_zone
+                                    background = load_background_for_zone(starting_zone, screen)
+                                    print(f"🗺️ Starting in zone: {starting_zone.get('name', 'Unknown')}")
+                                else:
+                                    battle.current_zone = None
+                                    background = load_background_for_zone(None, screen)
+                            else:
+                                battle.current_zone = None
+                                background = load_background_for_zone(None, screen)
                             battle.crafting_system = crafting_system  # Attach crafting system
                             ui.set_actions(battle)
                             game_over = False

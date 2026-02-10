@@ -206,6 +206,58 @@ class Enemy:
         # Add image attribute
         e.image = chosen.get('image', None)
         return e
+
+    @staticmethod
+    def from_id(enemy_id, wave=1):
+        """Create an enemy by id using the same scaling rules as random_enemy."""
+        data = Enemy._load_monsters()
+        if not data:
+            return None
+
+        enemies = data.get('enemies', [])
+        chosen = None
+        for mon in enemies:
+            if mon.get('id') == enemy_id:
+                chosen = mon
+                break
+
+        if not chosen:
+            return None
+
+        scaling = data.get('scaling_notes', {})
+        hp_pct = float(scaling.get('hp_scale_per_wave_pct', 0.06))
+        atk_pct = float(scaling.get('atk_scale_per_wave_pct', 0.025))
+
+        hp_base = int(chosen.get('hp_base', 10))
+        atk_base = int(chosen.get('atk_base', 1))
+        gold_base = int(chosen.get('gold_base', 1))
+        xp_base = int(chosen.get('xp_base', 1))
+        def_base = int(chosen.get('def_base', 0))
+        magic_def_base = int(chosen.get('magic_def_base', 0))
+        pen_base = float(chosen.get('pen_base', 0.0))
+
+        is_boss = chosen.get('classification') in ('boss', 'miniboss')
+        hp = Enemy._scale_value(hp_base, wave, hp_pct, flat_per_5waves=10, is_boss=is_boss)
+        atk = Enemy._scale_value(atk_base, wave, atk_pct, flat_per_5waves=1, is_boss=is_boss)
+        defense = Enemy._scale_value(def_base, wave, 0.015, flat_per_5waves=1, is_boss=is_boss)
+        magic_defense = Enemy._scale_value(magic_def_base, wave, 0.015, flat_per_5waves=1, is_boss=is_boss)
+        try:
+            gold = int(round(gold_base * (1 + wave * 0.05)))
+        except Exception:
+            gold = gold_base
+        try:
+            xp = int(round(xp_base * (1 + wave * 0.06)))
+        except Exception:
+            xp = xp_base
+
+        e = Enemy(name=f"{chosen.get('name', 'Enemy')} Lv.{wave}", hp=hp, atk=atk, gold=gold, xp=xp, id=chosen.get('id'))
+        e.defense = defense
+        e.magic_defense = magic_defense
+        e.penetration = pen_base
+        e.classification = chosen.get('classification', 'normal')
+        e.category = chosen.get('category', chosen.get('classification', 'normal'))
+        e.image = chosen.get('image', None)
+        return e
     
     @property
     def is_boss(self):
@@ -230,18 +282,26 @@ class Enemy:
             excess = hard_cap - soft_cap
             return soft_cap + (excess * 0.5)
 
-    def take_damage(self, dmg, attacker_penetration=0):
+    def take_damage(self, dmg, attacker_penetration=0, effect_manager=None):
         """Take damage with percentage-based defense reduction.
         
         Args:
             dmg: Raw damage amount
             attacker_penetration: Attacker's penetration stat (reduces defense effectiveness)
+            effect_manager: EffectManager to apply active buff/debuff modifiers
         
         Returns:
             Actual damage taken after defense
         """
-        # Calculate effective defense percentage (0-75%)
-        defense_percent = self._calculate_effective_stat(self.defense, 30, 75)
+        # Apply active effect modifiers to defense
+        defense_modifiers = 0
+        if effect_manager:
+            stat_modifiers = effect_manager.apply_active_effects(self)
+            defense_modifiers = stat_modifiers.get('def', 0)
+        
+        # Calculate effective defense percentage (0-75%) with buffs/debuffs
+        effective_defense_stat = self.defense + defense_modifiers
+        defense_percent = self._calculate_effective_stat(effective_defense_stat, 30, 75)
         
         # Calculate effective penetration from attacker (0-75%)
         if attacker_penetration > 0:

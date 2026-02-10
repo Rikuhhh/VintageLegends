@@ -4,6 +4,7 @@
       "id": "atk_boost",
       "name": "Offensive Training",
       "desc": "+1 base ATK per level",
+      "category": "offense",
       "cost": 1,
       "max_level": 10,
       "effect": { "type": "add", "stat": "base_atk", "value": 1 }
@@ -12,6 +13,7 @@
       "id": "hp_boost",
       "name": "Sturdy Constitution",
       "desc": "+10 max HP per level",
+      "category": "defense",
       "cost": 1,
       "max_level": 10,
       "effect": { "type": "add", "stat": "max_hp", "value": 10 }
@@ -20,6 +22,7 @@
       "id": "crit_chance",
       "name": "Sharpened Instinct",
       "desc": "+1% Crit Chance per level",
+      "category": "offense",
       "cost": 2,
       "max_level": 10,
       "effect": { "type": "add", "stat": "critchance", "value": 0.01 }
@@ -28,6 +31,7 @@
       "id": "crit_damage",
       "name": "Deadly Precision",
       "desc": "+0.1x Crit Damage per level",
+      "category": "offense",
       "cost": 3,
       "max_level": 5,
       "effect": { "type": "add", "stat": "critdamage", "value": 0.1 }
@@ -36,6 +40,7 @@
       "id": "penetration_boost",
       "name": "Armor Piercing",
       "desc": "+5 Penetration per level",
+      "category": "offense",
       "cost": 2,
       "max_level": 10,
       "effect": { "type": "add", "stat": "penetration", "value": 5 }
@@ -44,9 +49,73 @@
       "id": "agility_boost",
       "name": "Swift Reflexes",
       "desc": "+1 Agility per level (improves crit chance and dodge)",
+      "category": "utility",
       "cost": 3,
       "max_level": 20,
       "effect": { "type": "add", "stat": "agility", "value": 1 }
+    },
+    {
+      "id": "defense_boost",
+      "name": "Iron Stance",
+      "desc": "+1 Defense per level",
+      "category": "defense",
+      "cost": 2,
+      "max_level": 15,
+      "effect": { "type": "add", "stat": "defense", "value": 1 }
+    },
+    {
+      "id": "mana_boost",
+      "name": "Deep Reserves",
+      "desc": "+10 Max Mana per level",
+      "category": "magic",
+      "cost": 2,
+      "max_level": 15,
+      "effect": { "type": "add", "stat": "max_mana", "value": 10 }
+    },
+    {
+      "id": "mana_regen_boost",
+      "name": "Arcane Flow",
+      "desc": "+1 Mana Regen per level",
+      "category": "magic",
+      "cost": 2,
+      "max_level": 15,
+      "effect": { "type": "add", "stat": "mana_regen", "value": 1 }
+    },
+    {
+      "id": "magic_power_boost",
+      "name": "Mystic Focus",
+      "desc": "+1 Magic Power per level",
+      "category": "magic",
+      "cost": 3,
+      "max_level": 20,
+      "effect": { "type": "add", "stat": "magic_power", "value": 1 }
+    },
+    {
+      "id": "magic_pen_boost",
+      "name": "Arcane Pierce",
+      "desc": "+2 Magic Penetration per level",
+      "category": "magic",
+      "cost": 3,
+      "max_level": 15,
+      "effect": { "type": "add", "stat": "magic_penetration", "value": 2 }
+    },
+    {
+      "id": "hp_regen_boost",
+      "name": "Vital Recovery",
+      "desc": "+0.2 HP Regen per level",
+      "category": "defense",
+      "cost": 2,
+      "max_level": 20,
+      "effect": { "type": "add", "stat": "hp_regen", "value": 0.2 }
+    },
+    {
+      "id": "lifesteal_boost",
+      "name": "Blood Pact",
+      "desc": "+0.5% Lifesteal per level",
+      "category": "utility",
+      "cost": 10,
+      "max_level": 20,
+      "effect": { "type": "add", "stat": "lifesteal", "value": 0.5 }
     }
   ]
 }

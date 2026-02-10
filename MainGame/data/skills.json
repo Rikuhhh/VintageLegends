@@ -67,7 +67,7 @@
           "duration": 3
         }
       ],
-      "cooldown": 0,
+      "cooldown": 2,
       "description": "Bouclier magique augmentant la défense pour 3 tours."
     },
     {
@@ -134,7 +134,7 @@
       "target": "self",
       "effectiveness": {},
       "effects": [],
-      "cooldown": 0,
+      "cooldown": 2,
       "description": "Soigne 30 PV."
     },
     {
@@ -197,7 +197,7 @@
           "duration": 3
         }
       ],
-      "cooldown": 0,
+      "cooldown": 2,
       "description": "Cri de guerre augmentant l'attaque pour 3 tours."
     },
     {

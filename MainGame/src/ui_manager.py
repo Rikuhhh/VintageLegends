@@ -1,5 +1,6 @@
 # src/ui_manager.py
 import pygame
+import time
 try:
     # when running as top-level script
     from shop import Shop
@@ -56,6 +57,7 @@ class UIManager:
         self.inventory_cells = []
         self.inventory_selected = None
         self.inventory_page = 0
+        self.inventory_filter = 'all'
         self.stats_page = 0
         self.character_sheet_open_rect = None
         # Skills UI modal
@@ -332,19 +334,28 @@ class UIManager:
             if battle and hasattr(battle, 'damage_events') and battle.damage_events:
                 # create a float for each event
                 for ev in battle.damage_events:
-                    text = f"-{ev.get('amount', 0)}"
-                    if ev.get('is_crit'):
-                        color = (255, 60, 60)
+                    is_heal = ev.get('is_heal', False)
+                    
+                    if is_heal:
+                        # Healing counter (green)
+                        text = f"+{ev.get('amount', 0)}"
+                        color = (100, 255, 100)
                     else:
-                        color = (255, 180, 100)
+                        # Damage counter
+                        text = f"-{ev.get('amount', 0)}"
+                        if ev.get('is_crit'):
+                            color = (255, 60, 60)
+                        else:
+                            color = (255, 180, 100)
+                    
                     # position: above enemy or player sprite area; default positions
                     screen_w, screen_h = self.screen.get_size()
                     if ev.get('target') == 'enemy' and getattr(battle, 'enemy', None):
                         # place above enemy UI area (approx center-right screen)
                         pos = (screen_w // 2 + 100, screen_h // 2 - 80)
                     else:
-                        # player damage near player sprite location
-                        pos = (120, 480)
+                        # player damage/healing near player area (center-left, vertically centered)
+                        pos = (screen_w // 2 - 100, screen_h // 2)
 
                     self.floats.append({
                         'text': text,
@@ -568,6 +579,41 @@ class UIManager:
             level = getattr(player, "level", 1)
             self._blit_text_outlined(self.screen, self.small_font, f"Level: {level}", (x, y), fg=(200,200,255), outline=(0,0,0), outline_width=2)
             y += line_h
+
+            # Compact stats block (two columns)
+            stats = [
+                ("ATK", getattr(player, "atk", 0)),
+                ("DEF", getattr(player, "defense", 0)),
+                ("PEN", f"{getattr(player, 'penetration', 0):.1f}"),
+                ("M.PEN", f"{getattr(player, 'magic_penetration', 0):.1f}"),
+                ("MAG", getattr(player, "magic_power", 0)),
+                ("CRIT%", f"{getattr(player, 'critchance', 0.0) * 100:.0f}"),
+                ("CRITx", f"{getattr(player, 'critdamage', 1.5):.2f}"),
+                ("AGI", getattr(player, "agility", 0)),
+                ("DODGE%", f"{getattr(player, 'dodge_chance', 0.0) * 100:.1f}"),
+                ("LIFESTEAL%", f"{getattr(player, 'lifesteal', 0.0):.1f}"),
+                ("HP REGEN", f"{getattr(player, 'hp_regen', 0.0):.1f}"),
+                ("MANA REGEN", f"{getattr(player, 'mana_regen', 0)}"),
+            ]
+
+            col_w = 160
+            row_h = 20
+            for i, (label, value) in enumerate(stats):
+                col = i % 2
+                row = i // 2
+                stat_x = x + (col * col_w)
+                stat_y = y + (row * row_h)
+                self._blit_text_outlined(
+                    self.screen,
+                    self.small_font,
+                    f"{label}: {value}",
+                    (stat_x, stat_y),
+                    fg=(210, 210, 210),
+                    outline=(0, 0, 0),
+                    outline_width=2,
+                )
+
+            y += row_h * ((len(stats) + 1) // 2)
 
         # Vague
         if battle is not None and hasattr(battle, "wave"):
@@ -918,7 +964,71 @@ class UIManager:
     
     def _draw_inventory_tab(self, player, battle, modal_x, content_y, modal_w, content_h):
         """Draw inventory grid with pagination"""
-        items = list(player.inventory.items())
+        # Filter buttons
+        filter_labels = [
+            ('all', 'ALL'),
+            ('weapon', 'WEAPONS'),
+            ('equippable', 'EQUIPPABLE'),
+            ('material', 'MATERIALS'),
+            ('consumable', 'CONSUMABLES'),
+            ('misc', 'MISC'),
+        ]
+        filter_x = modal_x + 30
+        filter_y = content_y + 5
+        filter_w = 90
+        filter_h = 24
+        filter_gap = 6
+
+        def set_filter(key):
+            self.inventory_filter = key
+            self.inventory_page = 0
+            self.inventory_selected = None
+
+        for i, (key, label) in enumerate(filter_labels):
+            fx = filter_x + i * (filter_w + filter_gap)
+            rect = pygame.Rect(fx, filter_y, filter_w, filter_h)
+            is_active = (self.inventory_filter == key)
+            color = (120, 140, 200) if is_active else (60, 60, 80)
+            pygame.draw.rect(self.screen, color, rect, border_radius=6)
+            pygame.draw.rect(self.screen, (180, 180, 220), rect, 2, border_radius=6)
+            self._blit_text_outlined(
+                self.screen,
+                pygame.font.Font(None, 18),
+                label,
+                rect.center,
+                fg=(255, 255, 255),
+                outline=(0, 0, 0),
+                outline_width=1,
+                center=True,
+            )
+            self.character_sheet_buttons.append({'rect': rect, 'action': (lambda k=key: set_filter(k))})
+
+        def get_item_type(item_def):
+            if not item_def:
+                return 'misc'
+            return item_def.get('type', 'misc')
+
+        def matches_filter(item_def):
+            itype = get_item_type(item_def)
+            if self.inventory_filter == 'all':
+                return True
+            if self.inventory_filter == 'weapon':
+                return itype == 'weapon'
+            if self.inventory_filter == 'equippable':
+                return itype in ('weapon', 'armor', 'offhand', 'relic')
+            if self.inventory_filter == 'material':
+                return itype == 'material'
+            if self.inventory_filter == 'consumable':
+                return itype == 'consumable'
+            if self.inventory_filter == 'misc':
+                return itype not in ('weapon', 'armor', 'offhand', 'relic', 'material', 'consumable')
+            return True
+
+        items = []
+        for iid, cnt in list(player.inventory.items()):
+            item_def = self.shop_loader.find_item(iid) if getattr(self, 'shop_loader', None) else None
+            if matches_filter(item_def):
+                items.append((iid, cnt))
         items_per_page = 18  # 3 rows x 6 cols
         total_pages = max(1, (len(items) + items_per_page - 1) // items_per_page)
         page = getattr(self, 'inventory_page', 0)
@@ -948,7 +1058,7 @@ class UIManager:
         cell_h = 90
         pad = 10
         start_x = modal_x + 30
-        start_y = content_y + 10
+        start_y = content_y + 45
         
         start_idx = page * items_per_page
         end_idx = min(start_idx + items_per_page, len(items))
@@ -1018,6 +1128,10 @@ class UIManager:
         
         # Selected item details
         if self.inventory_selected:
+            if self.inventory_selected not in [iid for iid, _ in items]:
+                self.inventory_selected = None
+
+        if self.inventory_selected:
             sel = None
             for c in self.inventory_cells:
                 if c['item_id'] == self.inventory_selected:
@@ -1076,10 +1190,28 @@ class UIManager:
                     def make_use(iid=sel['item_id']):
                         def act():
                             # Use the player's use_item method which handles all effect types correctly
-                            if player.use_item(iid):
+                            # Pass effect_manager from battle for buff effects
+                            effect_mgr = getattr(battle, 'effect_manager', None) if battle else None
+                            old_hp = getattr(player, 'hp', 0)
+                            if player.use_item(iid, effect_mgr):
+                                new_hp = getattr(player, 'hp', 0)
+                                heal_amount = new_hp - old_hp
+                                if battle and heal_amount > 0:
+                                    try:
+                                        battle.damage_events.append({
+                                            'target': 'player',
+                                            'amount': int(heal_amount),
+                                            'time': time.time(),
+                                            'is_heal': True,
+                                        })
+                                    except Exception:
+                                        pass
                                 if getattr(battle, 'turn', None) == 'player':
                                     battle.turn = 'enemy'
-                                    battle.last_action_time = pygame.time.get_ticks() / 1000.0
+                                    battle.last_action_time = time.time()
+                                    # Longer delay after using potion to give enemy time to attack
+                                    battle.action_delay = 1.2
+                                    battle.enemy_turn_processed = False
                                 self.inventory_selected = None
                         return act
                     self.character_sheet_buttons.append({'rect': use_rect, 'action': make_use()})
@@ -1212,9 +1344,10 @@ class UIManager:
     
     def _draw_skills_ui(self, player, battle):
         """Draw Skills UI modal with unlocked skills, lock status, and equip options"""
-        modal_w, modal_h = 700, 500
+        modal_w, modal_h = 700, 520
         modal_x = (self.screen.get_width() - modal_w) // 2
-        modal_y = (self.screen.get_height() - modal_h) // 2
+        # Position higher to avoid overlap with bottom buttons
+        modal_y = max(20, (self.screen.get_height() - modal_h) // 2 - 30)
         
         # Reset buttons list
         self.skills_ui_buttons = []
@@ -1243,7 +1376,14 @@ class UIManager:
         
         # Split into unlocked and locked
         unlocked_list = [(sid, all_skills[sid]) for sid in unlocked_skills if sid in all_skills]
-        locked_list = [(sid, skill) for sid, skill in all_skills.items() if sid not in unlocked_skills]
+        # Filter locked skills: only show if unlock requirement is level-based (class level)
+        locked_list = []
+        for sid, skill in all_skills.items():
+            if sid not in unlocked_skills:
+                # Only show locked skill if it has a level requirement
+                requirements = skill.get('unlock_requirements', {})
+                if 'level' in requirements:
+                    locked_list.append((sid, skill))
         
         # Content area
         content_y = modal_y + 50

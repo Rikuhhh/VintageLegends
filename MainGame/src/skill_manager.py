@@ -59,7 +59,7 @@ class SkillManager:
         
         return True, "OK"
     
-    def calculate_skill_damage(self, skill, caster, target):
+    def calculate_skill_damage(self, skill, caster, target, effect_manager=None):
         """Calculate damage for a damage skill"""
         skill_type = skill.get('type')
         if skill_type not in ['damage']:
@@ -73,15 +73,20 @@ class SkillManager:
         skill_level = self.get_skill_level(caster, skill_id)
         level_multiplier = 1 + (skill_level - 1) * 0.25
         
-        # Get scaling stat value from caster
+        # Apply active effect modifiers to caster stats
+        stat_modifiers = {}
+        if effect_manager:
+            stat_modifiers = effect_manager.apply_active_effects(caster)
+        
+        # Get scaling stat value from caster with buffs applied
         if scaling_stat == 'magic_power':
-            stat_value = getattr(caster, 'magic_power', 0)
+            stat_value = getattr(caster, 'magic_power', 0) + stat_modifiers.get('magic_power', 0)
             # Magic skills scale 1.5x better with magic_power
             stat_value = int(stat_value * 1.5)
         elif scaling_stat == 'atk':
-            stat_value = getattr(caster, 'atk', 0)
+            stat_value = getattr(caster, 'atk', 0) + stat_modifiers.get('atk', 0)
         else:
-            stat_value = getattr(caster, scaling_stat, 0)
+            stat_value = getattr(caster, scaling_stat, 0) + stat_modifiers.get(scaling_stat, 0)
         
         # Base damage calculation: (base_power + stat_value) * level_multiplier
         raw_damage = int((base_power + stat_value) * level_multiplier)
@@ -251,20 +256,20 @@ class SkillManager:
         damage = 0
         is_crit = False
         if skill.get('type') == 'damage':
-            damage, is_crit = self.calculate_skill_damage(skill, caster, target)
+            damage, is_crit = self.calculate_skill_damage(skill, caster, target, effect_manager)
             # Apply damage to target
             target.hp = max(0, target.hp - damage)
         
         # Apply effects
         effect_results = self.apply_skill_effects(skill, caster, target, effect_manager)
         
-        # Set cooldown (tripled to prevent spamming)
+        # Set cooldown 
         cooldown = skill.get('cooldown', 0)
         if cooldown > 0:
             if not hasattr(caster, 'skill_cooldowns'):
                 caster.skill_cooldowns = {}
-            # Triple the cooldown to make skills more strategic
-            caster.skill_cooldowns[skill_id] = cooldown * 3
+            # Use cooldown as-is (no longer tripling since we balanced in skills.json)
+            caster.skill_cooldowns[skill_id] = cooldown
         
         # Return result summary
         result = {
