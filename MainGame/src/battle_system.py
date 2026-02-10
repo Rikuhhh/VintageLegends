@@ -238,7 +238,9 @@ class BattleSystem:
         if self.enemy.is_dead():
             print(f"{self.enemy.name} est vaincu !")
             self.add_log(f"{self.enemy.name} defeated!", 'info')
-            self.player.gold += self.enemy.gold
+            # Apply gold modifier from upgrades/items
+            gold_gained = int(self.enemy.gold * getattr(self.player, 'gold_modifier', 1.0))
+            self.player.gold += gold_gained
             self.player.gain_xp(self.enemy.xp)
             # Handle boss skill unlock chance
             if self.enemy.is_boss:
@@ -392,8 +394,9 @@ class BattleSystem:
             # Check if enemy died
             if self.enemy.is_dead():
                 print(f"{self.enemy.name} est vaincu !")
-                self.add_log(f"{self.enemy.name} defeated! +{self.enemy.gold}g", 'info')
-                self.player.gold += self.enemy.gold
+                gold_gained = int(self.enemy.gold * getattr(self.player, 'gold_modifier', 1.0))
+                self.add_log(f"{self.enemy.name} defeated! +{gold_gained}g", 'info')
+                self.player.gold += gold_gained
                 self.player.gain_xp(self.enemy.xp)
                 if self.enemy.is_boss:
                     self._try_boss_skill_unlock()
@@ -450,8 +453,9 @@ class BattleSystem:
 
                     # If enemy dies from DoT, resolve defeat and skip attack
                     if self.enemy and self.enemy.is_dead():
-                        self.add_log(f"{self.enemy.name} defeated by DoT!", 'info')
-                        self.player.gold += self.enemy.gold
+                        gold_gained = int(self.enemy.gold * getattr(self.player, 'gold_modifier', 1.0))
+                        self.add_log(f"{self.enemy.name} defeated by DoT! +{gold_gained}g", 'info')
+                        self.player.gold += gold_gained
                         self.player.gain_xp(self.enemy.xp)
                         if self.enemy.is_boss:
                             self._try_boss_skill_unlock()
@@ -521,12 +525,19 @@ class BattleSystem:
 
     def next_wave(self):
         self.wave += 1
-        # Award challenge coins: +1 every 10 waves, +1 extra every 20 waves
+        # Award challenge coins with scaling: +1 every 10 waves, +1 extra every 20 waves
+        # Plus bonus scaling: +1 per 10 waves for every 50 waves reached
         try:
             reward = 0
             if self.wave % 10 == 0:
+                # Base reward: 1 coin every 10 waves
                 reward += 1
+                # Scaling bonus: +1 coin per 10 waves for every 50 waves reached
+                # e.g., at wave 50-100: +1, at wave 100-150: +2, etc.
+                scaling_bonus = self.wave // 50
+                reward += scaling_bonus
             if self.wave % 20 == 0:
+                # Extra coin every 20 waves
                 reward += 1
             if reward > 0 and hasattr(self.player, 'challenge_coins'):
                 self.player.challenge_coins = getattr(self.player, 'challenge_coins', 0) + reward
@@ -612,13 +623,28 @@ class BattleSystem:
             player_skills = getattr(self.player, 'skills', [])
             locked_skills = [skill.get('id') for skill in all_skills if skill.get('id') and skill.get('id') not in player_skills]
             
+            # If no locked skills, try to level up an existing skill instead
             if not locked_skills:
-                self.add_log("No more skills to unlock!", 'info')
+                if player_skills:
+                    # Pick a random unlocked skill to level up
+                    skill_id = random.choice(player_skills)
+                    result, level = self.player.unlock_skill(skill_id)
+                    if result == 'levelup':
+                        # Get skill name for better display
+                        skill_name = skill_id
+                        for skill in all_skills:
+                            if skill.get('id') == skill_id:
+                                skill_name = skill.get('name', skill_id)
+                                break
+                        self.add_log(f"Boss upgraded skill: {skill_name} -> Lv{level}!", 'buff')
+                else:
+                    self.add_log("No skills available!", 'info')
                 return
             
             # Randomly pick one locked skill
             skill_id = random.choice(locked_skills)
-            if self.player.unlock_skill(skill_id):
+            result, level = self.player.unlock_skill(skill_id)
+            if result == 'new':
                 # Get skill name for better display
                 skill_name = skill_id
                 for skill in all_skills:
@@ -667,8 +693,8 @@ class BattleSystem:
                 if random.random() < chance:
                     # grant the item
                     print(f"Loot trouvé: {it.get('name')} de {enemy.name}")
-                    # call add_item so equipment auto-equip behavior is respected
-                    self.player.add_item(it)
+                    # call add_item with auto_equip=False so drops go to inventory
+                    self.player.add_item(it, auto_equip=False)
 
             # Also check per-monster drops in monsters.json if present (supports qty ranges)
             monsters_path = base / 'data' / 'monsters.json'
@@ -694,7 +720,7 @@ class BattleSystem:
                                     item_def = {'id': iid, 'name': iid, 'type': 'misc'}
                                 print(f"Loot (monster table): {item_def.get('name')} x{qty} from {enemy.name}")
                                 for _ in range(qty):
-                                    self.player.add_item(item_def)
+                                    self.player.add_item(item_def, auto_equip=False)
                         break
         except Exception as e:
             print("Erreur lors du traitement des drops:", e)

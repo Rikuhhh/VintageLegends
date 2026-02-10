@@ -114,8 +114,26 @@
       "desc": "+0.5% Lifesteal per level",
       "category": "utility",
       "cost": 10,
-      "max_level": 20,
+      "max_level": 5,
       "effect": { "type": "add", "stat": "lifesteal", "value": 0.5 }
+    },
+    {
+      "id": "gold_modifier",
+      "name": "Golden Touch",
+      "desc": "+5% Gold per level",
+      "category": "utility",
+      "cost": 5,
+      "max_level": 20,
+      "effect": { "type": "multiply", "stat": "gold_gain", "value": 0.05 }
+    },
+    {
+      "id": "exp_modifier",
+      "name": "Rapid Learning",
+      "desc": "+5% EXP per level",
+      "category": "utility",
+      "cost": 5,
+      "max_level": 20,
+      "effect": { "type": "multiply", "stat": "exp_gain", "value": 0.05 }
     }
   ]
 }

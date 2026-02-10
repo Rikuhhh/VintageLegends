@@ -64,6 +64,7 @@ class UIManager:
         self.skills_ui_open = False
         self.skills_ui_buttons = []
         self.skills_page = 0
+        self.skills_scroll = 0  # Scroll offset for skills
         self.skills_ui_rect = None
         # Crafting UI modal
         self.crafting_ui_open = False
@@ -1183,17 +1184,46 @@ class UIManager:
                         return act
                     self.character_sheet_buttons.append({'rect': equip_rect, 'action': make_equip()})
                 elif sel.get('def') and sel['def'].get('type') == 'consumable':
-                    use_rect = pygame.Rect(detail_rect.x + detail_rect.w - 110, btn_y, 100, 30)
-                    pygame.draw.rect(self.screen, (180, 140, 60), use_rect, border_radius=6)
-                    use_text = self.small_font.render('Use', True, (0, 0, 0))
-                    self.screen.blit(use_text, use_text.get_rect(center=use_rect.center))
-                    def make_use(iid=sel['item_id']):
-                        def act():
-                            # Use the player's use_item method which handles all effect types correctly
-                            # Pass effect_manager from battle for buff effects
-                            effect_mgr = getattr(battle, 'effect_manager', None) if battle else None
-                            old_hp = getattr(player, 'hp', 0)
-                            if player.use_item(iid, effect_mgr):
+                    # Multiple use buttons for consumables
+                    current_qty = sel.get('count', 1)
+                    btn_width = 50
+                    btn_spacing = 5
+                    start_x = detail_rect.x + detail_rect.w - (btn_width * 5 + btn_spacing * 4)
+                    
+                    use_amounts = [1, 5, 10, 100, current_qty]  # Last one is "All"
+                    use_labels = ['x1', 'x5', 'x10', 'x100', 'All']
+                    
+                    for i, (amount, label) in enumerate(zip(use_amounts, use_labels)):
+                        if amount > current_qty and label != 'All':
+                            continue  # Skip if not enough items
+                        
+                        actual_amount = min(amount, current_qty) if label != 'All' else current_qty
+                        btn_x = start_x + i * (btn_width + btn_spacing)
+                        use_rect = pygame.Rect(btn_x, btn_y, btn_width, 30)
+                        
+                        # Color gradient based on amount
+                        if label == 'All':
+                            color = (220, 100, 100)
+                        else:
+                            intensity = min(255, 140 + i * 20)
+                            color = (intensity, 120, 60)
+                        
+                        pygame.draw.rect(self.screen, color, use_rect, border_radius=6)
+                        use_text = self.small_font.render(label, True, (0, 0, 0))
+                        self.screen.blit(use_text, use_text.get_rect(center=use_rect.center))
+                        
+                        def make_use(iid=sel['item_id'], qty=actual_amount):
+                            def act():
+                                # Use multiple items
+                                effect_mgr = getattr(battle, 'effect_manager', None) if battle else None
+                                old_hp = getattr(player, 'hp', 0)
+                                used_count = 0
+                                for _ in range(qty):
+                                    if player.use_item(iid, effect_mgr):
+                                        used_count += 1
+                                    else:
+                                        break
+                                
                                 new_hp = getattr(player, 'hp', 0)
                                 heal_amount = new_hp - old_hp
                                 if battle and heal_amount > 0:
@@ -1206,39 +1236,80 @@ class UIManager:
                                         })
                                     except Exception:
                                         pass
+                                
+                                if battle and hasattr(battle, 'add_log') and used_count > 0:
+                                    battle.add_log(f"Used {sel['def'].get('name', iid)} x{used_count}", 'info')
+                                
                                 if getattr(battle, 'turn', None) == 'player':
                                     battle.turn = 'enemy'
                                     battle.last_action_time = time.time()
-                                    # Longer delay after using potion to give enemy time to attack
                                     battle.action_delay = 1.2
                                     battle.enemy_turn_processed = False
                                 self.inventory_selected = None
-                        return act
-                    self.character_sheet_buttons.append({'rect': use_rect, 'action': make_use()})
+                            return act
+                        self.character_sheet_buttons.append({'rect': use_rect, 'action': make_use()})
                 elif sel.get('def') and sel['def'].get('type') == 'container':
-                    # Container - add Open button
-                    open_rect = pygame.Rect(detail_rect.x + detail_rect.w - 110, btn_y, 100, 30)
-                    pygame.draw.rect(self.screen, (220, 180, 60), open_rect, border_radius=6)
-                    open_text = self.small_font.render('Open', True, (0, 0, 0))
-                    self.screen.blit(open_text, open_text.get_rect(center=open_rect.center))
-                    def make_open(iid=sel['item_id'], idef=sel.get('def')):
-                        def act():
-                            # Open container
-                            granted = player.open_container(idef)
-                            player.remove_item(iid, 1)
-                            # Add combat log messages if battle exists
-                            if battle and hasattr(battle, 'add_log'):
-                                for grant_type, grant_id, qty in granted:
-                                    if grant_type == 'skill':
-                                        if qty > 1:
-                                            battle.add_log(f"Skill leveled up: {grant_id} -> Lv{qty}!", 'buff')
-                                        else:
-                                            battle.add_log(f"Learned skill: {grant_id}!", 'buff')
-                                    elif grant_type == 'item':
-                                        battle.add_log(f"Received: {grant_id} x{qty}!", 'info')
-                            self.inventory_selected = None
-                        return act
-                    self.character_sheet_buttons.append({'rect': open_rect, 'action': make_open()})
+                    # Container - add multiple Open buttons
+                    current_qty = sel.get('count', 1)
+                    btn_width = 50
+                    btn_spacing = 5
+                    start_x = detail_rect.x + detail_rect.w - (btn_width * 5 + btn_spacing * 4)
+                    
+                    open_amounts = [1, 5, 10, 100, current_qty]  # Last one is "All"
+                    open_labels = ['x1', 'x5', 'x10', 'x100', 'All']
+                    
+                    for i, (amount, label) in enumerate(zip(open_amounts, open_labels)):
+                        if amount > current_qty and label != 'All':
+                            continue  # Skip if not enough items
+                        
+                        actual_amount = min(amount, current_qty) if label != 'All' else current_qty
+                        btn_x = start_x + i * (btn_width + btn_spacing)
+                        open_rect = pygame.Rect(btn_x, btn_y, btn_width, 30)
+                        
+                        # Color gradient based on amount
+                        if label == 'All':
+                            color = (220, 160, 60)
+                        else:
+                            intensity = min(255, 160 + i * 15)
+                            color = (intensity, 140 + i * 10, 60)
+                        
+                        pygame.draw.rect(self.screen, color, open_rect, border_radius=6)
+                        open_text = self.small_font.render(label, True, (0, 0, 0))
+                        self.screen.blit(open_text, open_text.get_rect(center=open_rect.center))
+                        
+                        def make_open(iid=sel['item_id'], idef=sel.get('def'), qty=actual_amount):
+                            def act():
+                                # Open multiple containers
+                                all_granted = []
+                                for _ in range(qty):
+                                    if player.has_item(iid):
+                                        granted = player.open_container(idef)
+                                        player.remove_item(iid, 1)
+                                        all_granted.extend(granted)
+                                    else:
+                                        break
+                                
+                                # Add combat log messages if battle exists
+                                if battle and hasattr(battle, 'add_log') and all_granted:
+                                    # Aggregate results
+                                    skill_upgrades = {}
+                                    item_counts = {}
+                                    for grant_type, grant_id, qty_or_level in all_granted:
+                                        if grant_type == 'skill':
+                                            if grant_id not in skill_upgrades:
+                                                skill_upgrades[grant_id] = []
+                                            skill_upgrades[grant_id].append(qty_or_level)
+                                        elif grant_type == 'item':
+                                            item_counts[grant_id] = item_counts.get(grant_id, 0) + qty_or_level
+                                    
+                                    for skill_id, levels in skill_upgrades.items():
+                                        battle.add_log(f"Skill: {skill_id} (x{len(levels)} upgrades)!", 'buff')
+                                    for item_id, total_qty in item_counts.items():
+                                        battle.add_log(f"Received: {item_id} x{total_qty}!", 'info')
+                                
+                                self.inventory_selected = None
+                            return act
+                        self.character_sheet_buttons.append({'rect': open_rect, 'action': make_open()})
     
     def _draw_stats_tab(self, player, modal_x, content_y, modal_w, content_h):
         """Draw player stats with pagination"""
@@ -1343,7 +1414,7 @@ class UIManager:
             self.screen.blit(page_text, (modal_x + modal_w // 2 - 30, btn_y + 5))
     
     def _draw_skills_ui(self, player, battle):
-        """Draw Skills UI modal with unlocked skills, lock status, and equip options"""
+        """Draw Skills UI modal with unlocked skills, lock status, and equip options with scrolling"""
         modal_w, modal_h = 700, 520
         modal_x = (self.screen.get_width() - modal_w) // 2
         # Position higher to avoid overlap with bottom buttons
@@ -1385,25 +1456,60 @@ class UIManager:
                 if 'level' in requirements:
                     locked_list.append((sid, skill))
         
-        # Content area
+        # Content area with scrolling
         content_y = modal_y + 50
         content_h = modal_h - 60
         
-        # Draw unlocked skills section
-        section_y = content_y + 10
-        self._blit_text_outlined(self.screen, self.small_font, f"Unlocked Skills ({len(unlocked_list)})", (modal_x + 20, section_y), fg=(100, 255, 100), outline=(0,0,0), outline_width=2)
-        
-        grid_y = section_y + 30
-        grid_x = modal_x + 20
+        # Create scrollable surface
         skill_w = 200
         skill_h = 80
         cols = 3
         
-        for idx, (skill_id, skill) in enumerate(unlocked_list[:9]):  # Show max 9 unlocked
+        # Calculate total height needed
+        unlocked_rows = (len(unlocked_list) + cols - 1) // cols
+        locked_rows = (len(locked_list) + cols - 1) // cols
+        total_content_height = 40 + unlocked_rows * (skill_h + 10) + 60 + locked_rows * (skill_h + 10)
+        
+        # Max scroll
+        max_scroll = max(0, total_content_height - content_h)
+        self.skills_scroll = max(0, min(self.skills_scroll, max_scroll))
+        
+        # Scroll buttons
+        if max_scroll > 0:
+            # Up button
+            up_rect = pygame.Rect(modal_x + modal_w - 40, modal_y + 50, 30, 30)
+            pygame.draw.rect(self.screen, (100, 100, 120), up_rect, border_radius=4)
+            up_text = self.small_font.render('▲', True, (255, 255, 255))
+            self.screen.blit(up_text, up_text.get_rect(center=up_rect.center))
+            self.skills_ui_buttons.append({'rect': up_rect, 'action': lambda: setattr(self, 'skills_scroll', max(0, self.skills_scroll - 50))})
+            
+            # Down button
+            down_rect = pygame.Rect(modal_x + modal_w - 40, modal_y + modal_h - 40, 30, 30)
+            pygame.draw.rect(self.screen, (100, 100, 120), down_rect, border_radius=4)
+            down_text = self.small_font.render('▼', True, (255, 255, 255))
+            self.screen.blit(down_text, down_text.get_rect(center=down_rect.center))
+            self.skills_ui_buttons.append({'rect': down_rect, 'action': lambda: setattr(self, 'skills_scroll', min(max_scroll, self.skills_scroll + 50))})
+        
+        # Create clipping rect for scrollable content
+        clip_rect = pygame.Rect(modal_x, content_y, modal_w - 50, content_h)
+        self.screen.set_clip(clip_rect)
+        
+        # Draw unlocked skills section
+        section_y = content_y + 10 - self.skills_scroll
+        self._blit_text_outlined(self.screen, self.small_font, f"Unlocked Skills ({len(unlocked_list)})", (modal_x + 20, section_y), fg=(100, 255, 100), outline=(0,0,0), outline_width=2)
+        
+        grid_y = section_y + 30
+        grid_x = modal_x + 20
+        
+        for idx, (skill_id, skill) in enumerate(unlocked_list):
             col = idx % cols
             row = idx // cols
             sx = grid_x + col * (skill_w + 10)
             sy = grid_y + row * (skill_h + 10)
+            
+            # Skip if outside visible area
+            if sy + skill_h < content_y or sy > content_y + content_h:
+                continue
             
             # Skill box
             is_equipped = skill_id in equipped_skills
@@ -1455,15 +1561,19 @@ class UIManager:
                     self.skills_ui_buttons.append({'rect': btn_rect, 'action': lambda sid=skill_id: self._equip_skill(player, sid)})
         
         # Draw locked skills section
-        locked_section_y = grid_y + 270
+        locked_section_y = grid_y + unlocked_rows * (skill_h + 10) + 20
         self._blit_text_outlined(self.screen, self.small_font, f"Locked Skills ({len(locked_list)})", (modal_x + 20, locked_section_y), fg=(255, 100, 100), outline=(0,0,0), outline_width=2)
         
         locked_grid_y = locked_section_y + 30
-        for idx, (skill_id, skill) in enumerate(locked_list[:6]):  # Show max 6 locked
+        for idx, (skill_id, skill) in enumerate(locked_list):
             col = idx % cols
             row = idx // cols
             sx = grid_x + col * (skill_w + 10)
             sy = locked_grid_y + row * (skill_h + 10)
+            
+            # Skip if outside visible area
+            if sy + skill_h < content_y or sy > content_y + content_h:
+                continue
             
             # Locked skill box (dimmed)
             skill_rect = pygame.Rect(sx, sy, skill_w, skill_h)
@@ -1488,6 +1598,9 @@ class UIManager:
                 elif req_item:
                     req_text = f"Req: {req_item[:15]}"
                     self._blit_text_outlined(self.screen, self.small_font, req_text, (sx + 5, sy + 45), fg=(180, 180, 100), outline=(0,0,0), outline_width=1)
+        
+        # Reset clip
+        self.screen.set_clip(None)
     
     def _equip_skill(self, player, skill_id):
         """Equip a skill to active skill bar"""

@@ -194,6 +194,10 @@ class Player:
         except (ValueError, TypeError):
             self.highest_wave = 0
         
+        # Exp and gold gain modifiers (from upgrades/items)
+        self.exp_modifier = 1.0  # Multiplier for XP gains
+        self.gold_modifier = 1.0  # Multiplier for gold gains
+        
         # Apply agility bonuses on initialization
         self._apply_agility_bonuses()
 
@@ -417,7 +421,9 @@ class Player:
             self.dodge_chance = 0.0
 
     def gain_xp(self, amount):
-        self.xp += amount
+        # Apply exp modifier from upgrades/items
+        modified_amount = int(amount * getattr(self, 'exp_modifier', 1.0))
+        self.xp += modified_amount
         # Supporte plusieurs niveaux d'un coup
         # Exponential scaling: level^1.5 * 100 (more XP needed each level)
         xp_required = int((self.level ** 1.5) * 100)
@@ -632,6 +638,9 @@ class Player:
         # start from base (reset derived stats)
         self.atk = getattr(self, 'base_atk', 0)
         self.defense = getattr(self, 'base_defense', 0)
+        # Reset modifiers
+        self.exp_modifier = 1.0
+        self.gold_modifier = 1.0
         # reset max_hp to canonical base before applying equipment/upgrades
         # but guard against a corrupted or implausibly large base_max_hp by
         # clamping it relative to the previous max to avoid large jumps.
@@ -741,6 +750,19 @@ class Player:
                     self.hp_regen += float(equipped_item.get('hp_regen', 0.0))
                 except Exception:
                     pass
+            # Exp and Gold gain modifiers from equipment
+            if equipped_item.get('exp_gain'):
+                try:
+                    # Convert percentage to multiplier (e.g., 10 -> 0.10)
+                    self.exp_modifier += float(equipped_item.get('exp_gain', 0.0)) / 100.0
+                except Exception:
+                    pass
+            if equipped_item.get('gold_gain'):
+                try:
+                    # Convert percentage to multiplier (e.g., 10 -> 0.10)
+                    self.gold_modifier += float(equipped_item.get('gold_gain', 0.0)) / 100.0
+                except Exception:
+                    pass
 
         # Apply permanent upgrades (data-driven) to derived stats only.
         # This avoids mutating the canonical base_* attributes repeatedly when _recalc_stats is called.
@@ -797,6 +819,18 @@ class Player:
                                         setattr(self, s, cur + val * int(lvl))
                                     except Exception:
                                         pass
+                            elif etype == 'multiply':
+                                # Handle multiplier effects (e.g., gold_gain, exp_gain)
+                                s = stat
+                                try:
+                                    if s == 'gold_gain':
+                                        # Accumulate multiplicative bonuses
+                                        self.gold_modifier = getattr(self, 'gold_modifier', 1.0) + (float(val) * int(lvl))
+                                    elif s == 'exp_gain':
+                                        # Accumulate multiplicative bonuses
+                                        self.exp_modifier = getattr(self, 'exp_modifier', 1.0) + (float(val) * int(lvl))
+                                except Exception:
+                                    pass
                         except Exception:
                             pass
         except Exception:

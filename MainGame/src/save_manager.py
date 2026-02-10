@@ -36,6 +36,7 @@ class SaveManager:
             "base_magic_penetration": getattr(player, 'base_magic_penetration', 0),
             # skills
             "skills": getattr(player, 'skills', []),
+            "skill_levels": getattr(player, 'skill_levels', {}),
             "equipped_skills": getattr(player, 'equipped_skills', []),
             "skill_cooldowns": getattr(player, 'skill_cooldowns', {}),
             # unspent skill points
@@ -103,6 +104,8 @@ class SaveManager:
                         # Skills
                         if 'skills' not in data:
                             data['skills'] = []
+                        if 'skill_levels' not in data:
+                            data['skill_levels'] = {}
                         if 'equipped_skills' not in data:
                             data['equipped_skills'] = []
                         if 'skill_cooldowns' not in data:

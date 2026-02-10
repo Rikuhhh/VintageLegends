@@ -223,6 +223,29 @@
         "level": 10
       },
       "description": "Éclair puissant avec forte pénétration magique."
+    },
+    {
+      "id": "skill_void_bolt",
+      "name": "Void Bolt",
+      "type": "damage",
+      "element": "void",
+      "mana_cost": 25,
+      "power": 18,
+      "scaling_stat": "magic_power",
+      "penetration": 15.0,
+      "target": "single",
+      "effectiveness": {
+        "strong_vs": [
+          "celestial",
+          "fey"
+        ],
+        "weak_vs": [
+          "aberration"
+        ]
+      },
+      "effects": [],
+      "cooldown": 1,
+      "description": "A bolt of void energy that pierces through reality, especially effective against celestial beings."
     }
   ]
 }

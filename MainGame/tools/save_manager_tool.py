@@ -55,6 +55,7 @@ class SaveManagerTool:
         print(f"HP: {data.get('hp', 0)} / {data.get('max_hp', 0)}")
         print(f"Gold: {data.get('gold', 0)}")
         print(f"XP: {data.get('xp', 0)}")
+        print(f"Unspent Skill Points: {data.get('unspent_points', 0)}")
         print(f"Highest Wave: {data.get('highest_wave', 0)}")
         print(f"Challenge Coins: {data.get('challenge_coins', 0)}")
         print(f"\nBase Stats:")
@@ -74,12 +75,13 @@ class SaveManagerTool:
             print("MODIFY SAVE")
             print("="*60)
             print("1. Modify Gold")
-            print("2. Modify Level")
+            print("2. Modify Level (also adds 3 skill points per level)")
             print("3. Modify HP")
-            print("4. Modify Challenge Coins")
-            print("5. Modify Highest Wave")
-            print("6. View Full JSON")
-            print("7. Back to Main Menu")
+            print("4. Modify Unspent Skill Points")
+            print("5. Modify Challenge Coins")
+            print("6. Modify Highest Wave")
+            print("7. View Full JSON")
+            print("8. Back to Main Menu")
             print("="*60)
             
             choice = input("\nSelect option: ").strip()
@@ -94,9 +96,22 @@ class SaveManagerTool:
             
             elif choice == '2':
                 try:
-                    new_level = int(input(f"Current Level: {data.get('level', 1)}\nEnter new level: "))
-                    data['level'] = max(1, new_level)
-                    print(f"✅ Level set to {data['level']}")
+                    current_level = data.get('level', 1)
+                    new_level = int(input(f"Current Level: {current_level}\nEnter new level: "))
+                    new_level = max(1, new_level)
+                    
+                    # Calculate skill points to add (3 per level gained)
+                    if new_level > current_level:
+                        levels_gained = new_level - current_level
+                        skill_points_to_add = levels_gained * 3
+                        current_points = data.get('unspent_points', 0)
+                        data['unspent_points'] = current_points + skill_points_to_add
+                        print(f"✅ Level set to {new_level}")
+                        print(f"✅ Added {skill_points_to_add} skill points (total: {data['unspent_points']})")
+                    else:
+                        print(f"✅ Level set to {new_level}")
+                    
+                    data['level'] = new_level
                 except ValueError:
                     print("❌ Invalid input")
             
@@ -110,13 +125,21 @@ class SaveManagerTool:
             
             elif choice == '4':
                 try:
+                    new_points = int(input(f"Current Unspent Points: {data.get('unspent_points', 0)}\nEnter new points: "))
+                    data['unspent_points'] = max(0, new_points)
+                    print(f"✅ Unspent Skill Points set to {data['unspent_points']}")
+                except ValueError:
+                    print("❌ Invalid input")
+            
+            elif choice == '5':
+                try:
                     new_coins = int(input(f"Current Challenge Coins: {data.get('challenge_coins', 0)}\nEnter new coins: "))
                     data['challenge_coins'] = max(0, new_coins)
                     print(f"✅ Challenge Coins set to {data['challenge_coins']}")
                 except ValueError:
                     print("❌ Invalid input")
             
-            elif choice == '5':
+            elif choice == '6':
                 try:
                     new_wave = int(input(f"Current Highest Wave: {data.get('highest_wave', 0)}\nEnter new wave: "))
                     data['highest_wave'] = max(0, new_wave)
@@ -124,11 +147,11 @@ class SaveManagerTool:
                 except ValueError:
                     print("❌ Invalid input")
             
-            elif choice == '6':
+            elif choice == '7':
                 print("\n" + json.dumps(data, indent=2))
                 input("\nPress Enter to continue...")
             
-            elif choice == '7':
+            elif choice == '8':
                 return data
     
     def save_changes(self, data):

@@ -204,6 +204,16 @@ class AdminInterface:
         self.item_fields['agility'].grid(row=3, column=3, padx=5, pady=3)
         ttk.Label(self.weapon_frame, text="(boosts crit & dodge)", font=('Arial', 7, 'italic')).grid(row=3, column=4, sticky='w', padx=2)
         
+        ttk.Label(self.weapon_frame, text="Exp Gain (%):").grid(row=4, column=0, sticky='w', padx=5, pady=3)
+        self.item_fields['exp_gain'] = ttk.Entry(self.weapon_frame, width=15)
+        self.item_fields['exp_gain'].grid(row=4, column=1, padx=5, pady=3)
+        ttk.Label(self.weapon_frame, text="(% bonus exp)", font=('Arial', 7, 'italic')).grid(row=4, column=2, sticky='w', padx=2)
+        
+        ttk.Label(self.weapon_frame, text="Gold Gain (%):").grid(row=5, column=0, sticky='w', padx=5, pady=3)
+        self.item_fields['gold_gain'] = ttk.Entry(self.weapon_frame, width=15)
+        self.item_fields['gold_gain'].grid(row=5, column=1, padx=5, pady=3)
+        ttk.Label(self.weapon_frame, text="(% bonus gold)", font=('Arial', 7, 'italic')).grid(row=5, column=2, sticky='w', padx=2)
+        
         # Armor stats (shown conditionally)
         self.armor_frame = ttk.LabelFrame(scrollable_frame, text="🛡️ Defensive Stats (Armor/Relics/Offhand)", style='Section.TLabelframe')
         self.armor_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
@@ -673,6 +683,10 @@ class AdminInterface:
             self.item_fields['lifesteal'].insert(0, str(item.get('lifesteal')))
         if item.get('agility'):
             self.item_fields['agility'].insert(0, str(item.get('agility')))
+        if item.get('exp_gain'):
+            self.item_fields['exp_gain'].insert(0, str(item.get('exp_gain')))
+        if item.get('gold_gain'):
+            self.item_fields['gold_gain'].insert(0, str(item.get('gold_gain')))
         
         # Armor stats
         if item.get('defense'):
@@ -893,6 +907,10 @@ class AdminInterface:
                 item['lifesteal'] = float(self.item_fields['lifesteal'].get())
             if self.item_fields['agility'].get():
                 item['agility'] = int(self.item_fields['agility'].get())
+            if self.item_fields['exp_gain'].get():
+                item['exp_gain'] = float(self.item_fields['exp_gain'].get())
+            if self.item_fields['gold_gain'].get():
+                item['gold_gain'] = float(self.item_fields['gold_gain'].get())
         
         # Armor/defensive stats
         if itype in ['armor', 'offhand', 'relic']:
