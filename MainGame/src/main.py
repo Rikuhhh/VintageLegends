@@ -152,6 +152,8 @@ pygame.init()
 # Initialize mixer for music playback
 try:
     pygame.mixer.init()
+    # Reserve more channels for sound effects (default is 8)
+    pygame.mixer.set_num_channels(16)
 except Exception:
     pass
 # Initialize clock early so it's available for character selection
@@ -175,6 +177,12 @@ def start_music_controller(music_dir, volume=0.2):
         root = tk.Tk()
         root.title("Music")
         root.resizable(False, False)
+        
+        def on_close():
+            pygame.mixer.music.stop()
+            root.destroy()
+        
+        root.protocol("WM_DELETE_WINDOW", on_close)
 
         try:
             sw = root.winfo_screenwidth()
@@ -286,9 +294,7 @@ def start_music_controller(music_dir, volume=0.2):
         ttk.Button(btn_frame, text="Next", command=next_track, width=6).grid(row=0, column=2, padx=2)
         ttk.Button(btn_frame, text="Stop", command=stop, width=6).grid(row=0, column=3, padx=2)
 
-        if tracks:
-            load_track(0)
-        else:
+        if not tracks:
             set_status("No tracks found")
 
         root.mainloop()

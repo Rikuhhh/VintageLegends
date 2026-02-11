@@ -165,6 +165,14 @@ class AdminInterface:
         self.item_fields['type'].bind('<<ComboboxSelected>>', self.on_type_change)
         row += 1
         
+        # Rarity
+        ttk.Label(scrollable_frame, text="Rarity*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.item_fields['rarity'] = ttk.Combobox(scrollable_frame, width=37, 
+                                                  values=['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical', 'ancient'])
+        self.item_fields['rarity'].grid(row=row, column=1, pady=5)
+        self.item_fields['rarity'].set('common')  # Default value
+        row += 1
+        
         # Weapon stats (shown conditionally)
         self.weapon_frame = ttk.LabelFrame(scrollable_frame, text="Weapon Stats")
         self.weapon_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
@@ -665,6 +673,7 @@ class AdminInterface:
         self.item_fields['name'].insert(0, item.get('name', ''))
         self.item_fields['description'].insert(0, item.get('description', ''))
         self.item_fields['type'].set(item.get('type', 'material'))
+        self.item_fields['rarity'].set(item.get('rarity', 'common'))
         
         # Weapon stats
         if item.get('attack'):
@@ -881,6 +890,7 @@ class AdminInterface:
             'id': self.item_fields['id'].get(),
             'name': self.item_fields['name'].get(),
             'type': self.item_fields['type'].get(),
+            'rarity': self.item_fields['rarity'].get() or 'common',
         }
         
         if self.item_fields['description'].get():

@@ -10,6 +10,22 @@ except Exception:
 
 
 class UIManager:
+    # Rarity color definitions
+    RARITY_COLORS = {
+        'common': (255, 255, 255),  # white
+        'uncommon': (30, 255, 0),  # green
+        'rare': (70, 130, 255),  # blue
+        'epic': (163, 53, 238),  # purple
+        'legendary': (255, 165, 0),  # gold
+        'mythical': (255, 40, 40),  # red
+        'ancient': (0, 0, 0),  # black (with white outline)
+    }
+    
+    @staticmethod
+    def get_rarity_color(rarity):
+        """Get color tuple for item rarity"""
+        return UIManager.RARITY_COLORS.get(rarity, UIManager.RARITY_COLORS['common'])
+    
     def __init__(self, screen, assets_path=None, data_path=None):
         self.screen = screen
         self.assets_path = assets_path
@@ -932,9 +948,13 @@ class UIManager:
                 else:
                     pygame.draw.rect(self.screen, (100, 100, 140), icon_rect, border_radius=6)
                 
-                # Item name and stats
+                # Item name and stats (use rarity color)
                 name_y = slot_y + 35
-                self._blit_text_outlined(self.screen, self.small_font, item_name[:20], (slot_x + 80, name_y), fg=(220,220,220), outline=(0,0,0), outline_width=1)
+                rarity = item_data.get('rarity', 'common') if item_data else 'common'
+                name_color = self.get_rarity_color(rarity)
+                outline_color = (255, 255, 255) if rarity == 'ancient' else (0, 0, 0)
+                outline_width = 2 if rarity == 'ancient' else 1
+                self._blit_text_outlined(self.screen, self.small_font, item_name[:20], (slot_x + 80, name_y), fg=name_color, outline=outline_color, outline_width=outline_width)
                 
                 # Show key stats
                 stats_text = []
@@ -1105,7 +1125,7 @@ class UIManager:
             pygame.draw.rect(self.screen, (10, 10, 10), badge_rect, border_radius=3)
             self._blit_text_outlined(self.screen, self.small_font, str(cnt), badge_rect.center, fg=(255,255,255), outline=(0,0,0), outline_width=1, center=True)
             
-            # Item name at bottom of cell, scaled to fit
+            # Item name at bottom of cell, scaled to fit (use rarity color)
             if name:
                 name_text = name[:15]  # Truncate if too long
                 # Calculate font size to fit within cell width
@@ -1120,9 +1140,13 @@ class UIManager:
                     if name_text:
                         name_text = name_text + '...'
                 
-                # Draw name at bottom of cell
+                # Draw name at bottom of cell with rarity color
                 name_y = cy + cell_h - 18
-                self._blit_text_outlined(self.screen, self.small_font, name_text, (cx + 4, name_y), fg=(200,200,200), outline=(0,0,0), outline_width=1)
+                rarity = item_def.get('rarity', 'common') if item_def else 'common'
+                name_color = self.get_rarity_color(rarity)
+                outline_color = (255, 255, 255) if rarity == 'ancient' else (0, 0, 0)
+                outline_width = 2 if rarity == 'ancient' else 1
+                self._blit_text_outlined(self.screen, self.small_font, name_text, (cx + 4, name_y), fg=name_color, outline=outline_color, outline_width=outline_width)
             
             # Register for clicks
             self.inventory_cells.append({'rect': rect, 'item_id': iid, 'count': cnt, 'def': item_def})
@@ -1144,13 +1168,21 @@ class UIManager:
                 detail_rect = pygame.Rect(modal_x + 30, detail_y, modal_w - 60, 120)
                 pygame.draw.rect(self.screen, (40, 40, 60), detail_rect, border_radius=6)
                 
+                # Item name with rarity color at top of details panel
+                item_name = sel['def'].get('name', sel['item_id']) if sel.get('def') else sel['item_id']
+                rarity = sel['def'].get('rarity', 'common') if sel.get('def') else 'common'
+                name_color = self.get_rarity_color(rarity)
+                outline_color = (255, 255, 255) if rarity == 'ancient' else (0, 0, 0)
+                outline_width = 2 if rarity == 'ancient' else 1
+                self._blit_text_outlined(self.screen, self.small_font, item_name[:35], (detail_rect.x + 10, detail_rect.y + 5), fg=name_color, outline=outline_color, outline_width=outline_width)
+                
                 # Description
                 desc = sel['def'].get('description', 'No description') if sel.get('def') else 'No description'
-                self._blit_text_outlined(self.screen, self.small_font, desc[:80], (detail_rect.x + 10, detail_rect.y + 10), fg=(200,200,200), outline=(0,0,0), outline_width=1)
+                self._blit_text_outlined(self.screen, pygame.font.Font(None, 22), desc[:80], (detail_rect.x + 10, detail_rect.y + 28), fg=(180,180,180), outline=(0,0,0), outline_width=1)
                 
                 # Stats display
                 if sel.get('def'):
-                    stats_y = detail_rect.y + 35
+                    stats_y = detail_rect.y + 50
                     stats = []
                     item_def = sel['def']
                     if item_def.get('attack'): stats.append(f"+{item_def['attack']} Attack")

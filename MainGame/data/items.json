@@ -4,7 +4,8 @@
       "id": "broken_tool",
       "name": "Outil cassé",
       "type": "material",
-      "description": "Un outil cassé, peut être réparé."
+      "description": "Un outil cassé, peut être réparé.",
+      "rarity": "common"
     },
     {
       "id": "potion",
@@ -17,7 +18,8 @@
       "effect": {
         "heal": 30
       },
-      "description": "Restaure des PV."
+      "description": "Restaure des PV.",
+      "rarity": "common"
     },
     {
       "id": "iron_core",
@@ -26,7 +28,8 @@
       "droppable": true,
       "dropped_by": "construct",
       "drop_chance": 0.6,
-      "description": "Matériau pour améliorer l'équipement."
+      "description": "Matériau pour améliorer l'équipement.",
+      "rarity": "uncommon"
     },
     {
       "id": "ember_shard",
@@ -35,7 +38,8 @@
       "droppable": true,
       "dropped_by": "demon",
       "drop_chance": 0.08,
-      "description": "Matériau rare."
+      "description": "Matériau rare.",
+      "rarity": "common"
     },
     {
       "id": "dragon_scale",
@@ -44,7 +48,8 @@
       "droppable": true,
       "dropped_by": "dragon",
       "drop_chance": 0.45,
-      "description": "Écaille précieuse provenant d'un dragon."
+      "description": "Écaille précieuse provenant d'un dragon.",
+      "rarity": "epic"
     },
     {
       "id": "legendary_fragment",
@@ -53,7 +58,8 @@
       "droppable": true,
       "dropped_by": "dragon",
       "drop_chance": 0.03,
-      "description": "Un fragment très rare."
+      "description": "Un fragment très rare.",
+      "rarity": "legendary"
     },
     {
       "id": "legendary_staff",
@@ -69,7 +75,8 @@
       "goldvariation": [
         -0.2,
         0.2
-      ]
+      ],
+      "rarity": "legendary"
     },
     {
       "id": "dull_sword",
@@ -82,7 +89,8 @@
       "goldvariation": [
         -0.2,
         0.3
-      ]
+      ],
+      "rarity": "common"
     },
     {
       "id": "arrow_bundle",
@@ -91,7 +99,8 @@
       "droppable": true,
       "dropped_by": "undead",
       "drop_chance": 0.25,
-      "description": "Flèches récupérées d'un archer squelette."
+      "description": "Flèches récupérées d'un archer squelette.",
+      "rarity": "common"
     },
     {
       "id": "iron_sword",
@@ -105,7 +114,8 @@
         -0.1,
         0.15
       ],
-      "description": "Une épée en fer solide avec une lame aiguisée."
+      "description": "Une épée en fer solide avec une lame aiguisée.",
+      "rarity": "uncommon"
     },
     {
       "id": "leather_armor",
@@ -118,7 +128,8 @@
       "goldvariation": [
         -0.15,
         0.2
-      ]
+      ],
+      "rarity": "common"
     },
     {
       "id": "steel_armor",
@@ -131,7 +142,8 @@
       "goldvariation": [
         -0.1,
         0.25
-      ]
+      ],
+      "rarity": "rare"
     },
     {
       "id": "wooden_shield",
@@ -144,7 +156,8 @@
         -0.2,
         0.2
       ],
-      "description": "Bouclier basique en bois renforcé."
+      "description": "Bouclier basique en bois renforcé.",
+      "rarity": "common"
     },
     {
       "id": "iron_shield",
@@ -158,7 +171,8 @@
       "goldvariation": [
         -0.1,
         0.15
-      ]
+      ],
+      "rarity": "uncommon"
     },
     {
       "id": "spell_tome",
@@ -172,7 +186,8 @@
         -0.15,
         0.2
       ],
-      "description": "Livre magique augmentant la puissance et la pénétration magique."
+      "description": "Livre magique augmentant la puissance et la pénétration magique.",
+      "rarity": "uncommon"
     },
     {
       "id": "power_ring",
@@ -185,7 +200,8 @@
       "goldvariation": [
         -0.1,
         0.1
-      ]
+      ],
+      "rarity": "uncommon"
     },
     {
       "id": "vitality_amulet",
@@ -199,7 +215,8 @@
         -0.1,
         0.15
       ],
-      "description": "Amulette augmentant la santé et la défense."
+      "description": "Amulette augmentant la santé et la défense.",
+      "rarity": "uncommon"
     },
     {
       "id": "critical_charm",
@@ -213,7 +230,8 @@
         -0.05,
         0.1
       ],
-      "description": "Charme augmentant les chances et dégâts critiques."
+      "description": "Charme augmentant les chances et dégâts critiques.",
+      "rarity": "uncommon"
     },
     {
       "id": "penetration_relic",
@@ -227,7 +245,8 @@
       "goldvariation": [
         -0.1,
         0.1
-      ]
+      ],
+      "rarity": "uncommon"
     },
     {
       "id": "balanced_talisman",
@@ -243,7 +262,8 @@
       "goldvariation": [
         -0.15,
         0.15
-      ]
+      ],
+      "rarity": "uncommon"
     },
     {
       "id": "dragon_eye",
@@ -258,7 +278,8 @@
       "max_hp": 1,
       "droppable": true,
       "dropped_by": "dragon",
-      "drop_chance": 0.15
+      "drop_chance": 0.15,
+      "rarity": "legendary"
     },
     {
       "id": "mana_potion",
@@ -271,7 +292,8 @@
       "effect": {
         "restore_mana": 30
       },
-      "description": "Restaure 30 points de mana."
+      "description": "Restaure 30 points de mana.",
+      "rarity": "uncommon"
     },
     {
       "id": "greater_mana_potion",
@@ -284,7 +306,8 @@
       "effect": {
         "restore_mana": 60
       },
-      "description": "Restaure 60 points de mana."
+      "description": "Restaure 60 points de mana.",
+      "rarity": "rare"
     },
     {
       "id": "small_health_elixir",
@@ -299,7 +322,8 @@
       "effect": {
         "heal_percent": 0.25
       },
-      "description": "Restaure 25% des PV max."
+      "description": "Restaure 25% des PV max.",
+      "rarity": "common"
     },
     {
       "id": "medium_health_elixir",
@@ -314,7 +338,8 @@
       "effect": {
         "heal_percent": 0.5
       },
-      "description": "Restaure 50% des PV max."
+      "description": "Restaure 50% des PV max.",
+      "rarity": "uncommon"
     },
     {
       "id": "large_health_elixir",
@@ -329,7 +354,8 @@
       "effect": {
         "heal_percent": 0.75
       },
-      "description": "Restaure 75% des PV max."
+      "description": "Restaure 75% des PV max.",
+      "rarity": "rare"
     },
     {
       "id": "wizard_staff",
@@ -344,7 +370,8 @@
       "goldvariation": [
         -0.15,
         0.2
-      ]
+      ],
+      "rarity": "rare"
     },
     {
       "id": "arcane_tome",
@@ -358,7 +385,8 @@
       "goldvariation": [
         -0.1,
         0.15
-      ]
+      ],
+      "rarity": "epic"
     },
     {
       "id": "mage_robes",
@@ -373,7 +401,8 @@
       "goldvariation": [
         -0.15,
         0.2
-      ]
+      ],
+      "rarity": "rare"
     },
     {
       "id": "crystal_ring",
@@ -387,7 +416,8 @@
       "goldvariation": [
         -0.1,
         0.15
-      ]
+      ],
+      "rarity": "rare"
     },
     {
       "id": "enchanted_amulet",
@@ -402,7 +432,8 @@
       "goldvariation": [
         -0.1,
         0.1
-      ]
+      ],
+      "rarity": "rare"
     },
     {
       "id": "wooden_chest",
@@ -435,7 +466,8 @@
       "goldvariation": [
         -0.1,
         0.2
-      ]
+      ],
+      "rarity": "common"
     },
     {
       "id": "iron_chest",
@@ -475,7 +507,8 @@
       ],
       "droppable": true,
       "dropped_by": "construct",
-      "drop_chance": 0.1
+      "drop_chance": 0.1,
+      "rarity": "rare"
     },
     {
       "id": "golden_chest",
@@ -524,7 +557,8 @@
       ],
       "droppable": true,
       "dropped_by": "dragon",
-      "drop_chance": 0.2
+      "drop_chance": 0.2,
+      "rarity": "rare"
     },
     {
       "id": "skill_scroll_fire",
@@ -542,7 +576,8 @@
       "goldvariation": [
         -0.1,
         0.1
-      ]
+      ],
+      "rarity": "common"
     },
     {
       "id": "herb_healing",
@@ -551,7 +586,8 @@
       "description": "A common herb with healing properties.",
       "droppable": true,
       "dropped_by": "beast",
-      "drop_chance": 0.3
+      "drop_chance": 0.3,
+      "rarity": "common"
     },
     {
       "id": "beast_hide",
@@ -559,7 +595,8 @@
       "type": "material",
       "description": "Tough hide from wild beasts, useful for armor crafting.",
       "droppable": true,
-      "dropped_by": "beast"
+      "dropped_by": "beast",
+      "rarity": "common"
     },
     {
       "id": "scrap_metal",
@@ -567,7 +604,8 @@
       "type": "material",
       "description": "Pieces of scavenged metal from defeated enemies.",
       "droppable": true,
-      "dropped_by": "horde"
+      "dropped_by": "horde",
+      "rarity": "common"
     },
     {
       "id": "water_crystal",
@@ -576,7 +614,8 @@
       "description": "A crystallized drop of pure water.",
       "droppable": true,
       "dropped_by": "construct",
-      "drop_chance": 0.15
+      "drop_chance": 0.15,
+      "rarity": "uncommon"
     },
     {
       "id": "potion_health",
@@ -586,7 +625,8 @@
       "effect": {
         "heal": 50
       },
-      "cost": 30
+      "cost": 30,
+      "rarity": "common"
     },
     {
       "id": "iron_ore",
@@ -595,7 +635,8 @@
       "description": "Raw iron ore for forging.",
       "droppable": true,
       "dropped_by": "construct",
-      "drop_chance": 0.25
+      "drop_chance": 0.25,
+      "rarity": "uncommon"
     },
     {
       "id": "wood_plank",
@@ -604,7 +645,8 @@
       "description": "A sturdy wooden plank.",
       "droppable": true,
       "dropped_by": "beast",
-      "drop_chance": 0.4
+      "drop_chance": 0.4,
+      "rarity": "common"
     },
     {
       "id": "greatscraphammer",
@@ -616,7 +658,8 @@
       "critchance": 0.0,
       "critdamage": 0.5,
       "magic_power": 0,
-      "magic_penetration": 0.0
+      "magic_penetration": 0.0,
+      "rarity": "uncommon"
     },
     {
       "id": "dragon_scale",
@@ -625,7 +668,8 @@
       "description": "Rare scale from a dragon",
       "droppable": true,
       "dropped_by": "dragon",
-      "drop_chance": 0.08
+      "drop_chance": 0.08,
+      "rarity": "epic"
     },
     {
       "id": "demon_horn",
@@ -634,7 +678,8 @@
       "description": "Cursed horn radiating dark energy",
       "droppable": true,
       "dropped_by": "demon",
-      "drop_chance": 0.12
+      "drop_chance": 0.12,
+      "rarity": "rare"
     },
     {
       "id": "undead_essence",
@@ -643,7 +688,8 @@
       "description": "Ghostly essence of the undead",
       "droppable": true,
       "dropped_by": "undead",
-      "drop_chance": 0.2
+      "drop_chance": 0.2,
+      "rarity": "rare"
     },
     {
       "id": "elemental_core",
@@ -652,35 +698,40 @@
       "description": "Crystallized elemental power",
       "droppable": true,
       "dropped_by": "elemental",
-      "drop_chance": 0.15
+      "drop_chance": 0.15,
+      "rarity": "rare"
     },
     {
       "id": "mythril_ore",
       "name": "Mythril Ore",
       "type": "material",
       "description": "Legendary lightweight metal ore",
-      "cost": 200
+      "cost": 200,
+      "rarity": "epic"
     },
     {
       "id": "shadow_essence",
       "name": "Shadow Essence",
       "type": "material",
       "description": "Pure concentrated darkness",
-      "cost": 120
+      "cost": 120,
+      "rarity": "epic"
     },
     {
       "id": "crystal_shard",
       "name": "Crystal Shard",
       "type": "material",
       "description": "Magical crystal fragment",
-      "cost": 60
+      "cost": 60,
+      "rarity": "rare"
     },
     {
       "id": "ancient_rune",
       "name": "Ancient Rune",
       "type": "material",
       "description": "Mysterious rune with forgotten power",
-      "cost": 250
+      "cost": 250,
+      "rarity": "rare"
     },
     {
       "id": "mythril_blade",
@@ -690,7 +741,8 @@
       "attack": 15,
       "penetration": 8.0,
       "critchance": 0.12,
-      "critdamage": 0.3
+      "critdamage": 0.3,
+      "rarity": "epic"
     },
     {
       "id": "shadow_dagger",
@@ -700,7 +752,8 @@
       "attack": 10,
       "penetration": 5.0,
       "critchance": 0.25,
-      "critdamage": 0.8
+      "critdamage": 0.8,
+      "rarity": "epic"
     },
     {
       "id": "flame_staff",
@@ -709,7 +762,8 @@
       "description": "Staff imbued with fire magic",
       "attack": 2,
       "magic_power": 15,
-      "magic_penetration": 8.0
+      "magic_penetration": 8.0,
+      "rarity": "epic"
     },
     {
       "id": "arcane_orb",
@@ -719,7 +773,8 @@
       "magic_power": 12,
       "magic_penetration": 5.0,
       "max_mana": 30,
-      "mana_regen": 3
+      "mana_regen": 3,
+      "rarity": "epic"
     },
     {
       "id": "dragon_plate",
@@ -727,7 +782,8 @@
       "type": "armor",
       "description": "Heavy armor forged from dragon scales",
       "defense": 25,
-      "max_hp": 80
+      "max_hp": 80,
+      "rarity": "epic"
     },
     {
       "id": "shadow_cloak",
@@ -736,7 +792,8 @@
       "description": "Cloak that blends with shadows",
       "defense": 8,
       "critchance": 0.15,
-      "max_hp": 20
+      "max_hp": 20,
+      "rarity": "epic"
     },
     {
       "id": "mage_robe",
@@ -746,7 +803,8 @@
       "defense": 5,
       "magic_power": 10,
       "max_mana": 50,
-      "mana_regen": 5
+      "mana_regen": 5,
+      "rarity": "rare"
     },
     {
       "id": "guardian_shield",
@@ -754,7 +812,8 @@
       "type": "offhand",
       "description": "Massive shield for ultimate protection",
       "defense": 20,
-      "max_hp": 50
+      "max_hp": 50,
+      "rarity": "epic"
     },
     {
       "id": "vampiric_ring",
@@ -764,7 +823,8 @@
       "attack": 5,
       "max_hp": 30,
       "lifesteal": 10,
-      "cost": 550
+      "cost": 550,
+      "rarity": "epic"
     },
     {
       "id": "phoenix_feather",
@@ -773,7 +833,8 @@
       "description": "Grants regeneration powers",
       "max_hp": 40,
       "mana_regen": 4,
-      "cost": 600
+      "cost": 600,
+      "rarity": "legendary"
     },
     {
       "id": "elixir_strength",
@@ -784,7 +845,8 @@
         "atk_boost": 10,
         "duration": 3
       },
-      "cost": 80
+      "cost": 80,
+      "rarity": "uncommon"
     },
     {
       "id": "elixir_defense",
@@ -795,7 +857,8 @@
         "def_boost": 15,
         "duration": 3
       },
-      "cost": 80
+      "cost": 80,
+      "rarity": "uncommon"
     },
     {
       "id": "mana_potion_large",
@@ -804,7 +867,8 @@
       "description": "Restores 100 mana",
       "effect": {
         "mana_restore": 100
-      }
+      },
+      "rarity": "uncommon"
     },
     {
       "id": "full_restore",
@@ -814,7 +878,8 @@
       "effect": {
         "full_heal": true,
         "full_mana": true
-      }
+      },
+      "rarity": "rare"
     },
     {
       "id": "aberrant_tissue",
@@ -822,7 +887,8 @@
       "type": "material",
       "description": "Twisted flesh from aberrations, used in dark crafting",
       "droppable": true,
-      "dropped_by": "aberration"
+      "dropped_by": "aberration",
+      "rarity": "uncommon"
     },
     {
       "id": "void_crystal",
@@ -830,7 +896,8 @@
       "type": "material",
       "description": "A crystal pulsing with void energy",
       "droppable": true,
-      "dropped_by": "aberration"
+      "dropped_by": "aberration",
+      "rarity": "epic"
     },
     {
       "id": "holy_essence",
@@ -838,7 +905,8 @@
       "type": "material",
       "description": "Pure celestial energy condensed into liquid form",
       "droppable": true,
-      "dropped_by": "celestial"
+      "dropped_by": "celestial",
+      "rarity": "epic"
     },
     {
       "id": "starlight_shard",
@@ -846,7 +914,8 @@
       "type": "material",
       "description": "A fragment of crystallized starlight",
       "droppable": true,
-      "dropped_by": "celestial"
+      "dropped_by": "celestial",
+      "rarity": "epic"
     },
     {
       "id": "fey_dust",
@@ -854,7 +923,8 @@
       "type": "material",
       "description": "Magical dust from fey creatures",
       "droppable": true,
-      "dropped_by": "fey"
+      "dropped_by": "fey",
+      "rarity": "rare"
     },
     {
       "id": "moonstone",
@@ -862,7 +932,8 @@
       "type": "material",
       "description": "A gem that glows softly with moonlight",
       "droppable": true,
-      "dropped_by": "fey"
+      "dropped_by": "fey",
+      "rarity": "rare"
     },
     {
       "id": "infernal_steel",
@@ -870,7 +941,8 @@
       "type": "material",
       "description": "Metal forged in the fires of the infernal realm",
       "droppable": true,
-      "dropped_by": "infernal"
+      "dropped_by": "infernal",
+      "rarity": "rare"
     },
     {
       "id": "hellfire_core",
@@ -878,7 +950,8 @@
       "type": "material",
       "description": "A core burning with eternal hellfire",
       "droppable": true,
-      "dropped_by": "infernal"
+      "dropped_by": "infernal",
+      "rarity": "epic"
     },
     {
       "id": "celestial_lootbox",
@@ -916,7 +989,8 @@
         }
       ],
       "droppable": true,
-      "dropped_by": "celestial"
+      "dropped_by": "celestial",
+      "rarity": "epic"
     },
     {
       "id": "fey_lootbox",
@@ -954,7 +1028,8 @@
         }
       ],
       "droppable": true,
-      "dropped_by": "fey"
+      "dropped_by": "fey",
+      "rarity": "epic"
     },
     {
       "id": "infernal_lootbox",
@@ -992,7 +1067,8 @@
         }
       ],
       "droppable": true,
-      "dropped_by": "infernal"
+      "dropped_by": "infernal",
+      "rarity": "epic"
     },
     {
       "id": "aberration_lootbox",
@@ -1029,7 +1105,11 @@
       "dropped_by": "aberration",
       "cost": 350,
       "shopchance": 0.05,
-      "goldvariation": [-0.05, 0.1]
+      "goldvariation": [
+        -0.05,
+        0.1
+      ],
+      "rarity": "epic"
     },
     {
       "id": "angelic_blade",
@@ -1040,7 +1120,8 @@
       "magic_power": 12,
       "crit_chance": 8.0,
       "droppable": true,
-      "dropped_by": "celestial"
+      "dropped_by": "celestial",
+      "rarity": "mythical"
     },
     {
       "id": "moonlight_staff",
@@ -1051,7 +1132,8 @@
       "mana_regen": 6,
       "max_mana": 50,
       "droppable": true,
-      "dropped_by": "fey"
+      "dropped_by": "fey",
+      "rarity": "mythical"
     },
     {
       "id": "demon_blade",
@@ -1062,7 +1144,8 @@
       "crit_damage": 0.4,
       "lifesteal": 8,
       "droppable": true,
-      "dropped_by": "infernal"
+      "dropped_by": "infernal",
+      "rarity": "legendary"
     },
     {
       "id": "void_dagger",
@@ -1073,7 +1156,8 @@
       "magic_power": 18,
       "penetration": 20.0,
       "droppable": true,
-      "dropped_by": "aberration"
+      "dropped_by": "aberration",
+      "rarity": "legendary"
     },
     {
       "id": "infernal_armor",
@@ -1084,7 +1168,8 @@
       "max_hp": 80,
       "attack": 10,
       "droppable": true,
-      "dropped_by": "infernal"
+      "dropped_by": "infernal",
+      "rarity": "legendary"
     },
     {
       "id": "eldritch_tome",
@@ -1095,7 +1180,8 @@
       "max_mana": 70,
       "magic_penetration": 18.0,
       "droppable": true,
-      "dropped_by": "aberration"
+      "dropped_by": "aberration",
+      "rarity": "legendary"
     },
     {
       "id": "mystery_lootbox",
@@ -1135,7 +1221,11 @@
       ],
       "cost": 100,
       "shopchance": 0.4,
-      "goldvariation": [-0.1, 0.15]
+      "goldvariation": [
+        -0.1,
+        0.15
+      ],
+      "rarity": "rare"
     },
     {
       "id": "legendary_lootbox",
@@ -1179,7 +1269,11 @@
       ],
       "cost": 800,
       "shopchance": 0.02,
-      "goldvariation": [-0.05, 0.05]
+      "goldvariation": [
+        -0.05,
+        0.05
+      ],
+      "rarity": "mythical"
     }
   ]
 }

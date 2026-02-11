@@ -1,5 +1,7 @@
 # src/battle_system.py
 import time
+import pygame
+from pathlib import Path
 try:
     from enemy import Enemy
 except Exception:
@@ -40,6 +42,40 @@ class BattleSystem:
         # Track if turn start effects have been processed
         self.turn_processed = False
         self.enemy_turn_processed = False
+        
+        # Load sound effects
+        self.sounds = {}
+        try:
+            # Find assets/sounds/effects directory
+            current_file = Path(__file__)
+            src_dir = current_file.parent
+            base_dir = src_dir.parent
+            effects_dir = base_dir / "assets" / "sounds" / "effects"
+            
+            if effects_dir.exists():
+                monster_hit = effects_dir / "MonsterHit.mp3"
+                monster_kill = effects_dir / "MonsterKill.mp3"
+                mage_hit = effects_dir / "MageHit.mp3"
+                
+                if monster_hit.exists():
+                    self.sounds['monster_hit'] = pygame.mixer.Sound(str(monster_hit))
+                    self.sounds['monster_hit'].set_volume(0.3)
+                if monster_kill.exists():
+                    self.sounds['monster_kill'] = pygame.mixer.Sound(str(monster_kill))
+                    self.sounds['monster_kill'].set_volume(0.6)
+                if mage_hit.exists():
+                    self.sounds['player_hit'] = pygame.mixer.Sound(str(mage_hit))
+                    self.sounds['player_hit'].set_volume(0.3)
+        except Exception as e:
+            print(f"Warning: Could not load sound effects: {e}")
+    
+    def play_sound(self, sound_key):
+        """Play a sound effect if it's loaded"""
+        try:
+            if sound_key in self.sounds:
+                self.sounds[sound_key].play()
+        except Exception:
+            pass
     
     def add_log(self, message, category='info'):
         """Add a message to combat log"""
@@ -197,6 +233,11 @@ class BattleSystem:
         # Apply defense debuffs to enemy
         dmg_dealt = self.enemy.take_damage(dmg, player_pen, self.effect_manager)
         
+        # Play monster hit sound only if it didn't die from this hit
+        # (death sound will be played later)
+        if not self.enemy.is_dead():
+            self.play_sound('monster_hit')
+        
         # Apply lifesteal if player has it
         player_lifesteal = getattr(self.player, 'lifesteal', 0.0)
         if player_lifesteal > 0 and dmg_dealt > 0:
@@ -237,6 +278,8 @@ class BattleSystem:
 
         if self.enemy.is_dead():
             print(f"{self.enemy.name} est vaincu !")
+            # Play monster kill sound
+            self.play_sound('monster_kill')
             self.add_log(f"{self.enemy.name} defeated!", 'info')
             # Apply gold modifier from upgrades/items
             gold_gained = int(self.enemy.gold * getattr(self.player, 'gold_modifier', 1.0))
@@ -394,6 +437,8 @@ class BattleSystem:
             # Check if enemy died
             if self.enemy.is_dead():
                 print(f"{self.enemy.name} est vaincu !")
+                # Play monster kill sound
+                self.play_sound('monster_kill')
                 gold_gained = int(self.enemy.gold * getattr(self.player, 'gold_modifier', 1.0))
                 self.add_log(f"{self.enemy.name} defeated! +{gold_gained}g", 'info')
                 self.player.gold += gold_gained
@@ -453,6 +498,8 @@ class BattleSystem:
 
                     # If enemy dies from DoT, resolve defeat and skip attack
                     if self.enemy and self.enemy.is_dead():
+                        # Play monster kill sound
+                        self.play_sound('monster_kill')
                         gold_gained = int(self.enemy.gold * getattr(self.player, 'gold_modifier', 1.0))
                         self.add_log(f"{self.enemy.name} defeated by DoT! +{gold_gained}g", 'info')
                         self.player.gold += gold_gained
@@ -494,6 +541,9 @@ class BattleSystem:
                     enemy_pen = getattr(self.enemy, 'penetration', 0)
                     # apply damage and capture the actual damage taken after defense
                     dmg_taken = self.player.take_damage(dmg, enemy_pen, self.effect_manager)
+                    
+                    # Play player hit sound
+                    self.play_sound('player_hit')
                     
                     # Restore original defense and clear block bonus
                     if self.block_defense_bonus > 0:
