@@ -596,6 +596,12 @@ class UIManager:
             level = getattr(player, "level", 1)
             self._blit_text_outlined(self.screen, self.small_font, f"Level: {level}", (x, y), fg=(200,200,255), outline=(0,0,0), outline_width=2)
             y += line_h
+            
+            # XP counter with current/required display
+            current_xp = getattr(player, "xp", 0)
+            xp_required = int((level ** 1.5) * 100)
+            self._blit_text_outlined(self.screen, self.small_font, f"XP: {current_xp}/{xp_required}", (x, y), fg=(100,255,100), outline=(0,0,0), outline_width=2)
+            y += line_h
 
             # Compact stats block (two columns)
             stats = [
@@ -705,7 +711,7 @@ class UIManager:
                         pass
                 return {"rect": rect, "label": label, "action": action}
 
-            labels = [("+ATK", "atk"), ("+DEF", "def"), ("+HP", "hp"), ("+AGI", "agi")]
+            labels = [("+ATK", "atk"), ("+DEF", "def"), ("+HP", "hp"), ("+AGI", "agi"), ("+MAG", "mag")]
             for i, (lab, st) in enumerate(labels):
                 btn_rect = pygame.Rect(bx + i * (btn_w + spacing), by, btn_w, btn_h)
                 pygame.draw.rect(self.screen, (80, 160, 80), btn_rect, border_radius=6)

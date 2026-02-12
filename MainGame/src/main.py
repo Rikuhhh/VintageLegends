@@ -74,8 +74,8 @@ def select_zone(wave, zones):
     if not available_zones:
         return None
     
-    # Every 10 waves, roll for zone change
-    if wave % 10 == 0 or wave == 1:
+    # Every 25 waves, roll for zone change (reduced frequency)
+    if wave % 25 == 0 or wave == 1:
         import random
         # Build weighted list based on spawn_chance
         total_chance = sum(z.get('spawn_chance', 0) for z in available_zones)
@@ -310,8 +310,8 @@ current_zone = None
 # Prefer an explicit 'flowerfield.png' background if present, otherwise fall back to default_bg.png
 background = load_background_for_zone(None, screen)
 
-# Start music controller window (playlist from assets/sounds/music)
-start_music_controller(ASSETS_PATH / "sounds" / "music", volume=user_settings.get("volume", 0.8))
+# Music controller removed - zone themes now configured in zones.json
+# start_music_controller(ASSETS_PATH / "sounds" / "music", volume=user_settings.get("volume", 0.8))
 
 # Exemple de personnage
 mage_path = ASSETS_PATH / "images" / "characters" / "mage.png"
@@ -466,8 +466,19 @@ if saved:
     player = Player(player_template)
     # restore persistent fields
     player.gold = saved.get('gold', getattr(player, 'gold', 0))
-    player.xp = saved.get('xp', getattr(player, 'xp', 0))
     player.level = saved.get('level', getattr(player, 'level', 1))
+    player.xp = saved.get('xp', getattr(player, 'xp', 0))
+    
+    # Validate and fix XP - if XP accumulated enough to level up, process it properly
+    # This handles cases where save/load might have created inconsistent state
+    xp_required = int((player.level ** 1.5) * 100)
+    if player.xp >= xp_required:
+        # XP is too high for current level - process level ups that should have happened
+        print(f'[INFO] Fixing XP overflow: level {player.level}, XP {player.xp}/{xp_required}')
+        # Temporarily reduce to safe value, then add back through gain_xp to trigger proper level ups
+        excess_xp = player.xp
+        player.xp = 0
+        player.gain_xp(excess_xp)
     player.inventory = saved.get('inventory', {})
     player.equipment = saved.get('equipment', {'weapon': None, 'armor': None})
     player.base_atk = saved.get('base_atk', getattr(player, 'base_atk', 0))
@@ -488,6 +499,7 @@ if saved:
     player.base_magic_penetration = saved.get('base_magic_penetration', getattr(player, 'base_magic_penetration', 0))
     # restore skills
     player.skills = saved.get('skills', [])
+    player.skill_levels = saved.get('skill_levels', {})
     player.equipped_skills = saved.get('equipped_skills', [])
     player.skill_cooldowns = saved.get('skill_cooldowns', {})
     
@@ -501,10 +513,20 @@ if saved:
                     if char.get('id') == selected_char_id or char.get('name') == saved.get('name'):
                         starting_skills = char.get('starting_skills', [])
                         player.skills = list(starting_skills)
+                        # Initialize skill levels for migrated skills
+                        for skill_id in starting_skills:
+                            if skill_id not in player.skill_levels:
+                                player.skill_levels[skill_id] = 1
                         print(f"✨ Loaded {len(starting_skills)} starting skills for {char.get('name')}")
                         break
         except Exception as e:
             print(f"Warning: Could not load starting skills: {e}")
+    
+    # Ensure all skills have levels (migration for old saves)
+    for skill_id in player.skills:
+        if skill_id not in player.skill_levels:
+            player.skill_levels[skill_id] = 1
+            print(f"🔧 Initialized level for skill: {skill_id}")
     
     player.unspent_points = saved.get('unspent_points', getattr(player, 'unspent_points', 0))
     player.permanent_upgrades = saved.get('permanent_upgrades', getattr(player, 'permanent_upgrades', {}))
@@ -613,11 +635,17 @@ else:
     starting_skills = player_template.get('starting_skills', [])
     if starting_skills:
         player.skills = list(starting_skills)
+        # Initialize skill levels for starting skills
+        if not hasattr(player, 'skill_levels'):
+            player.skill_levels = {}
+        for skill_id in starting_skills:
+            player.skill_levels[skill_id] = 1
         print(f"✨ Learned {len(starting_skills)} starting skills")
         for skill_id in starting_skills:
             print(f"  - {skill_id}")
     else:
         player.skills = []
+        player.skill_levels = {}
     
     battle = BattleSystem(player)
     # Initialize starting zone for new game
@@ -717,10 +745,10 @@ def main():
         battle.update()
         ui.update(player, battle)
         
-        # Check for zone changes every 10 waves (only once when wave changes)
+        # Check for zone changes every 25 waves (only once when wave changes)
         try:
             current_wave = getattr(battle, 'wave', 0)
-            if current_wave % 10 == 0 and current_wave > 0 and current_wave != last_zone_check_wave:
+            if current_wave % 25 == 0 and current_wave > 0 and current_wave != last_zone_check_wave:
                 new_zone = select_zone(current_wave, zones)
                 if new_zone and new_zone != battle.current_zone:
                     battle.current_zone = new_zone

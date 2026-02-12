@@ -56,30 +56,6 @@
       ]
     },
     {
-      "id": "fire_imp",
-      "name": "Fire Imp",
-      "classification": "elite",
-      "category": "demon",
-      "min_wave": 4,
-      "hp_base": 25,
-      "atk_base": 8,
-      "def_base": 2,
-      "magic_def_base": 8,
-      "xp_base": 20,
-      "gold_base": 10,
-      "drops": [
-        {
-          "item_id": "ember_shard",
-          "chance": 0.08,
-          "qty_min": 1,
-          "qty_max": 2
-        }
-      ],
-      "attacks": [
-        "atk_fireball"
-      ]
-    },
-    {
       "id": "miniboss_golem",
       "name": "Golem (MiniBoss)",
       "classification": "miniboss",
@@ -116,14 +92,14 @@
       "name": "Ancient Dragon",
       "classification": "boss",
       "category": "dragon",
-      "min_wave": 10,
-      "spawn_on_wave_multiple_of": 10,
       "hp_base": 150,
       "atk_base": 10,
       "def_base": 10,
       "magic_def_base": 15,
-      "xp_base": 450,
+      "xp_base": 250,
       "gold_base": 200,
+      "min_wave": 10,
+      "spawn_on_wave_multiple_of": 10,
       "drops": [
         {
           "item_id": "dragon_scale",
@@ -239,7 +215,9 @@
       "min_wave": 5,
       "max_wave": 0,
       "image": "goblin1.png",
-      "attacks": ["atk_slash"],
+      "attacks": [
+        "atk_slash"
+      ],
       "drops": [
         {
           "item_id": "broken_tool",
@@ -318,7 +296,9 @@
           "qty_max": 2
         }
       ],
-      "attacks": ["atk_fireball"]
+      "attacks": [
+        "atk_fireball"
+      ]
     },
     {
       "id": "flame_elemental",
@@ -346,7 +326,9 @@
           "qty_max": 1
         }
       ],
-      "attacks": ["atk_fireball"]
+      "attacks": [
+        "atk_fireball"
+      ]
     },
     {
       "id": "ice_elemental",
@@ -374,7 +356,9 @@
           "qty_max": 2
         }
       ],
-      "attacks": ["atk_slash"]
+      "attacks": [
+        "atk_slash"
+      ]
     },
     {
       "id": "demon_imp",
@@ -396,7 +380,9 @@
           "qty_max": 2
         }
       ],
-      "attacks": ["atk_fireball"]
+      "attacks": [
+        "atk_fireball"
+      ]
     },
     {
       "id": "demon_lord",
@@ -425,7 +411,9 @@
           "qty_max": 1
         }
       ],
-      "attacks": ["atk_multi_stab"]
+      "attacks": [
+        "atk_multi_stab"
+      ]
     },
     {
       "id": "young_dragon",
@@ -454,7 +442,9 @@
           "qty_max": 3
         }
       ],
-      "attacks": ["atk_fireball"]
+      "attacks": [
+        "atk_fireball"
+      ]
     },
     {
       "id": "ancient_dragon",
@@ -489,7 +479,9 @@
           "qty_max": 2
         }
       ],
-      "attacks": ["atk_fireball"]
+      "attacks": [
+        "atk_fireball"
+      ]
     },
     {
       "id": "skeleton_warrior",
@@ -517,7 +509,9 @@
           "qty_max": 3
         }
       ],
-      "attacks": ["atk_slash"]
+      "attacks": [
+        "atk_slash"
+      ]
     },
     {
       "id": "lich",
@@ -552,7 +546,9 @@
           "qty_max": 4
         }
       ],
-      "attacks": ["atk_fireball"]
+      "attacks": [
+        "atk_fireball"
+      ]
     },
     {
       "id": "crystal_golem",
@@ -580,7 +576,9 @@
           "qty_max": 3
         }
       ],
-      "attacks": ["atk_slash"]
+      "attacks": [
+        "atk_slash"
+      ]
     },
     {
       "id": "dire_wolf",
@@ -608,7 +606,9 @@
           "qty_max": 2
         }
       ],
-      "attacks": ["atk_multi_stab"]
+      "attacks": [
+        "atk_multi_stab"
+      ]
     },
     {
       "id": "giant_spider",
@@ -630,7 +630,9 @@
           "qty_max": 2
         }
       ],
-      "attacks": ["atk_slash"]
+      "attacks": [
+        "atk_slash"
+      ]
     },
     {
       "id": "corrupted_treant",
@@ -658,7 +660,9 @@
           "qty_max": 4
         }
       ],
-      "attacks": ["atk_slash"]
+      "attacks": [
+        "atk_slash"
+      ]
     },
     {
       "id": "void_horror",
@@ -699,7 +703,9 @@
           "qty_max": 3
         }
       ],
-      "attacks": ["atk_multi_stab"]
+      "attacks": [
+        "atk_multi_stab"
+      ]
     },
     {
       "id": "aberration_eye",
@@ -728,7 +734,9 @@
           "qty_max": 2
         }
       ],
-      "attacks": ["atk_magic_bolt"]
+      "attacks": [
+        "atk_magic_bolt"
+      ]
     },
     {
       "id": "celestial_guardian",
@@ -756,7 +764,9 @@
           "qty_max": 3
         }
       ],
-      "attacks": ["atk_holy_smite"]
+      "attacks": [
+        "atk_holy_smite"
+      ]
     },
     {
       "id": "fey_trickster",
@@ -784,7 +794,9 @@
           "qty_max": 2
         }
       ],
-      "attacks": ["atk_multi_stab"]
+      "attacks": [
+        "atk_multi_stab"
+      ]
     },
     {
       "id": "infernal_knight",
@@ -813,7 +825,10 @@
           "qty_max": 2
         }
       ],
-      "attacks": ["atk_slash", "atk_roar"]
+      "attacks": [
+        "atk_slash",
+        "atk_roar"
+      ]
     },
     {
       "id": "abyssal_spawn",
@@ -835,7 +850,9 @@
           "qty_max": 3
         }
       ],
-      "attacks": ["atk_slash"]
+      "attacks": [
+        "atk_slash"
+      ]
     },
     {
       "id": "angelic_sentinel",
@@ -864,7 +881,10 @@
           "qty_max": 1
         }
       ],
-      "attacks": ["atk_holy_smite", "atk_roar"]
+      "attacks": [
+        "atk_holy_smite",
+        "atk_roar"
+      ]
     },
     {
       "id": "fairy_queen",
@@ -899,7 +919,10 @@
           "qty_max": 1
         }
       ],
-      "attacks": ["atk_magic_bolt", "atk_multi_stab"]
+      "attacks": [
+        "atk_magic_bolt",
+        "atk_multi_stab"
+      ]
     },
     {
       "id": "demon_lord",
@@ -935,7 +958,47 @@
           "qty_max": 1
         }
       ],
-      "attacks": ["atk_fireball", "atk_slash", "atk_roar"]
+      "attacks": [
+        "atk_fireball",
+        "atk_slash",
+        "atk_roar"
+      ]
+    },
+    {
+      "id": "elder_dragon",
+      "name": "Elder Dragon",
+      "classification": "boss",
+      "category": "dragon",
+      "hp_base": 300,
+      "atk_base": 40,
+      "def_base": 20,
+      "pen_base": 15.0,
+      "magic_def_base": 15,
+      "xp_base": 550,
+      "gold_base": 250,
+      "min_wave": 40,
+      "rare_spawn_chance": 100,
+      "drops": [
+        {
+          "item_id": "dragon_scale",
+          "chance": 0.9,
+          "qty_min": 5,
+          "qty_max": 10
+        },
+        {
+          "item_id": "ancient_rune",
+          "chance": 0.4,
+          "qty_min": 1,
+          "qty_max": 2
+        },
+        {
+          "item_id": "mythril_ore",
+          "chance": 0.3,
+          "qty_min": 1,
+          "qty_max": 2
+        }
+      ],
+      "attacks": []
     }
   ],
   "scaling_notes": {

@@ -87,6 +87,7 @@ class Enemy:
     def random_enemy(wave=1, allowed_categories=None):
         """Create an enemy definition based on monsters.json rules and scaling.
         Rules:
+        - Rare monsters checked first (if multiple can spawn, highest roll wins)
         - Bosses prioritized on multiples of 10
         - Minibosses on multiples of 5
         - Elites are rarer than normal
@@ -106,11 +107,9 @@ class Enemy:
         scaling = data.get('scaling_notes', {})
         hp_pct = float(scaling.get('hp_scale_per_wave_pct', 0.06))
         atk_pct = float(scaling.get('atk_scale_per_wave_pct', 0.025))
-        # selection pools
-        bosses = []
-        minibosses = []
-        elites = []
-        normals = []
+        
+        # RARE MONSTER CHECK - Roll for rare monsters first
+        rare_candidates = []
         for mon in enemies:
             if not Enemy._in_wave_range(mon, wave):
                 continue
@@ -119,55 +118,85 @@ class Enemy:
                 mon_category = mon.get('category')
                 if mon_category not in allowed_categories:
                     continue
-            cls = mon.get('classification', 'normal')
-            if cls == 'boss':
-                bosses.append(mon)
-            elif cls == 'miniboss':
-                minibosses.append(mon)
-            elif cls == 'elite':
-                elites.append(mon)
-            else:
-                normals.append(mon)
-
-        chosen = None
-        # Boss on multiples of 10
-        if wave % 10 == 0 and bosses:
-            chosen = random.choice(bosses)
-        # Miniboss on multiples of 5
-        elif wave % 5 == 0 and minibosses:
-            chosen = random.choice(minibosses)
+            
+            rare_chance = mon.get('rare_spawn_chance', 0)
+            if rare_chance > 0:
+                # Roll for this rare monster (1/rare_chance probability)
+                roll = random.randint(1, rare_chance)
+                if roll == 1:  # Success!
+                    rare_candidates.append((mon, roll))
+        
+        # If multiple rare monsters rolled successfully, pick the one with highest "roll value"
+        # (in this case all successful rolls are 1, so we pick randomly among candidates)
+        if rare_candidates:
+            chosen_rare = random.choice(rare_candidates)[0]
+            print(f"✨ RARE SPAWN: {chosen_rare.get('name')}! (1/{chosen_rare.get('rare_spawn_chance')} chance)")
+            # Use this rare monster as the chosen one
+            chosen = chosen_rare
         else:
-            # regular selection: combine normals and elites with weights
-            pool = []
-            weights = []
-            for n in normals:
-                pool.append(n)
-                weights.append(1.0)
-            for e in elites:
-                pool.append(e)
-                # make elites rarer; reduce weight
-                weights.append(0.15)
-            if pool:
-                # normalize weights and choose
-                total = sum(weights)
-                r = random.random() * total
-                upto = 0
-                for p, w in zip(pool, weights):
-                    if upto + w >= r:
-                        chosen = p
-                        break
-                    upto += w
+            # No rare spawn - proceed with normal selection
+            # selection pools
+            bosses = []
+            minibosses = []
+            elites = []
+            normals = []
+            for mon in enemies:
+                if not Enemy._in_wave_range(mon, wave):
+                    continue
+                # Filter by allowed categories if specified
+                if allowed_categories is not None:
+                    mon_category = mon.get('category')
+                    if mon_category not in allowed_categories:
+                        continue
+                cls = mon.get('classification', 'normal')
+                if cls == 'boss':
+                    bosses.append(mon)
+                elif cls == 'miniboss':
+                    minibosses.append(mon)
+                elif cls == 'elite':
+                    elites.append(mon)
+                else:
+                    normals.append(mon)
 
-        if not chosen:
-            # fallback to a normal or slime
-            if normals:
-                chosen = random.choice(normals)
+            chosen = None
+            # Boss on multiples of 10
+            if wave % 10 == 0 and bosses:
+                chosen = random.choice(bosses)
+            # Miniboss on multiples of 5
+            elif wave % 5 == 0 and minibosses:
+                chosen = random.choice(minibosses)
             else:
-                hp = 20 + wave * 5
-                atk = 5 + wave * 2
-                gold = 10 + wave * 3
-                xp = 10 + wave * 4
-                return Enemy(name=f"Slime Lv.{wave}", hp=hp, atk=atk, gold=gold, xp=xp)
+                # regular selection: combine normals and elites with weights
+                pool = []
+                weights = []
+                for n in normals:
+                    pool.append(n)
+                    weights.append(1.0)
+                for e in elites:
+                    pool.append(e)
+                    # make elites rarer; reduce weight
+                    weights.append(0.15)
+                if pool:
+                    # normalize weights and choose
+                    total = sum(weights)
+                    r = random.random() * total
+                    upto = 0
+                    for p, w in zip(pool, weights):
+                        if upto + w >= r:
+                            chosen = p
+                            break
+                        upto += w
+
+            if not chosen:
+                # fallback to a normal or slime
+                if normals:
+                    chosen = random.choice(normals)
+                else:
+                    hp = 20 + wave * 5
+                    atk = 5 + wave * 2
+                    gold = 10 + wave * 3
+                    xp = 10 + wave * 4
+                    return Enemy(name=f"Slime Lv.{wave}", hp=hp, atk=atk, gold=gold, xp=xp)
 
         # Build stats from chosen def
         hp_base = int(chosen.get('hp_base', 10))

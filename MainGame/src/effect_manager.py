@@ -10,7 +10,7 @@ class EffectManager:
         # entity can be player or enemy (identified by id(entity))
         self.active_effects = {}
     
-    def add_effect(self, entity, effect):
+    def add_effect(self, entity, effect, caster=None):
         """Add an effect to an entity
         
         effect structure:
@@ -19,14 +19,34 @@ class EffectManager:
             'stat': 'atk'|'def'|'magic_power'|etc (for buff/debuff),
             'value': int (for buff/debuff),
             'damage': int (for dot),
+            'damage_type': 'physical'|'magic' (for dot scaling),
             'damage_percent': float (for counter),
             'duration': int (turns),
-            'source': str (skill name)
+            'source': str (skill name),
+            'caster_stats': dict (snapshot of caster stats for DoT scaling)
         }
         """
         entity_id = id(entity)
         if entity_id not in self.active_effects:
             self.active_effects[entity_id] = []
+        
+        # For DoT effects, scale with caster's stats
+        if effect.get('type') == 'dot' and caster:
+            damage_type = effect.get('damage_type', 'physical')
+            base_damage = effect.get('damage', 0)
+            
+            # Scale DoT with relevant stat
+            if damage_type == 'magic':
+                scaling_stat = getattr(caster, 'magic_power', 0)
+                # Magic DoT scales 30% with magic power
+                scaled_damage = base_damage + int(scaling_stat * 0.3)
+            else:
+                scaling_stat = getattr(caster, 'atk', 0)
+                # Physical DoT scales 20% with attack
+                scaled_damage = base_damage + int(scaling_stat * 0.2)
+            
+            effect['damage'] = max(1, scaled_damage)
+            effect['damage_type'] = damage_type
         
         # Add effect with internal ID
         effect['_id'] = len(self.active_effects[entity_id])

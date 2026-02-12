@@ -65,18 +65,22 @@
       "id": "legendary_staff",
       "name": "Sceptre légendaire",
       "type": "weapon",
+      "rarity": "legendary",
       "description": "Très rare. Puissance magique légendaire.",
-      "magic_power": 25,
-      "magic_penetration": 20.0,
       "critchance": 0.3,
       "critdamage": 0.5,
+      "magic_power": 25,
+      "magic_penetration": 20.0,
+      "multi_hit": {
+        "hits": 5,
+        "damage_per_hit": 0.2
+      },
       "cost": 600,
       "shopchance": 0.1,
       "goldvariation": [
         -0.2,
         0.2
-      ],
-      "rarity": "legendary"
+      ]
     },
     {
       "id": "dull_sword",
@@ -1127,13 +1131,15 @@
       "id": "moonlight_staff",
       "name": "Moonlight Staff",
       "type": "weapon",
+      "rarity": "legendary",
       "description": "A staff channeling the power of the moon",
-      "magic_power": 28,
-      "mana_regen": 6,
+      "magic_power": 35,
+      "exp_gain": 25.0,
       "max_mana": 50,
+      "mana_regen": 15,
       "droppable": true,
       "dropped_by": "fey",
-      "rarity": "mythical"
+      "drop_chance": 0.0
     },
     {
       "id": "demon_blade",
@@ -1274,6 +1280,47 @@
         0.05
       ],
       "rarity": "mythical"
+    },
+    {
+      "id": "casta_cloak",
+      "name": "Casta's Cloak",
+      "type": "armor",
+      "rarity": "mythical",
+      "description": "True embodiment of Casta's will",
+      "attack": 50,
+      "penetration": 30.0,
+      "critchance": 0.5,
+      "critdamage": 1.5,
+      "magic_power": 15,
+      "magic_penetration": 5.0,
+      "lifesteal": 10.0,
+      "agility": 40,
+      "exp_gain": 5.0,
+      "gold_gain": 15.0,
+      "defense": 30,
+      "max_hp": 100,
+      "max_mana": 50,
+      "mana_regen": 15,
+      "hp_regen": 10.0,
+      "dodge_chance": 5.0,
+      "cost": 5000,
+      "shopchance": 0.01,
+      "goldvariation": [
+        0.9,
+        2.0
+      ],
+      "shop_zones": [
+        "void_realm"
+      ],
+      "image": "casta_cloak1.png"
+    },
+    {
+      "id": "ultimate_core",
+      "name": "Ultimate Core",
+      "type": "material",
+      "rarity": "mythical",
+      "description": "Feels aetheral...",
+      "image": "ultimatecore1.png"
     }
   ]
 }

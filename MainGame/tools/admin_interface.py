@@ -84,6 +84,32 @@ class AdminInterface:
                 return data.get('zones', [])
         except Exception as e:
             return []
+    
+    def update_multi_hit_total(self, event=None):
+        """Calculate and display total damage multiplier for multi-hit (items)"""
+        try:
+            hits = int(self.item_fields['multi_hit_count'].get() or 0)
+            damage_per_hit = float(self.item_fields['multi_hit_damage'].get() or 0)
+            total = hits * damage_per_hit
+            self.multi_hit_total_label.config(
+                text=f"= {total:.2f}x total damage",
+                foreground='green' if total <= 2.0 else 'orange'
+            )
+        except (ValueError, AttributeError):
+            self.multi_hit_total_label.config(text="(invalid values)", foreground='red')
+    
+    def update_skill_multi_hit_total(self, event=None):
+        """Calculate and display total damage multiplier for multi-hit (skills)"""
+        try:
+            hits = int(self.skill_fields['multi_hit_count'].get() or 0)
+            damage_per_hit = float(self.skill_fields['multi_hit_damage'].get() or 0)
+            total = hits * damage_per_hit
+            self.skill_multi_hit_total_label.config(
+                text=f"= {total:.2f}x total damage",
+                foreground='green' if total <= 2.0 else 'orange'
+            )
+        except (ValueError, AttributeError):
+            self.skill_multi_hit_total_label.config(text="(invalid values)", foreground='red')
         
     def setup_items_tab(self):
         """Setup the Items tab with form fields"""
@@ -100,6 +126,16 @@ class AdminInterface:
         self.item_search_var = tk.StringVar()
         self.item_search_var.trace('w', self.filter_items)
         ttk.Entry(search_frame, textvariable=self.item_search_var, width=20).pack(side='left', padx=2)
+        
+        # Sort dropdown
+        sort_frame = ttk.Frame(left_frame)
+        sort_frame.pack(fill='x', pady=2)
+        ttk.Label(sort_frame, text="Sort by:").pack(side='left', padx=2)
+        self.item_sort_var = tk.StringVar(value='id')
+        sort_combo = ttk.Combobox(sort_frame, textvariable=self.item_sort_var, 
+                                  values=['id', 'name', 'type', 'rarity'], width=10, state='readonly')
+        sort_combo.pack(side='left', padx=2)
+        sort_combo.bind('<<ComboboxSelected>>', self.sort_items)
         
         self.items_listbox = tk.Listbox(left_frame, width=35, height=25)
         self.items_listbox.pack(fill='both', expand=True)
@@ -221,6 +257,32 @@ class AdminInterface:
         self.item_fields['gold_gain'] = ttk.Entry(self.weapon_frame, width=15)
         self.item_fields['gold_gain'].grid(row=5, column=1, padx=5, pady=3)
         ttk.Label(self.weapon_frame, text="(% bonus gold)", font=('Arial', 7, 'italic')).grid(row=5, column=2, sticky='w', padx=2)
+        
+        # Multi-Hit Configuration
+        multi_hit_frame = ttk.LabelFrame(scrollable_frame, text="⚔️ Multi-Hit Settings (Weapons/Skills)", style='Section.TLabelframe')
+        multi_hit_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        self.item_fields['multi_hit_enabled'] = tk.BooleanVar()
+        ttk.Checkbutton(multi_hit_frame, text="Enable Multi-Hit", variable=self.item_fields['multi_hit_enabled']).grid(row=0, column=0, sticky='w', padx=5, pady=3)
+        
+        ttk.Label(multi_hit_frame, text="Hit Count:").grid(row=1, column=0, sticky='w', padx=5, pady=3)
+        self.item_fields['multi_hit_count'] = ttk.Entry(multi_hit_frame, width=15)
+        self.item_fields['multi_hit_count'].grid(row=1, column=1, padx=5, pady=3, sticky='w')
+        ttk.Label(multi_hit_frame, text="(2-10 hits)", font=('Arial', 7, 'italic')).grid(row=1, column=2, sticky='w', padx=2)
+        
+        ttk.Label(multi_hit_frame, text="Damage Per Hit:").grid(row=2, column=0, sticky='w', padx=5, pady=3)
+        self.item_fields['multi_hit_damage'] = ttk.Entry(multi_hit_frame, width=15)
+        self.item_fields['multi_hit_damage'].grid(row=2, column=1, padx=5, pady=3, sticky='w')
+        ttk.Label(multi_hit_frame, text="(0.3-0.5 recommended)", font=('Arial', 7, 'italic')).grid(row=2, column=2, sticky='w', padx=2)
+        
+        ttk.Label(multi_hit_frame, text="Total Damage:").grid(row=3, column=0, sticky='w', padx=5, pady=3)
+        self.multi_hit_total_label = ttk.Label(multi_hit_frame, text="(auto-calculated)", font=('Arial', 8, 'italic'), foreground='gray')
+        self.multi_hit_total_label.grid(row=3, column=1, sticky='w', padx=5)
+        
+        # Bind fields to calculate total
+        self.item_fields['multi_hit_count'].bind('<KeyRelease>', self.update_multi_hit_total)
+        self.item_fields['multi_hit_damage'].bind('<KeyRelease>', self.update_multi_hit_total)
         
         # Armor stats (shown conditionally)
         self.armor_frame = ttk.LabelFrame(scrollable_frame, text="🛡️ Defensive Stats (Armor/Relics/Offhand)", style='Section.TLabelframe')
@@ -405,6 +467,16 @@ class AdminInterface:
         self.monster_search_var.trace('w', self.filter_monsters)
         ttk.Entry(search_frame, textvariable=self.monster_search_var, width=20).pack(side='left', padx=2)
         
+        # Sort dropdown
+        sort_frame = ttk.Frame(left_frame)
+        sort_frame.pack(fill='x', pady=2)
+        ttk.Label(sort_frame, text="Sort by:").pack(side='left', padx=2)
+        self.monster_sort_var = tk.StringVar(value='id')
+        sort_combo = ttk.Combobox(sort_frame, textvariable=self.monster_sort_var, 
+                                  values=['id', 'name', 'classification', 'category'], width=12, state='readonly')
+        sort_combo.pack(side='left', padx=2)
+        sort_combo.bind('<<ComboboxSelected>>', self.sort_monsters)
+        
         self.monsters_listbox = tk.Listbox(left_frame, width=35, height=25)
         self.monsters_listbox.pack(fill='both', expand=True)
         self.monsters_listbox.bind('<<ListboxSelect>>', self.load_selected_monster)
@@ -468,6 +540,18 @@ class AdminInterface:
                                                        values=self.get_monster_categories())
         self.monster_fields['category'].grid(row=row, column=1, pady=5)
         row += 1
+        
+        # Rare Spawn Configuration
+        rare_frame = ttk.LabelFrame(scrollable_frame, text="⭐ Rare Spawn Settings", style='Section.TLabelframe')
+        rare_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        ttk.Label(rare_frame, text="Spawn Chance (1/X):").grid(row=0, column=0, sticky='w', padx=5, pady=3)
+        self.monster_fields['rare_spawn_chance'] = ttk.Entry(rare_frame, width=15)
+        self.monster_fields['rare_spawn_chance'].grid(row=0, column=1, padx=5, pady=3, sticky='w')
+        ttk.Label(rare_frame, text="(Leave 0 or empty for normal spawn)", font=('Arial', 8, 'italic')).grid(row=0, column=2, sticky='w', padx=5)
+        
+        ttk.Label(rare_frame, text="Example: 30 means 1/30 chance", font=('Arial', 8, 'italic'), foreground='gray').grid(row=1, column=0, columnspan=3, sticky='w', padx=5)
         
         # Base stats frame
         stats_frame = ttk.LabelFrame(scrollable_frame, text="📊 Base Stats", style='Section.TLabelframe')
@@ -581,15 +665,10 @@ class AdminInterface:
         """Show/hide relevant stat frames based on item type"""
         item_type = self.item_fields['type'].get()
         
-        if item_type == 'weapon':
+        if item_type in ['weapon', 'armor', 'offhand', 'relic']:
+            # All equipment types can have both offensive AND defensive stats
             self.weapon_frame.grid()
-            self.armor_frame.grid_remove()
-            self.consumable_frame.grid_remove()
-            self.container_frame.grid_remove()
-        elif item_type in ['armor', 'offhand', 'relic']:
-            # All equipment types can use weapon and armor frames for stats
-            self.weapon_frame.grid()  # Relics/offhand can have attack too
-            self.armor_frame.grid()   # Can have defense too
+            self.armor_frame.grid()
             self.consumable_frame.grid_remove()
             self.container_frame.grid_remove()
         elif item_type == 'consumable':
@@ -615,6 +694,8 @@ class AdminInterface:
             with open(self.data_path / 'items.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 self.items_data = data.get('items', [])
+                # Initialize filter tracking
+                self.filtered_items_indices = list(range(len(self.items_data)))
                 for item in self.items_data:
                     self.items_listbox.insert(tk.END, f"{item.get('id')} - {item.get('name')}")
                 self.item_count_label.config(text=f"Items: {len(self.items_data)}")
@@ -623,14 +704,33 @@ class AdminInterface:
             self.items_data = []
             self.item_count_label.config(text="Items: 0")
     
+    def sort_items(self, event=None):
+        """Sort items list by selected criterion"""
+        sort_by = self.item_sort_var.get()
+        if sort_by == 'id':
+            self.items_data.sort(key=lambda x: x.get('id', ''))
+        elif sort_by == 'name':
+            self.items_data.sort(key=lambda x: x.get('name', ''))
+        elif sort_by == 'type':
+            self.items_data.sort(key=lambda x: x.get('type', ''))
+        elif sort_by == 'rarity':
+            # Sort by rarity order: common, uncommon, rare, epic, legendary
+            rarity_order = {'common': 0, 'uncommon': 1, 'rare': 2, 'epic': 3, 'legendary': 4}
+            self.items_data.sort(key=lambda x: rarity_order.get(x.get('rarity', 'common'), 0))
+        # Refresh display
+        self.filter_items()
+    
     def filter_items(self, *args):
         """Filter items list based on search"""
         search_term = self.item_search_var.get().lower()
         self.items_listbox.delete(0, tk.END)
-        for item in self.items_data:
+        # Track mapping from displayed index to actual data index
+        self.filtered_items_indices = []
+        for i, item in enumerate(self.items_data):
             item_text = f"{item.get('id')} - {item.get('name')}"
             if search_term in item_text.lower():
                 self.items_listbox.insert(tk.END, item_text)
+                self.filtered_items_indices.append(i)
     
     def load_monsters_list(self):
         """Load monsters from monsters.json into the listbox"""
@@ -639,6 +739,8 @@ class AdminInterface:
             with open(self.data_path / 'monsters.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 self.monsters_data = data.get('enemies', [])
+                # Initialize filter tracking
+                self.filtered_monsters_indices = list(range(len(self.monsters_data)))
                 for monster in self.monsters_data:
                     self.monsters_listbox.insert(tk.END, f"{monster.get('id')} - {monster.get('name')}")
                 self.monster_count_label.config(text=f"Monsters: {len(self.monsters_data)}")
@@ -647,14 +749,33 @@ class AdminInterface:
             self.monsters_data = []
             self.monster_count_label.config(text="Monsters: 0")
     
+    def sort_monsters(self, event=None):
+        """Sort monsters list by selected criterion"""
+        sort_by = self.monster_sort_var.get()
+        if sort_by == 'id':
+            self.monsters_data.sort(key=lambda x: x.get('id', ''))
+        elif sort_by == 'name':
+            self.monsters_data.sort(key=lambda x: x.get('name', ''))
+        elif sort_by == 'classification':
+            # Sort by classification order: normal, elite, miniboss, boss
+            class_order = {'normal': 0, 'elite': 1, 'miniboss': 2, 'boss': 3}
+            self.monsters_data.sort(key=lambda x: class_order.get(x.get('classification', 'normal'), 0))
+        elif sort_by == 'category':
+            self.monsters_data.sort(key=lambda x: x.get('category', ''))
+        # Refresh display
+        self.filter_monsters()
+    
     def filter_monsters(self, *args):
         """Filter monsters list based on search"""
         search_term = self.monster_search_var.get().lower()
         self.monsters_listbox.delete(0, tk.END)
-        for monster in self.monsters_data:
+        # Track mapping from displayed index to actual data index
+        self.filtered_monsters_indices = []
+        for i, monster in enumerate(self.monsters_data):
             monster_text = f"{monster.get('id')} - {monster.get('name')}"
             if search_term in monster_text.lower():
                 self.monsters_listbox.insert(tk.END, monster_text)
+                self.filtered_monsters_indices.append(i)
     
     def load_selected_item(self, event):
         """Load selected item into the form"""
@@ -662,7 +783,12 @@ class AdminInterface:
         if not selection:
             return
         
-        idx = selection[0]
+        displayed_idx = selection[0]
+        # Map displayed index to actual data index
+        if hasattr(self, 'filtered_items_indices'):
+            idx = self.filtered_items_indices[displayed_idx]
+        else:
+            idx = displayed_idx
         item = self.items_data[idx]
         
         # Clear all fields first
@@ -696,6 +822,16 @@ class AdminInterface:
             self.item_fields['exp_gain'].insert(0, str(item.get('exp_gain')))
         if item.get('gold_gain'):
             self.item_fields['gold_gain'].insert(0, str(item.get('gold_gain')))
+        
+        # Multi-hit settings
+        multi_hit = item.get('multi_hit', {})
+        if multi_hit:
+            self.item_fields['multi_hit_enabled'].set(True)
+            if multi_hit.get('hits'):
+                self.item_fields['multi_hit_count'].insert(0, str(multi_hit['hits']))
+            if multi_hit.get('damage_per_hit'):
+                self.item_fields['multi_hit_damage'].insert(0, str(multi_hit['damage_per_hit']))
+            self.update_multi_hit_total()
         
         # Armor stats
         if item.get('defense'):
@@ -775,7 +911,12 @@ class AdminInterface:
         if not selection:
             return
         
-        idx = selection[0]
+        displayed_idx = selection[0]
+        # Map displayed index to actual data index
+        if hasattr(self, 'filtered_monsters_indices'):
+            idx = self.filtered_monsters_indices[displayed_idx]
+        else:
+            idx = displayed_idx
         monster = self.monsters_data[idx]
         
         # Clear all fields first
@@ -799,6 +940,10 @@ class AdminInterface:
         self.monster_fields['max_wave'].insert(0, str(monster.get('max_wave', '')))
         self.monster_fields['spawn_multiple'].insert(0, str(monster.get('spawn_on_wave_multiple_of', '')))
         self.monster_fields['image'].insert(0, str(monster.get('image', '')))
+        
+        # Load rare spawn chance
+        if monster.get('rare_spawn_chance'):
+            self.monster_fields['rare_spawn_chance'].insert(0, str(monster.get('rare_spawn_chance', '')))
         
         # Load drops
         drops = monster.get('drops', [])
@@ -899,8 +1044,8 @@ class AdminInterface:
         # Type-specific stats
         itype = self.item_fields['type'].get()
         
-        # Weapon stats
-        if itype in ['weapon', 'offhand', 'relic']:
+        # Offensive stats (allowed on ALL equipment types: weapon, armor, offhand, relic)
+        if itype in ['weapon', 'armor', 'offhand', 'relic']:
             if self.item_fields['attack'].get():
                 item['attack'] = int(self.item_fields['attack'].get())
             if self.item_fields['penetration_weapon'].get():
@@ -922,10 +1067,24 @@ class AdminInterface:
             if self.item_fields['gold_gain'].get():
                 item['gold_gain'] = float(self.item_fields['gold_gain'].get())
         
-        # Armor/defensive stats
-        if itype in ['armor', 'offhand', 'relic']:
+        # Multi-hit settings (allowed on weapons and offhands)
+        if itype in ['weapon', 'offhand'] and self.item_fields['multi_hit_enabled'].get():
+            try:
+                hits = int(self.item_fields['multi_hit_count'].get() or 0)
+                damage_per_hit = float(self.item_fields['multi_hit_damage'].get() or 0)
+                if hits > 0 and damage_per_hit > 0:
+                    item['multi_hit'] = {
+                        'hits': hits,
+                        'damage_per_hit': damage_per_hit
+                    }
+            except ValueError:
+                pass  # Ignore invalid values
+        
+        # Defensive stats (allowed on ALL equipment types: weapon, armor, offhand, relic)
+        if itype in ['weapon', 'armor', 'offhand', 'relic']:
             if self.item_fields['defense'].get():
                 item['defense'] = int(self.item_fields['defense'].get())
+            # Only use armor penetration field if weapon penetration wasn't already set
             if self.item_fields['penetration_armor'].get() and not item.get('penetration'):
                 item['penetration'] = float(self.item_fields['penetration_armor'].get())
             if self.item_fields['max_hp'].get():
@@ -1066,6 +1225,15 @@ class AdminInterface:
             monster['max_wave'] = int(self.monster_fields['max_wave'].get())
         if self.monster_fields['spawn_multiple'].get():
             monster['spawn_on_wave_multiple_of'] = int(self.monster_fields['spawn_multiple'].get())
+        
+        # Rare spawn chance
+        if self.monster_fields['rare_spawn_chance'].get():
+            try:
+                rare_chance = int(self.monster_fields['rare_spawn_chance'].get())
+                if rare_chance > 0:
+                    monster['rare_spawn_chance'] = rare_chance
+            except ValueError:
+                pass  # Ignore invalid values
         
         # Image settings
         if self.monster_fields['image'].get():
@@ -1285,6 +1453,55 @@ class AdminInterface:
                                                   values=['single', 'self', 'all'])
         self.skill_fields['target'].grid(row=1, column=3, padx=5, pady=3)
         
+        # Multi-Hit frame
+        multi_hit_frame = ttk.LabelFrame(scrollable_frame, text="⚡ Multi-Hit Configuration")
+        multi_hit_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        self.skill_fields['multi_hit_enabled'] = tk.BooleanVar()
+        ttk.Checkbutton(multi_hit_frame, text="Enable Multi-Hit", 
+                       variable=self.skill_fields['multi_hit_enabled'],
+                       command=self.update_skill_multi_hit_total).grid(row=0, column=0, columnspan=2, sticky='w', padx=5, pady=5)
+        
+        ttk.Label(multi_hit_frame, text="Hit Count (2-10):").grid(row=1, column=0, sticky='w', padx=5, pady=3)
+        self.skill_fields['multi_hit_count'] = ttk.Spinbox(multi_hit_frame, from_=2, to=10, width=12)
+        self.skill_fields['multi_hit_count'].bind('<KeyRelease>', self.update_skill_multi_hit_total)
+        self.skill_fields['multi_hit_count'].grid(row=1, column=1, padx=5, pady=3)
+        
+        ttk.Label(multi_hit_frame, text="Damage per Hit (0.3-0.5):").grid(row=2, column=0, sticky='w', padx=5, pady=3)
+        self.skill_fields['multi_hit_damage'] = ttk.Entry(multi_hit_frame, width=12)
+        self.skill_fields['multi_hit_damage'].bind('<KeyRelease>', self.update_skill_multi_hit_total)
+        self.skill_fields['multi_hit_damage'].grid(row=2, column=1, padx=5, pady=3)
+        
+        self.skill_multi_hit_total_label = ttk.Label(multi_hit_frame, text="= 0.00x total damage", foreground='gray')
+        self.skill_multi_hit_total_label.grid(row=3, column=0, columnspan=2, pady=5)
+        
+        # DoT Configuration frame
+        dot_frame = ttk.LabelFrame(scrollable_frame, text="🔥 DoT (Damage over Time) Configuration")
+        dot_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        self.skill_fields['dot_enabled'] = tk.BooleanVar()
+        ttk.Checkbutton(dot_frame, text="Enable DoT Effect", 
+                       variable=self.skill_fields['dot_enabled']).grid(row=0, column=0, columnspan=4, sticky='w', padx=5, pady=5)
+        
+        ttk.Label(dot_frame, text="Base Damage:").grid(row=1, column=0, sticky='w', padx=5, pady=3)
+        self.skill_fields['dot_damage'] = ttk.Entry(dot_frame, width=12)
+        self.skill_fields['dot_damage'].grid(row=1, column=1, padx=5, pady=3)
+        ttk.Label(dot_frame, text="(scales with caster stats)", font=('Arial', 7, 'italic')).grid(row=1, column=2, columnspan=2, sticky='w', padx=2)
+        
+        ttk.Label(dot_frame, text="Duration (turns):").grid(row=2, column=0, sticky='w', padx=5, pady=3)
+        self.skill_fields['dot_duration'] = ttk.Spinbox(dot_frame, from_=1, to=10, width=10)
+        self.skill_fields['dot_duration'].grid(row=2, column=1, padx=5, pady=3)
+        
+        ttk.Label(dot_frame, text="Damage Type:").grid(row=3, column=0, sticky='w', padx=5, pady=3)
+        self.skill_fields['dot_damage_type'] = ttk.Combobox(dot_frame, width=10,
+                                                            values=['physical', 'magic'])
+        self.skill_fields['dot_damage_type'].set('physical')
+        self.skill_fields['dot_damage_type'].grid(row=3, column=1, padx=5, pady=3)
+        ttk.Label(dot_frame, text="Physical: +20% ATK | Magic: +30% Magic Power", 
+                 font=('Arial', 7, 'italic')).grid(row=3, column=2, columnspan=2, sticky='w', padx=2)
+        
         # Unlock requirements frame
         unlock_frame = ttk.LabelFrame(scrollable_frame, text="Unlock Requirements")
         unlock_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
@@ -1359,11 +1576,38 @@ class AdminInterface:
             self.skill_fields['unlock_level'].insert(0, str(unlock_req['level']))
         if unlock_req.get('item_equipped'):
             self.skill_fields['unlock_item'].insert(0, unlock_req['item_equipped'])
+        
+        # Load multi-hit settings
+        multi_hit = skill.get('multi_hit', {})
+        if multi_hit:
+            self.skill_fields['multi_hit_enabled'].set(True)
+            if multi_hit.get('hits'):
+                self.skill_fields['multi_hit_count'].delete(0, tk.END)
+                self.skill_fields['multi_hit_count'].insert(0, str(multi_hit['hits']))
+            if multi_hit.get('damage_per_hit'):
+                self.skill_fields['multi_hit_damage'].insert(0, str(multi_hit['damage_per_hit']))
+            self.update_skill_multi_hit_total()
+        
+        # Load DoT effect if present
+        effects = skill.get('effects', [])
+        for effect in effects:
+            if effect.get('type') == 'dot':
+                self.skill_fields['dot_enabled'].set(True)
+                if effect.get('damage'):
+                    self.skill_fields['dot_damage'].insert(0, str(effect['damage']))
+                if effect.get('duration'):
+                    self.skill_fields['dot_duration'].delete(0, tk.END)
+                    self.skill_fields['dot_duration'].insert(0, str(effect['duration']))
+                if effect.get('damage_type'):
+                    self.skill_fields['dot_damage_type'].set(effect['damage_type'])
+                break  # Only load first DoT effect
     
     def clear_skill_form(self):
         """Clear all skill form fields"""
         for key, field in self.skill_fields.items():
-            if isinstance(field, (ttk.Entry, ttk.Combobox)):
+            if isinstance(field, tk.BooleanVar):
+                field.set(False)
+            elif isinstance(field, (ttk.Entry, ttk.Combobox, ttk.Spinbox)):
                 field.delete(0, tk.END)
     
     def new_skill(self):
@@ -1405,6 +1649,19 @@ class AdminInterface:
         if self.skill_fields['target'].get():
             skill['target'] = self.skill_fields['target'].get()
         
+        # Multi-hit settings
+        if self.skill_fields['multi_hit_enabled'].get():
+            try:
+                hits = int(self.skill_fields['multi_hit_count'].get() or 0)
+                damage_per_hit = float(self.skill_fields['multi_hit_damage'].get() or 0)
+                if hits > 0 and damage_per_hit > 0:
+                    skill['multi_hit'] = {
+                        'hits': hits,
+                        'damage_per_hit': damage_per_hit
+                    }
+            except ValueError:
+                pass  # Ignore invalid values
+        
         # Unlock requirements
         unlock_req = {}
         if self.skill_fields['unlock_level'].get():
@@ -1419,6 +1676,23 @@ class AdminInterface:
             skill['effectiveness'] = {}
         if 'effects' not in skill:
             skill['effects'] = []
+        
+        # Add DoT effect if enabled
+        if self.skill_fields['dot_enabled'].get():
+            try:
+                dot_damage = int(self.skill_fields['dot_damage'].get() or 0)
+                dot_duration = int(self.skill_fields['dot_duration'].get() or 1)
+                dot_type = self.skill_fields['dot_damage_type'].get() or 'physical'
+                if dot_damage > 0:
+                    dot_effect = {
+                        'type': 'dot',
+                        'damage': dot_damage,
+                        'duration': dot_duration,
+                        'damage_type': dot_type
+                    }
+                    skill['effects'].append(dot_effect)
+            except ValueError:
+                pass  # Ignore invalid values
         
         # Find if updating or creating new
         skill_id = skill['id']
@@ -1540,6 +1814,17 @@ class AdminInterface:
         ttk.Label(bg_frame, text="(e.g. flowerfield.png - in assets/images/backgrounds/)", 
                  font=('Arial', 8)).grid(row=1, column=0, columnspan=2, sticky='w', padx=5, pady=3)
         
+        # Theme Music
+        music_frame = ttk.LabelFrame(scrollable_frame, text="🎵 Zone Theme Music")
+        music_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        ttk.Label(music_frame, text="Theme Filename:", font=('Arial', 9)).grid(row=0, column=0, sticky='w', padx=5, pady=5)
+        self.zone_fields['theme'] = ttk.Entry(music_frame, width=30)
+        self.zone_fields['theme'].grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(music_frame, text="(e.g. forest_theme.mp3 - in assets/sounds/music/)", 
+                 font=('Arial', 8)).grid(row=1, column=0, columnspan=2, sticky='w', padx=5, pady=3)
+        
         # Enemy Types
         enemy_frame = ttk.LabelFrame(scrollable_frame, text="Enemy Types Allowed")
         enemy_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
@@ -1592,6 +1877,8 @@ class AdminInterface:
         self.zone_fields['spawn_chance'].insert(0, str(zone.get('spawn_chance', '')))
         self.zone_fields['min_wave'].insert(0, str(zone.get('min_wave', '')))
         self.zone_fields['background_image'].insert(0, zone.get('background_image', ''))
+        if zone.get('theme'):
+            self.zone_fields['theme'].insert(0, zone.get('theme', ''))
         
         # Load enemy types
         enemy_types = zone.get('enemy_types', {})
@@ -1650,6 +1937,10 @@ class AdminInterface:
             'background_image': self.zone_fields['background_image'].get(),
             'enemy_types': {}
         }
+        
+        # Add theme if specified
+        if self.zone_fields['theme'].get():
+            zone['theme'] = self.zone_fields['theme'].get()
         
         # Get enemy types (ensure all current categories are included)
         for enemy_type in self.get_monster_categories():

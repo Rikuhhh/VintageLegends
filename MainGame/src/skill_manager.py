@@ -233,17 +233,22 @@ class SkillManager:
             
             elif effect_type == 'dot':
                 # Apply damage over time to target
+                # Determine damage type based on skill element
+                skill_element = skill.get('element', 'physical')
+                damage_type = 'magic' if skill_element in ['fire', 'ice', 'arcane', 'light', 'dark'] else 'physical'
+                
                 effect_manager.add_effect(target, {
                     'type': 'dot',
                     'damage': effect.get('damage'),
+                    'damage_type': damage_type,
                     'duration': effect.get('duration'),
                     'source': skill.get('name', skill.get('id'))
-                })
+                }, caster=caster)
                 results.append(('dot', effect.get('damage'), target))
         
         return results
     
-    def use_skill(self, caster, target, skill_id, effect_manager):
+    def use_skill(self, caster, target, skill_id, effect_manager, damage_events=None):
         """Execute a skill: apply damage/effects and set cooldown (mana already consumed by caller)"""
         skill = self.get_skill(skill_id)
         if not skill:
@@ -251,6 +256,12 @@ class SkillManager:
         
         # Get skill level for scaling
         skill_level = self.get_skill_level(caster, skill_id)
+        
+        # Check for multi-hit skill
+        multi_hit_data = skill.get('multi_hit')
+        if multi_hit_data and skill.get('type') == 'damage':
+            # Execute multi-hit attack
+            return self._execute_multi_hit_skill(skill, caster, target, effect_manager, skill_level, damage_events)
         
         # Calculate damage (if applicable)
         damage = 0
@@ -262,6 +273,13 @@ class SkillManager:
         
         # Apply effects
         effect_results = self.apply_skill_effects(skill, caster, target, effect_manager)
+        
+        # Extract healing amount from effect results if present
+        healing = 0
+        for effect_data in effect_results:
+            if effect_data and effect_data[0] == 'heal':
+                healing = effect_data[1]
+                break
         
         # Set cooldown 
         cooldown = skill.get('cooldown', 0)
@@ -277,8 +295,88 @@ class SkillManager:
             'skill_level': skill_level,
             'damage': damage,
             'is_crit': is_crit,
+            'healing': healing,
             'effects': effect_results,
             'mana_used': skill.get('mana_cost', 0)
         }
         
+        return result, "Success"
+    
+    def _execute_multi_hit_skill(self, skill, caster, target, effect_manager, skill_level, damage_events=None):
+        """Execute a multi-hit skill with separate damage calculations per hit"""
+        import time
+        
+        multi_hit_data = skill.get('multi_hit', {})
+        num_hits = multi_hit_data.get('hits', 3)
+        damage_per_hit = multi_hit_data.get('damage_per_hit', 0.4)
+        
+        total_damage = 0
+        crit_count = 0
+        hit_count = 0
+        
+        # Create a copy of the skill to modify power temporarily
+        skill_copy = skill.copy()
+        original_power = skill.get('power', 0)
+        
+        # Execute each hit
+        for hit_num in range(num_hits):
+            if target.hp <= 0:
+                break
+            
+            # Calculate damage for this hit (with reduced power)
+            skill_copy['power'] = int(original_power * damage_per_hit)
+            
+            hit_damage, is_crit = self.calculate_skill_damage(skill_copy, caster, target, effect_manager)
+            target.hp = max(0, target.hp - hit_damage)
+            
+            total_damage += hit_damage
+            if is_crit:
+                crit_count += 1
+            hit_count += 1
+            
+            # Register damage event for UI if available
+            if damage_events is not None:
+                try:
+                    damage_events.append({
+                        'target': 'enemy',
+                        'amount': int(hit_damage),
+                        'time': time.time(),
+                        'is_crit': bool(is_crit),
+                    })
+                except Exception:
+                    pass
+            
+            # Delay between hits so damage counters don't overlap
+            if hit_num < num_hits - 1:  # Don't wait after the last hit
+                time.sleep(0.15)
+        
+        # Apply effects only once after all hits
+        effect_results = self.apply_skill_effects(skill, caster, target, effect_manager)
+        
+        # Extract healing amount from effect results if present
+        healing = 0
+        for effect_data in effect_results:
+            if effect_data and effect_data[0] == 'heal':
+                healing = effect_data[1]
+                break
+        
+        # Set cooldown
+        cooldown = skill.get('cooldown', 0)
+        if cooldown > 0:
+            if not hasattr(caster, 'skill_cooldowns'):
+                caster.skill_cooldowns = {}
+            caster.skill_cooldowns[skill.get('id')] = cooldown
+        
+        result = {
+            'skill': skill,
+            'skill_level': skill_level,
+            'damage': total_damage,
+            'is_crit': crit_count > 0,
+            'multi_hit': True,
+            'hit_count': hit_count,
+            'crit_count': crit_count,
+            'healing': healing,
+            'effects': effect_results,
+            'mana_used': skill.get('mana_cost', 0)
+        }
         return result, "Success"

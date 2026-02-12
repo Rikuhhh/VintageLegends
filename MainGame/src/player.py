@@ -55,6 +55,13 @@ class Player:
         # Dodge chance (computed from agility)
         self.dodge_chance = 0.0
         
+        # MAG stat (increases magic power, magic regen, and magic penetration)
+        try:
+            self.base_mag = max(0, int(data.get('mag', 0)))
+        except (ValueError, TypeError):
+            self.base_mag = 0
+        self.mag = self.base_mag
+        
         # Lifesteal stat (steals % of damage dealt as HP)
         try:
             self.base_lifesteal = max(0.0, float(data.get('lifesteal', 0.0)))
@@ -198,8 +205,13 @@ class Player:
         self.exp_modifier = 1.0  # Multiplier for XP gains
         self.gold_modifier = 1.0  # Multiplier for gold gains
         
-        # Apply agility bonuses on initialization
+        # Apply stat bonuses and equipment on initialization
         self._apply_agility_bonuses()
+        # Apply MAG bonuses to magic stats
+        mag_points = getattr(self, 'base_mag', 0)
+        self.magic_power += mag_points
+        self.magic_penetration += mag_points * 0.25
+        self.mana_regen += mag_points // 5
 
     @staticmethod
     def _calculate_effective_stat(raw_value, soft_cap, hard_cap):
@@ -287,6 +299,7 @@ class Player:
         - Fixed healing (heal: int)
         - Percentage healing (heal_percent: float 0.0-1.0)
         - Mana restoration (restore_mana: int or mana_restore: int)
+        - Percentage mana restoration (mana_percent: float 0.0-1.0)
         - Temporary stat buffs (atk_boost, def_boost, etc. with duration)
         - Full restore effects (full_heal, full_mana)
         
@@ -330,12 +343,20 @@ class Player:
             self.hp = self.max_hp
             print(f"Fully healed! (+{self.hp - old_hp} HP)")
         
-        # Mana restoration (support both 'restore_mana' and 'mana_restore')
+        # Fixed mana restoration (support both 'restore_mana' and 'mana_restore')
         mana_amount = effect.get('restore_mana') or effect.get('mana_restore')
         if mana_amount:
             old_mana = self.current_mana
             self.current_mana = min(self.max_mana, self.current_mana + mana_amount)
             print(f"Restored {self.current_mana - old_mana} mana")
+        
+        # Percentage mana restoration
+        if 'mana_percent' in effect:
+            mana_percent = effect['mana_percent']
+            mana_amount = int(self.max_mana * mana_percent)
+            old_mana = self.current_mana
+            self.current_mana = min(self.max_mana, self.current_mana + mana_amount)
+            print(f"Restored {self.current_mana - old_mana} mana ({int(mana_percent * 100)}%)")
         
         # Full mana restore
         if effect.get('full_mana'):
@@ -470,7 +491,7 @@ class Player:
         print(f"{self.name} est maintenant niveau {self.level} ! (+3 points non dépensés)")
 
     def spend_point(self, stat: str) -> bool:
-        """Dépense un point sur une statistique: 'atk', 'def', 'hp', 'agi'. Retourne True si succès."""
+        """Dépense un point sur une statistique: 'atk', 'def', 'hp', 'agi', 'mag'. Retourne True si succès."""
         if self.unspent_points <= 0:
             return False
         if stat == "atk":
@@ -485,18 +506,26 @@ class Player:
         elif stat == "agi" or stat == "agility":
             # increase base agility
             self.base_agility = getattr(self, 'base_agility', 0) + 1
+        elif stat == "mag" or stat == "magic":
+            # increase base mag stat
+            self.base_mag = getattr(self, 'base_mag', 0) + 1
         else:
             return False
 
         self.unspent_points -= 1
         print(f"{self.name} dépense 1 point sur {stat}. Points restants: {self.unspent_points}")
         
-        # For HP stat, preserve current HP to avoid healing
+        # For HP and MAG stats, preserve current HP/mana to avoid healing/restoring
         if stat == "hp":
             current_hp = self.hp
             self._recalc_stats()
             # Restore the exact HP value (no healing)
             self.hp = min(current_hp, self.max_hp)
+        elif stat in ["mag", "magic"]:
+            current_mana = self.current_mana
+            self._recalc_stats()
+            # Restore the exact mana value (no mana restoration)
+            self.current_mana = min(current_mana, self.max_mana)
         else:
             # For other stats, recalc normally
             self._recalc_stats()
@@ -674,9 +703,18 @@ class Player:
         # reset mana stats to base
         self.max_mana = getattr(self, 'base_max_mana', 100)
         self.mana_regen = getattr(self, 'base_mana_regen', 10)
+        
+        # Add MAG stat contribution to mana regen (+1 for every 5 MAG points)
+        mag_points = getattr(self, 'base_mag', 0)
+        self.mana_regen += mag_points // 5
+        
         # reset magic stats to base
         self.magic_power = getattr(self, 'base_magic_power', 5)
         self.magic_penetration = getattr(self, 'base_magic_penetration', 0.0)
+        
+        # Add MAG stat contributions
+        self.magic_power += mag_points  # +1 magic power per MAG point
+        self.magic_penetration += mag_points * 0.25  # +0.25 magic pen per MAG point
         # Apply bonuses from all equipment slots
         for slot_name, item_id in self.equipment.items():
             if not item_id:

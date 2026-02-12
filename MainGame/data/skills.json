@@ -228,24 +228,42 @@
       "id": "skill_void_bolt",
       "name": "Void Bolt",
       "type": "damage",
+      "description": "A bolt of void energy that pierces through reality, especially effective against celestial beings.",
       "element": "void",
       "mana_cost": 25,
       "power": 18,
       "scaling_stat": "magic_power",
       "penetration": 15.0,
-      "target": "single",
-      "effectiveness": {
-        "strong_vs": [
-          "celestial",
-          "fey"
-        ],
-        "weak_vs": [
-          "aberration"
-        ]
-      },
-      "effects": [],
       "cooldown": 1,
-      "description": "A bolt of void energy that pierces through reality, especially effective against celestial beings."
+      "target": "single",
+      "multi_hit": {
+        "hits": 10,
+        "damage_per_hit": 0.11
+      },
+      "effectiveness": {},
+      "effects": [
+        {
+          "type": "dot",
+          "damage": 2,
+          "duration": 3,
+          "damage_type": "magic"
+        }
+      ]
+    },
+    {
+      "id": "skill_hellfire",
+      "name": "Hell Fire",
+      "type": "damage",
+      "description": "Unleash true HELL",
+      "element": "fire",
+      "mana_cost": 150,
+      "power": 50,
+      "scaling_stat": "magic_power",
+      "penetration": 15.0,
+      "cooldown": 10,
+      "target": "single",
+      "effectiveness": {},
+      "effects": []
     }
   ]
 }

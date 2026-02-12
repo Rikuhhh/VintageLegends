@@ -190,6 +190,19 @@ class BattleSystem:
             print("No enemy to attack!")
             return
         
+        # Check if equipped weapon has multi-hit property
+        weapon_id = self.player.equipment.get('weapon')
+        multi_hit_data = None
+        if weapon_id:
+            weapon_item = self.player._load_item_by_id(weapon_id)
+            if weapon_item and 'multi_hit' in weapon_item:
+                multi_hit_data = weapon_item['multi_hit']
+        
+        # Execute multi-hit attack if weapon has multi_hit property
+        if multi_hit_data:
+            self._execute_multi_hit_attack(multi_hit_data)
+            return
+        
         # Apply active effect modifiers to player stats
         player_modifiers = self.effect_manager.apply_active_effects(self.player)
         
@@ -300,6 +313,146 @@ class BattleSystem:
             self.action_delay = 0.9
             self.enemy_turn_processed = False
     
+    def _execute_multi_hit_attack(self, multi_hit_data):
+        """Execute a multi-hit attack with multiple damage instances.
+        
+        Args:
+            multi_hit_data: Dict with 'hits' (int) and 'damage_per_hit' (float) keys
+        """
+        num_hits = multi_hit_data.get('hits', 2)
+        damage_per_hit_multiplier = multi_hit_data.get('damage_per_hit', 0.4)
+        
+        # Apply active effect modifiers to player stats
+        player_modifiers = self.effect_manager.apply_active_effects(self.player)
+        
+        # Base damage with buffs applied
+        base_dmg = getattr(self.player, 'atk', 0) + player_modifiers.get('atk', 0)
+        
+        # Overcrit mechanic: crit chance >100% converts to bonuses
+        crit_chance = float(getattr(self.player, 'critchance', 0.0))
+        base_crit_damage = float(getattr(self.player, 'critdamage', 1.5))
+        
+        # Calculate overcrit bonuses
+        if crit_chance > 1.0:
+            overcrit_amount = crit_chance - 1.0
+            bonus_crit_damage = overcrit_amount
+            overcrit_chance = overcrit_amount * 0.5
+            effective_crit_chance = 1.0
+            effective_crit_damage = base_crit_damage + bonus_crit_damage
+        else:
+            effective_crit_chance = crit_chance
+            effective_crit_damage = base_crit_damage
+        
+        total_damage_dealt = 0
+        total_lifesteal = 0
+        crit_count = 0
+        overcrit_count = 0
+        player_pen = getattr(self.player, 'penetration', 0)
+        player_lifesteal = getattr(self.player, 'lifesteal', 0.0)
+        
+        # Execute each hit
+        for hit_num in range(num_hits):
+            # Check if enemy died from previous hits
+            if self.enemy.is_dead():
+                break
+            
+            # Calculate damage for this hit
+            hit_damage = int(round(base_dmg * damage_per_hit_multiplier))
+            
+            # Roll for critical hit (independent per hit)
+            try:
+                is_crit = random.random() < effective_crit_chance
+                is_overcrit = False
+                if is_crit and crit_chance > 1.0:
+                    is_overcrit = random.random() < (overcrit_chance)
+            except Exception:
+                is_crit = False
+                is_overcrit = False
+            
+            if is_crit:
+                crit_mult = effective_crit_damage * (3.0 if is_overcrit else 1.0)
+                hit_damage = int(round(hit_damage * crit_mult))
+                crit_count += 1
+                if is_overcrit:
+                    overcrit_count += 1
+            
+            # Apply damage to enemy
+            dmg_dealt = self.enemy.take_damage(hit_damage, player_pen, self.effect_manager)
+            total_damage_dealt += dmg_dealt
+            
+            # Apply lifesteal for this hit
+            if player_lifesteal > 0 and dmg_dealt > 0:
+                lifesteal_amount = int(dmg_dealt * (player_lifesteal / 100.0))
+                if lifesteal_amount > 0:
+                    total_lifesteal += lifesteal_amount
+            
+            # Register damage event for UI
+            try:
+                self.damage_events.append({
+                    'target': 'enemy',
+                    'amount': int(dmg_dealt),
+                    'time': time.time(),
+                    'is_crit': bool(is_crit),
+                })
+            except Exception:
+                pass
+            
+            # Delay between hits so damage counters don't overlap
+            if hit_num < num_hits - 1:  # Don't wait after the last hit
+                time.sleep(0.15)
+        
+        # Apply total lifesteal healing
+        if total_lifesteal > 0:
+            old_hp = self.player.hp
+            self.player.hp = min(self.player.max_hp, self.player.hp + total_lifesteal)
+            actual_heal = self.player.hp - old_hp
+            if actual_heal > 0:
+                self.add_log(f"Lifesteal: +{actual_heal} HP", 'heal')
+                try:
+                    self.damage_events.append({
+                        'target': 'player',
+                        'amount': actual_heal,
+                        'time': time.time(),
+                        'is_heal': True,
+                    })
+                except Exception:
+                    pass
+        
+        # Play sound effects
+        if not self.enemy.is_dead():
+            self.play_sound('monster_hit')
+        
+        # Log the multi-hit attack
+        if crit_count > 0:
+            crit_label = f"{crit_count}x CRIT"
+            if overcrit_count > 0:
+                crit_label += f" ({overcrit_count}x OVERCRIT)"
+            print(f"{crit_label}! {self.player.name} multi-hit deals {total_damage_dealt} damage ({num_hits} hits)!")
+            self.add_log(f"{num_hits}-HIT COMBO! {crit_label} {total_damage_dealt} dmg!", 'damage')
+        else:
+            print(f"{self.player.name} multi-hit deals {total_damage_dealt} damage ({num_hits} hits)!")
+            self.add_log(f"{num_hits}-HIT COMBO! {total_damage_dealt} damage", 'damage')
+        
+        # Check if enemy died
+        if self.enemy.is_dead():
+            print(f"{self.enemy.name} est vaincu !")
+            self.play_sound('monster_kill')
+            self.add_log(f"{self.enemy.name} defeated!", 'info')
+            gold_gained = int(self.enemy.gold * getattr(self.player, 'gold_modifier', 1.0))
+            self.player.gold += gold_gained
+            self.player.gain_xp(self.enemy.xp)
+            if self.enemy.is_boss:
+                self._try_boss_skill_unlock()
+            self._process_drops(self.enemy)
+            self.next_wave()
+            self.action_delay = 0.3
+        else:
+            self.turn = "enemy"
+            self.last_action_time = time.time()
+            # Longer delay for multi-hit to let all damage numbers display
+            self.action_delay = 1.2 + (num_hits * 0.15)  # Scale with hit count
+            self.enemy_turn_processed = False
+    
     def player_block(self):
         """Player blocks, adding +300 defense for the next enemy turn"""
         if self.turn != "player":
@@ -374,7 +527,7 @@ class BattleSystem:
             return
         
         # Use the skill
-        result, msg = self.skill_manager.use_skill(self.player, self.enemy, skill_id, self.effect_manager)
+        result, msg = self.skill_manager.use_skill(self.player, self.enemy, skill_id, self.effect_manager, self.damage_events)
         
         # Mark that a skill was used this turn (prevents mana regen)
         self.skill_used_this_turn = True

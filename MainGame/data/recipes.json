@@ -264,7 +264,26 @@
         },
         {
           "item_id": "ancient_rune",
+          "quantity": 2
+        }
+      ]
+    },
+    {
+      "id": "casta_cloak_craft",
+      "name": "Casta's Cloak",
+      "description": "The true embodiment of Casta's will",
+      "category": "armor",
+      "result_item_id": "casta_cloak",
+      "result_quantity": 1,
+      "required_level": 10,
+      "ingredients": [
+        {
+          "item_id": "legendary_staff",
           "quantity": 1
+        },
+        {
+          "item_id": "dragon_eye",
+          "quantity": 2
         }
       ]
     }
