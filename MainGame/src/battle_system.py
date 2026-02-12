@@ -396,10 +396,6 @@ class BattleSystem:
                 })
             except Exception:
                 pass
-            
-            # Delay between hits so damage counters don't overlap
-            if hit_num < num_hits - 1:  # Don't wait after the last hit
-                time.sleep(0.15)
         
         # Apply total lifesteal healing
         if total_lifesteal > 0:

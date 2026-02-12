@@ -64,7 +64,7 @@ def load_zones():
         print(f"Error loading zones: {e}")
         return []
 
-def select_zone(wave, zones):
+def select_zone(wave, zones, current_zone=None):
     """Select a zone based on wave number and spawn chances"""
     if not zones:
         return None
@@ -74,23 +74,48 @@ def select_zone(wave, zones):
     if not available_zones:
         return None
     
-    # Every 25 waves, roll for zone change (reduced frequency)
-    if wave % 25 == 0 or wave == 1:
+    # For wave 1, always select a starting zone
+    if wave == 1:
         import random
-        # Build weighted list based on spawn_chance
-        total_chance = sum(z.get('spawn_chance', 0) for z in available_zones)
-        if total_chance <= 0:
-            return random.choice(available_zones)
-        
-        roll = random.random() * total_chance
-        current = 0
-        for zone in available_zones:
-            current += zone.get('spawn_chance', 0)
-            if roll <= current:
-                return zone
-        return available_zones[-1]
+        # Prefer zones with min_wave=1
+        starting_zones = [z for z in available_zones if z.get('min_wave', 1) == 1]
+        if starting_zones:
+            total_chance = sum(z.get('spawn_chance', 1) for z in starting_zones)
+            if total_chance > 0:
+                roll = random.random() * total_chance
+                current = 0
+                for zone in starting_zones:
+                    current += zone.get('spawn_chance', 1)
+                    if roll <= current:
+                        return zone
+            return random.choice(starting_zones)
+        return random.choice(available_zones)
     
-    return None  # Don't change zone
+    # Only consider zone changes every 25 waves (not random)
+    if wave % 25 != 0:
+        return current_zone  # Keep current zone
+    
+    # At wave 25, 50, 75, etc., roll for zone change based on spawn_chance
+    import random
+    
+    # Roll for each zone: random() * spawn_chance, pick highest
+    zone_rolls = []
+    for zone in available_zones:
+        spawn_chance = zone.get('spawn_chance', 1)
+        roll = random.random() * spawn_chance
+        zone_rolls.append((roll, zone))
+    
+    # Sort by roll value (highest first)
+    zone_rolls.sort(key=lambda x: x[0], reverse=True)
+    
+    # Get the highest roll
+    highest_roll = zone_rolls[0][0]
+    
+    # Find all zones with the same highest roll (ties)
+    tied_zones = [zone for roll, zone in zone_rolls if roll == highest_roll]
+    
+    # If multiple zones tied, pick randomly between them
+    return random.choice(tied_zones)
 
 def resolve_zone_for_wave(wave, zones):
     """Resolve a stable zone for the current wave when no saved zone is available."""
@@ -586,7 +611,7 @@ if saved:
                         break
             # If no saved zone or zone not found, select one based on current wave
             if not battle.current_zone and zones:
-                loaded_zone = select_zone(battle.wave, zones)
+                loaded_zone = select_zone(battle.wave, zones, None)
                 if not loaded_zone:
                     loaded_zone = resolve_zone_for_wave(battle.wave, zones)
                 if loaded_zone:
@@ -749,11 +774,13 @@ def main():
         try:
             current_wave = getattr(battle, 'wave', 0)
             if current_wave % 25 == 0 and current_wave > 0 and current_wave != last_zone_check_wave:
-                new_zone = select_zone(current_wave, zones)
+                new_zone = select_zone(current_wave, zones, battle.current_zone)
+                # Only change if we got a different zone
                 if new_zone and new_zone != battle.current_zone:
+                    old_zone_name = battle.current_zone.get('name', 'Unknown') if battle.current_zone else 'Unknown'
                     battle.current_zone = new_zone
                     background = load_background_for_zone(new_zone, screen)
-                    print(f"🗺️ Entering zone: {new_zone.get('name', 'Unknown')}")
+                    print(f"🗺️ Zone changed: {old_zone_name} → {new_zone.get('name', 'Unknown')}")
                     # Add notification
                     try:
                         battle.damage_events.append({
@@ -763,6 +790,8 @@ def main():
                         })
                     except Exception:
                         pass
+                elif new_zone and new_zone == battle.current_zone:
+                    print(f"🗺️ Staying in {new_zone.get('name', 'Unknown')}")
                 last_zone_check_wave = current_wave
         except Exception as e:
             print(f"Zone change error: {e}")

@@ -345,10 +345,6 @@ class SkillManager:
                     })
                 except Exception:
                     pass
-            
-            # Delay between hits so damage counters don't overlap
-            if hit_num < num_hits - 1:  # Don't wait after the last hit
-                time.sleep(0.15)
         
         # Apply effects only once after all hits
         effect_results = self.apply_skill_effects(skill, caster, target, effect_manager)
