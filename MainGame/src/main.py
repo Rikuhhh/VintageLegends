@@ -618,17 +618,16 @@ if saved:
                 if loaded_zone:
                     battle.current_zone = loaded_zone
                     background = load_background_for_zone(loaded_zone, screen)
-            # Get allowed categories from current zone for enemy spawning
-            allowed_categories = None
+            # Get current zone id for enemy spawning
+            zone_id = None
             if battle.current_zone:
-                enemy_types = battle.current_zone.get('enemy_types', {})
-                allowed_categories = [cat for cat, allowed in enemy_types.items() if allowed]
+                zone_id = battle.current_zone.get('id')
             saved_enemy_id = saved.get('enemy_id')
             if saved_enemy_id:
                 restored_enemy = Enemy.from_id(saved_enemy_id, battle.wave)
-                battle.enemy = restored_enemy or Enemy.random_enemy(battle.wave, allowed_categories=allowed_categories)
+                battle.enemy = restored_enemy or Enemy.random_enemy(battle.wave, current_zone_id=zone_id)
             else:
-                battle.enemy = Enemy.random_enemy(battle.wave, allowed_categories=allowed_categories)
+                battle.enemy = Enemy.random_enemy(battle.wave, current_zone_id=zone_id)
 
             if 'enemy_hp' in saved and battle.enemy:
                 try:
@@ -1118,12 +1117,11 @@ def main():
 
             # After shop closed, spawn next enemy for the new wave
             battle.in_shop = False
-            # Get allowed categories from current zone
-            allowed_categories = None
+            # Get current zone id for enemy spawning
+            zone_id = None
             if battle.current_zone:
-                enemy_types = battle.current_zone.get('enemy_types', {})
-                allowed_categories = [cat for cat, allowed in enemy_types.items() if allowed]
-            battle.enemy = Enemy.random_enemy(battle.wave, allowed_categories=allowed_categories)
+                zone_id = battle.current_zone.get('id')
+            battle.enemy = Enemy.random_enemy(battle.wave, current_zone_id=zone_id)
             # Reset enemy hit time so new enemy doesn't appear with red/shake effect
             battle.enemy_hit_time = 0
             battle.turn = 'player'

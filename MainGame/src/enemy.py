@@ -84,7 +84,7 @@ class Enemy:
             return int(base_val)
 
     @staticmethod
-    def random_enemy(wave=1, allowed_categories=None):
+    def random_enemy(wave=1, current_zone_id=None):
         """Create an enemy definition based on monsters.json rules and scaling.
         Rules:
         - Rare monsters checked first (if multiple can spawn, highest roll wins)
@@ -92,7 +92,7 @@ class Enemy:
         - Minibosses on multiples of 5
         - Elites are rarer than normal
         - min_wave/max_wave (0 means ignore)
-        - allowed_categories: list of category strings to filter by (from zones)
+        - current_zone_id: zone id string to filter by (monsters with this zone in spawn_zones)
         """
         data = Enemy._load_monsters()
         if not data:
@@ -113,10 +113,10 @@ class Enemy:
         for mon in enemies:
             if not Enemy._in_wave_range(mon, wave):
                 continue
-            # Filter by allowed categories if specified
-            if allowed_categories is not None:
-                mon_category = mon.get('category')
-                if mon_category not in allowed_categories:
+            # Filter by zone if specified
+            if current_zone_id is not None:
+                spawn_zones = mon.get('spawn_zones', [])
+                if spawn_zones and current_zone_id not in spawn_zones:
                     continue
             
             rare_chance = mon.get('rare_spawn_chance', 0)
@@ -143,10 +143,10 @@ class Enemy:
             for mon in enemies:
                 if not Enemy._in_wave_range(mon, wave):
                     continue
-                # Filter by allowed categories if specified
-                if allowed_categories is not None:
-                    mon_category = mon.get('category')
-                    if mon_category not in allowed_categories:
+                # Filter by zone if specified
+                if current_zone_id is not None:
+                    spawn_zones = mon.get('spawn_zones', [])
+                    if spawn_zones and current_zone_id not in spawn_zones:
                         continue
                 cls = mon.get('classification', 'normal')
                 if cls == 'boss':

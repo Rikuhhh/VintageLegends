@@ -103,6 +103,9 @@ class UIManager:
         # Enemy images cache: {enemy_id: pygame.Surface}
         self.enemy_images = {}
         self.current_enemy_image = None
+        # Skill images cache: {skill_id: pygame.Surface}
+        self.skill_images = {}
+        self.skill_image_load_attempted = set()
         # Player character image
         self.player_image = None
         try:
@@ -520,18 +523,16 @@ class UIManager:
         # Draw equipped skill buttons (1-5 keys)
         if player is not None and hasattr(player, 'equipped_skills'):
             equipped = player.equipped_skills[:5]  # Max 5 skills
-            skill_btn_w, skill_btn_h = 80, 40
             skill_start_x = screen_w - 740
             skill_y = screen_h - 150  # Moved higher
             
             for i, skill_id in enumerate(equipped):
-                skill_x = skill_start_x + i * (skill_btn_w + 10)
-                skill_rect = pygame.Rect(skill_x, skill_y, skill_btn_w, skill_btn_h)
-                
                 # Check if skill is usable (has mana, no cooldown)
                 can_use = True
                 skill_data = None
                 skill_level = 1
+                has_image = False
+                
                 if hasattr(battle, 'skill_manager'):
                     skill_data = battle.skill_manager.get_skill(skill_id)
                     skill_level = getattr(player, 'skill_levels', {}).get(skill_id, 1)
@@ -540,24 +541,68 @@ class UIManager:
                         actual_mana_cost = int(base_mana_cost * (1 + (skill_level - 1) * 0.2))
                         if player.current_mana < actual_mana_cost:
                             can_use = False
+                        
+                        # Try to load skill image if specified
+                        skill_image_file = skill_data.get('image')
+                        if skill_image_file and skill_id not in self.skill_image_load_attempted:
+                            self.skill_image_load_attempted.add(skill_id)
+                            try:
+                                if self.assets_path:
+                                    img_path = self.assets_path / "images" / "skills" / skill_image_file
+                                    if img_path.exists():
+                                        loaded = pygame.image.load(str(img_path)).convert_alpha()
+                                        # Scale to fit button (50x50 for square)
+                                        scaled = pygame.transform.smoothscale(loaded, (50, 50))
+                                        self.skill_images[skill_id] = scaled
+                                        has_image = True
+                            except Exception:
+                                pass
+                        elif skill_id in self.skill_images:
+                            has_image = True
                 
-                # Color based on usability
-                btn_color = (50, 150, 200) if can_use else (80, 80, 80)
-                pygame.draw.rect(self.screen, btn_color, skill_rect, border_radius=6)
-                pygame.draw.rect(self.screen, (255, 255, 255), skill_rect, 2, border_radius=6)
+                # Use square buttons if image exists, rectangle if not
+                if has_image:
+                    skill_btn_w, skill_btn_h = 55, 55
+                else:
+                    skill_btn_w, skill_btn_h = 80, 40
                 
-                # Skill name (shortened)
-                skill_name = skill_id.replace('skill_', '').replace('_', ' ')[:8]
-                text_color = (255, 255, 255) if can_use else (120, 120, 120)
-                skill_text = pygame.font.Font(None, 18).render(skill_name, True, text_color)
-                self.screen.blit(skill_text, skill_text.get_rect(center=(skill_x + skill_btn_w//2, skill_y + 12)))
+                skill_x = skill_start_x + i * (85 if has_image else 90)
+                skill_rect = pygame.Rect(skill_x, skill_y, skill_btn_w, skill_btn_h)
                 
-                # Skill level indicator
+                # Draw button background
+                if has_image:
+                    # Dark background for image buttons
+                    bg_color = (40, 40, 50) if can_use else (30, 30, 30)
+                    pygame.draw.rect(self.screen, bg_color, skill_rect, border_radius=6)
+                    # Draw skill image
+                    img = self.skill_images[skill_id]
+                    if not can_use:
+                        # Darken image if not usable
+                        darkened = img.copy()
+                        darkened.fill((80, 80, 80), special_flags=pygame.BLEND_RGBA_MULT)
+                        self.screen.blit(darkened, (skill_x + 2, skill_y + 2))
+                    else:
+                        self.screen.blit(img, (skill_x + 2, skill_y + 2))
+                    border_color = (100, 200, 255) if can_use else (80, 80, 80)
+                    pygame.draw.rect(self.screen, border_color, skill_rect, 2, border_radius=6)
+                else:
+                    # Color based on usability for text buttons
+                    btn_color = (50, 150, 200) if can_use else (80, 80, 80)
+                    pygame.draw.rect(self.screen, btn_color, skill_rect, border_radius=6)
+                    pygame.draw.rect(self.screen, (255, 255, 255), skill_rect, 2, border_radius=6)
+                    
+                    # Skill name (shortened)
+                    skill_name = skill_id.replace('skill_', '').replace('_', ' ')[:8]
+                    text_color = (255, 255, 255) if can_use else (120, 120, 120)
+                    skill_text = pygame.font.Font(None, 18).render(skill_name, True, text_color)
+                    self.screen.blit(skill_text, skill_text.get_rect(center=(skill_x + skill_btn_w//2, skill_y + 12)))
+                
+                # Skill level indicator (top right)
                 if skill_level > 1:
                     level_badge = pygame.font.Font(None, 14).render(f"Lv{skill_level}", True, (255, 255, 100))
                     self.screen.blit(level_badge, (skill_x + skill_btn_w - 22, skill_y + 3))
                 
-                # Key hint
+                # Key hint (bottom left)
                 key_hint = pygame.font.Font(None, 16).render(f"[{i+1}]", True, (200, 200, 100))
                 self.screen.blit(key_hint, (skill_x + 5, skill_y + skill_btn_h - 16))
                 

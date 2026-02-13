@@ -5,6 +5,9 @@
       "name": "Grunt",
       "classification": "normal",
       "category": "beast",
+      "spawn_zones": [
+        "flower_field"
+      ],
       "min_wave": 1,
       "hp_base": 12,
       "atk_base": 4,
@@ -29,6 +32,10 @@
       "name": "Wolf",
       "classification": "normal",
       "category": "beast",
+      "spawn_zones": [
+        "flower_field",
+        "dark_forest"
+      ],
       "min_wave": 2,
       "hp_base": 18,
       "atk_base": 6,
@@ -85,6 +92,11 @@
       "attacks": [
         "atk_slash",
         "atk_roar"
+      ],
+      "spawn_zones": [
+        "flower_field",
+        "frozen_wastes",
+        "haunted_ruins"
       ]
     },
     {
@@ -118,6 +130,11 @@
         "atk_fireball",
         "atk_slash",
         "atk_roar"
+      ],
+      "spawn_zones": [
+        "flower_field",
+        "volcanic_peak",
+        "void_realm"
       ]
     },
     {
@@ -142,6 +159,12 @@
       ],
       "attacks": [
         "atk_arrow_shot"
+      ],
+      "spawn_zones": [
+        "dark_forest",
+        "frozen_wastes",
+        "haunted_ruins",
+        "void_realm"
       ]
     },
     {
@@ -160,7 +183,13 @@
       "max_wave": 0,
       "spawn_on_wave_multiple_of": 3,
       "attacks": [],
-      "drops": []
+      "drops": [],
+      "spawn_zones": [
+        "dark_forest",
+        "frozen_wastes",
+        "haunted_ruins",
+        "void_realm"
+      ]
     },
     {
       "id": "minotaure1",
@@ -179,7 +208,12 @@
       "spawn_on_wave_multiple_of": 3,
       "image": "minotaure1.png",
       "attacks": [],
-      "drops": []
+      "drops": [],
+      "spawn_zones": [
+        "flower_field",
+        "dark_forest",
+        "frozen_wastes"
+      ]
     },
     {
       "id": "archdemon",
@@ -198,7 +232,13 @@
       "spawn_on_wave_multiple_of": 10,
       "image": "archdemon.png",
       "attacks": [],
-      "drops": []
+      "drops": [],
+      "spawn_zones": [
+        "dark_forest",
+        "volcanic_peak",
+        "haunted_ruins",
+        "void_realm"
+      ]
     },
     {
       "id": "goblin1",
@@ -231,6 +271,9 @@
           "qty_min": 1,
           "qty_max": 1
         }
+      ],
+      "spawn_zones": [
+        "flower_field"
       ]
     },
     {
@@ -250,7 +293,12 @@
       "spawn_on_wave_multiple_of": 6,
       "image": "fireelemental1",
       "attacks": [],
-      "drops": []
+      "drops": [],
+      "spawn_zones": [
+        "volcanic_peak",
+        "frozen_wastes",
+        "void_realm"
+      ]
     },
     {
       "id": "goldengoblin",
@@ -268,7 +316,10 @@
       "max_wave": 0,
       "spawn_on_wave_multiple_of": 16,
       "attacks": [],
-      "drops": []
+      "drops": [],
+      "spawn_zones": [
+        "flower_field"
+      ]
     },
     {
       "id": "shadow_wraith",
@@ -298,6 +349,12 @@
       ],
       "attacks": [
         "atk_fireball"
+      ],
+      "spawn_zones": [
+        "dark_forest",
+        "frozen_wastes",
+        "haunted_ruins",
+        "void_realm"
       ]
     },
     {
@@ -328,6 +385,11 @@
       ],
       "attacks": [
         "atk_fireball"
+      ],
+      "spawn_zones": [
+        "volcanic_peak",
+        "frozen_wastes",
+        "void_realm"
       ]
     },
     {
@@ -358,6 +420,11 @@
       ],
       "attacks": [
         "atk_slash"
+      ],
+      "spawn_zones": [
+        "volcanic_peak",
+        "frozen_wastes",
+        "void_realm"
       ]
     },
     {
@@ -382,6 +449,12 @@
       ],
       "attacks": [
         "atk_fireball"
+      ],
+      "spawn_zones": [
+        "dark_forest",
+        "volcanic_peak",
+        "haunted_ruins",
+        "void_realm"
       ]
     },
     {
@@ -413,6 +486,12 @@
       ],
       "attacks": [
         "atk_multi_stab"
+      ],
+      "spawn_zones": [
+        "dark_forest",
+        "volcanic_peak",
+        "haunted_ruins",
+        "void_realm"
       ]
     },
     {
@@ -444,6 +523,11 @@
       ],
       "attacks": [
         "atk_fireball"
+      ],
+      "spawn_zones": [
+        "flower_field",
+        "volcanic_peak",
+        "void_realm"
       ]
     },
     {
@@ -481,6 +565,11 @@
       ],
       "attacks": [
         "atk_fireball"
+      ],
+      "spawn_zones": [
+        "flower_field",
+        "volcanic_peak",
+        "void_realm"
       ]
     },
     {
@@ -511,6 +600,12 @@
       ],
       "attacks": [
         "atk_slash"
+      ],
+      "spawn_zones": [
+        "dark_forest",
+        "frozen_wastes",
+        "haunted_ruins",
+        "void_realm"
       ]
     },
     {
@@ -549,6 +644,12 @@
       ],
       "attacks": [
         "atk_fireball"
+      ],
+      "spawn_zones": [
+        "dark_forest",
+        "frozen_wastes",
+        "haunted_ruins",
+        "void_realm"
       ]
     },
     {
@@ -579,6 +680,11 @@
       ],
       "attacks": [
         "atk_slash"
+      ],
+      "spawn_zones": [
+        "flower_field",
+        "frozen_wastes",
+        "haunted_ruins"
       ]
     },
     {
@@ -609,6 +715,11 @@
       ],
       "attacks": [
         "atk_multi_stab"
+      ],
+      "spawn_zones": [
+        "flower_field",
+        "dark_forest",
+        "frozen_wastes"
       ]
     },
     {
@@ -633,6 +744,11 @@
       ],
       "attacks": [
         "atk_slash"
+      ],
+      "spawn_zones": [
+        "flower_field",
+        "dark_forest",
+        "frozen_wastes"
       ]
     },
     {
@@ -663,6 +779,11 @@
       ],
       "attacks": [
         "atk_slash"
+      ],
+      "spawn_zones": [
+        "flower_field",
+        "dark_forest",
+        "frozen_wastes"
       ]
     },
     {
@@ -706,6 +827,12 @@
       ],
       "attacks": [
         "atk_multi_stab"
+      ],
+      "spawn_zones": [
+        "dark_forest",
+        "volcanic_peak",
+        "haunted_ruins",
+        "void_realm"
       ]
     },
     {
@@ -737,6 +864,12 @@
       ],
       "attacks": [
         "atk_magic_bolt"
+      ],
+      "spawn_zones": [
+        "dark_forest",
+        "frozen_wastes",
+        "haunted_ruins",
+        "void_realm"
       ]
     },
     {
@@ -767,6 +900,9 @@
       ],
       "attacks": [
         "atk_holy_smite"
+      ],
+      "spawn_zones": [
+        "void_realm"
       ]
     },
     {
@@ -797,6 +933,10 @@
       ],
       "attacks": [
         "atk_multi_stab"
+      ],
+      "spawn_zones": [
+        "flower_field",
+        "dark_forest"
       ]
     },
     {
@@ -829,6 +969,11 @@
       "attacks": [
         "atk_slash",
         "atk_roar"
+      ],
+      "spawn_zones": [
+        "volcanic_peak",
+        "haunted_ruins",
+        "void_realm"
       ]
     },
     {
@@ -853,6 +998,12 @@
       ],
       "attacks": [
         "atk_slash"
+      ],
+      "spawn_zones": [
+        "dark_forest",
+        "frozen_wastes",
+        "haunted_ruins",
+        "void_realm"
       ]
     },
     {
@@ -885,6 +1036,9 @@
       "attacks": [
         "atk_holy_smite",
         "atk_roar"
+      ],
+      "spawn_zones": [
+        "void_realm"
       ]
     },
     {
@@ -923,6 +1077,10 @@
       "attacks": [
         "atk_magic_bolt",
         "atk_multi_stab"
+      ],
+      "spawn_zones": [
+        "flower_field",
+        "dark_forest"
       ]
     },
     {
@@ -963,6 +1121,11 @@
         "atk_fireball",
         "atk_slash",
         "atk_roar"
+      ],
+      "spawn_zones": [
+        "volcanic_peak",
+        "haunted_ruins",
+        "void_realm"
       ]
     },
     {
@@ -999,7 +1162,12 @@
           "qty_max": 2
         }
       ],
-      "attacks": []
+      "attacks": [],
+      "spawn_zones": [
+        "flower_field",
+        "volcanic_peak",
+        "void_realm"
+      ]
     }
   ],
   "scaling_notes": {

@@ -1,0 +1,94 @@
+{
+  "elements": [
+    {
+      "id": "physical",
+      "name": "Physical",
+      "color": [
+        200,
+        200,
+        200
+      ],
+      "description": "Standard physical damage"
+    },
+    {
+      "id": "fire",
+      "name": "Fire",
+      "color": [
+        255,
+        100,
+        50
+      ],
+      "description": "Burning damage over time"
+    },
+    {
+      "id": "ice",
+      "name": "Ice",
+      "color": [
+        100,
+        200,
+        255
+      ],
+      "description": "Freezing and slowing effects"
+    },
+    {
+      "id": "lightning",
+      "name": "Lightning",
+      "color": [
+        255,
+        255,
+        100
+      ],
+      "description": "Fast, shocking damage"
+    },
+    {
+      "id": "arcane",
+      "name": "Arcane",
+      "color": [
+        200,
+        100,
+        255
+      ],
+      "description": "Pure magical energy"
+    },
+    {
+      "id": "dark",
+      "name": "Dark",
+      "color": [
+        100,
+        50,
+        150
+      ],
+      "description": "Shadow and void damage"
+    },
+    {
+      "id": "light",
+      "name": "Light",
+      "color": [
+        255,
+        255,
+        200
+      ],
+      "description": "Holy and radiant damage"
+    },
+    {
+      "id": "neutral",
+      "name": "Neutral",
+      "color": [
+        150,
+        150,
+        150
+      ],
+      "description": "Untyped damage"
+    },
+    {
+      "id": "blood",
+      "name": "Blood",
+      "description": "Blood",
+      "color": [
+        255,
+        0,
+        0
+      ]
+    }
+  ]
+}

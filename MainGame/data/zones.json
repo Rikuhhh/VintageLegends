@@ -5,120 +5,42 @@
       "name": "Flower Field",
       "spawn_chance": 60.0,
       "min_wave": 1,
-      "background_image": "flowerfield.png",
-      "enemy_types": {
-        "beast": true,
-        "construct": true,
-        "demon": false,
-        "dragon": true,
-        "elemental": false,
-        "horde": true,
-        "undead": false,
-        "aberration": false,
-        "celestial": false,
-        "fey": true,
-        "infernal": false
-      }
+      "background_image": "flowerfield.png"
     },
     {
       "id": "dark_forest",
       "name": "Dark Forest",
       "spawn_chance": 40.0,
       "min_wave": 30,
-      "background_image": "darkforest.png",
-      "enemy_types": {
-        "beast": true,
-        "construct": false,
-        "demon": true,
-        "dragon": false,
-        "elemental": false,
-        "horde": false,
-        "undead": true,
-        "aberration": true,
-        "celestial": false,
-        "fey": true,
-        "infernal": false
-      }
+      "background_image": "darkforest.png"
     },
     {
       "id": "volcanic_peak",
       "name": "Volcanic Peak",
       "spawn_chance": 50.0,
       "min_wave": 25,
-      "background_image": "volcano.png",
-      "enemy_types": {
-        "beast": false,
-        "construct": false,
-        "demon": true,
-        "dragon": true,
-        "elemental": true,
-        "horde": false,
-        "undead": false,
-        "aberration": false,
-        "celestial": false,
-        "fey": false,
-        "infernal": true
-      }
+      "background_image": "volcano.png"
     },
     {
       "id": "frozen_wastes",
       "name": "Frozen Wastes",
       "spawn_chance": 45.0,
       "min_wave": 70,
-      "background_image": "frozen.png",
-      "enemy_types": {
-        "beast": true,
-        "construct": true,
-        "demon": false,
-        "dragon": false,
-        "elemental": true,
-        "horde": false,
-        "undead": true,
-        "aberration": true,
-        "celestial": false,
-        "fey": false,
-        "infernal": false
-      }
+      "background_image": "frozen.png"
     },
     {
       "id": "haunted_ruins",
       "name": "Haunted Ruins",
       "spawn_chance": 40.0,
       "min_wave": 50,
-      "background_image": "ruins.png",
-      "enemy_types": {
-        "beast": false,
-        "construct": true,
-        "demon": true,
-        "dragon": false,
-        "elemental": false,
-        "horde": false,
-        "undead": true,
-        "aberration": true,
-        "celestial": false,
-        "fey": false,
-        "infernal": true
-      }
+      "background_image": "ruins.png"
     },
     {
       "id": "void_realm",
       "name": "Void Realm",
       "spawn_chance": 5.0,
       "min_wave": 150,
-      "background_image": "void.png",
-      "enemy_types": {
-        "beast": false,
-        "construct": false,
-        "demon": true,
-        "dragon": true,
-        "elemental": true,
-        "horde": false,
-        "undead": true,
-        "aberration": true,
-        "celestial": true,
-        "fey": false,
-        "infernal": true
-      }
+      "background_image": "void.png"
     }
   ]
 }

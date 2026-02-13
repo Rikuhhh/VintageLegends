@@ -46,12 +46,14 @@ class AdminInterface:
         self.items_frame = ttk.Frame(self.notebook)
         self.monsters_frame = ttk.Frame(self.notebook)
         self.skills_frame = ttk.Frame(self.notebook)
+        self.elements_frame = ttk.Frame(self.notebook)
         self.zones_frame = ttk.Frame(self.notebook)
         self.recipes_frame = ttk.Frame(self.notebook)
         
         self.notebook.add(self.items_frame, text='Items')
         self.notebook.add(self.monsters_frame, text='Monsters')
         self.notebook.add(self.skills_frame, text='Skills')
+        self.notebook.add(self.elements_frame, text='Elements')
         self.notebook.add(self.zones_frame, text='Zones')
         self.notebook.add(self.recipes_frame, text='Recipes')
         
@@ -59,6 +61,7 @@ class AdminInterface:
         self.setup_items_tab()
         self.setup_monsters_tab()
         self.setup_skills_tab()
+        self.setup_elements_tab()
         self.setup_zones_tab()
         self.setup_recipes_tab()
     
@@ -257,6 +260,21 @@ class AdminInterface:
         self.item_fields['gold_gain'] = ttk.Entry(self.weapon_frame, width=15)
         self.item_fields['gold_gain'].grid(row=5, column=1, padx=5, pady=3)
         ttk.Label(self.weapon_frame, text="(% bonus gold)", font=('Arial', 7, 'italic')).grid(row=5, column=2, sticky='w', padx=2)
+        
+        # Damage Type Bonuses
+        damage_bonus_frame = ttk.LabelFrame(scrollable_frame, text="🔥 Elemental Damage Bonuses", style='Section.TLabelframe')
+        damage_bonus_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        ttk.Label(damage_bonus_frame, text="Damage Type Bonuses (%):", font=('Arial', 9, 'bold')).grid(row=0, column=0, columnspan=4, sticky='w', padx=5, pady=5)
+        ttk.Label(damage_bonus_frame, text="Format: element1:bonus1,element2:bonus2  Example: fire:20,ice:15", 
+                 font=('Arial', 7, 'italic')).grid(row=1, column=0, columnspan=4, sticky='w', padx=5)
+        
+        self.item_fields['damage_type_bonuses'] = ttk.Entry(damage_bonus_frame, width=60)
+        self.item_fields['damage_type_bonuses'].grid(row=2, column=0, columnspan=4, padx=5, pady=5, sticky='ew')
+        
+        ttk.Label(damage_bonus_frame, text="Example: fire:20 = +20% fire damage | dark:15,arcane:10 = +15% dark, +10% arcane", 
+                 font=('Arial', 7, 'italic'), foreground='green').grid(row=3, column=0, columnspan=4, sticky='w', padx=5, pady=2)
         
         # Multi-Hit Configuration
         multi_hit_frame = ttk.LabelFrame(scrollable_frame, text="⚔️ Multi-Hit Settings (Weapons/Skills)", style='Section.TLabelframe')
@@ -603,6 +621,25 @@ class AdminInterface:
         self.monster_fields['spawn_multiple'] = ttk.Entry(spawn_frame, width=15)
         self.monster_fields['spawn_multiple'].grid(row=2, column=1, padx=5, pady=3)
         
+        # Spawn Zones selector
+        zones_frame = ttk.LabelFrame(scrollable_frame, text="🗺️ Spawn Zones", style='Section.TLabelframe')
+        zones_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        # Load zones and create checkboxes
+        zones = self.get_zones()
+        self.monster_fields['spawn_zones'] = {}
+        ttk.Label(zones_frame, text="Select zones where this monster can spawn:", 
+                 font=('Arial', 8, 'italic')).grid(row=0, column=0, columnspan=2, sticky='w', padx=5, pady=5)
+        
+        for i, zone in enumerate(zones):
+            zone_id = zone.get('id')
+            zone_name = zone.get('name')
+            self.monster_fields['spawn_zones'][zone_id] = tk.BooleanVar()
+            ttk.Checkbutton(zones_frame, text=zone_name, 
+                          variable=self.monster_fields['spawn_zones'][zone_id]).grid(
+                              row=1 + (i // 2), column=i % 2, sticky='w', padx=10, pady=5)
+        
         # Image settings
         image_frame = ttk.LabelFrame(scrollable_frame, text="Image Settings")
         image_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
@@ -823,6 +860,12 @@ class AdminInterface:
         if item.get('gold_gain'):
             self.item_fields['gold_gain'].insert(0, str(item.get('gold_gain')))
         
+        # Damage type bonuses
+        damage_bonuses = item.get('damage_type_bonuses', {})
+        if damage_bonuses:
+            bonus_str = ','.join([f"{k}:{v}" for k, v in damage_bonuses.items()])
+            self.item_fields['damage_type_bonuses'].insert(0, bonus_str)
+        
         # Multi-hit settings
         multi_hit = item.get('multi_hit', {})
         if multi_hit:
@@ -945,6 +988,11 @@ class AdminInterface:
         if monster.get('rare_spawn_chance'):
             self.monster_fields['rare_spawn_chance'].insert(0, str(monster.get('rare_spawn_chance', '')))
         
+        # Load spawn zones
+        spawn_zones = monster.get('spawn_zones', [])
+        for zone_id, var in self.monster_fields['spawn_zones'].items():
+            var.set(zone_id in spawn_zones)
+        
         # Load drops
         drops = monster.get('drops', [])
         for i, drop in enumerate(drops[:8]):  # Max 8 entries in UI
@@ -975,7 +1023,10 @@ class AdminInterface:
     def clear_monster_form(self):
         """Clear all monster form fields"""
         for key, field in self.monster_fields.items():
-            if isinstance(field, (ttk.Entry, ttk.Combobox)):
+            if key == 'spawn_zones':
+                for var in field.values():
+                    var.set(False)
+            elif isinstance(field, (ttk.Entry, ttk.Combobox)):
                 field.delete(0, tk.END)
         
         # Clear drop entries
@@ -1066,6 +1117,21 @@ class AdminInterface:
                 item['exp_gain'] = float(self.item_fields['exp_gain'].get())
             if self.item_fields['gold_gain'].get():
                 item['gold_gain'] = float(self.item_fields['gold_gain'].get())
+        
+        # Damage type bonuses (allowed on ALL equipment types)
+        if itype in ['weapon', 'armor', 'offhand', 'relic']:
+            bonus_text = self.item_fields['damage_type_bonuses'].get().strip()
+            if bonus_text:
+                damage_bonuses = {}
+                for pair in bonus_text.split(','):
+                    if ':' in pair:
+                        elem, bonus = pair.strip().split(':', 1)
+                        try:
+                            damage_bonuses[elem.strip()] = float(bonus.strip())
+                        except ValueError:
+                            pass  # Ignore invalid entries
+                if damage_bonuses:
+                    item['damage_type_bonuses'] = damage_bonuses
         
         # Multi-hit settings (allowed on weapons and offhands)
         if itype in ['weapon', 'offhand'] and self.item_fields['multi_hit_enabled'].get():
@@ -1234,6 +1300,14 @@ class AdminInterface:
                     monster['rare_spawn_chance'] = rare_chance
             except ValueError:
                 pass  # Ignore invalid values
+        
+        # Spawn zones
+        spawn_zones = []
+        for zone_id, var in self.monster_fields['spawn_zones'].items():
+            if var.get():
+                spawn_zones.append(zone_id)
+        if spawn_zones:
+            monster['spawn_zones'] = spawn_zones
         
         # Image settings
         if self.monster_fields['image'].get():
@@ -1422,6 +1496,32 @@ class AdminInterface:
         self.skill_fields['element'].grid(row=row, column=1, pady=5)
         row += 1
         
+        # Image
+        ttk.Label(scrollable_frame, text="Image File:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.skill_fields['image'] = ttk.Entry(scrollable_frame, width=40)
+        self.skill_fields['image'].grid(row=row, column=1, pady=5)
+        ttk.Label(scrollable_frame, text="(e.g., fireball.png in assets/images/skills/)", font=('Arial', 7, 'italic')).grid(row=row, column=2, sticky='w', padx=5)
+        row += 1
+        
+        # Effectiveness frame
+        effectiveness_frame = ttk.LabelFrame(scrollable_frame, text="🎯 Effectiveness (Strong/Weak Against)")
+        effectiveness_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
+        row += 1
+        
+        ttk.Label(effectiveness_frame, text="Strong vs Monster Types:", font=('Arial', 9, 'bold')).grid(row=0, column=0, sticky='w', padx=5, pady=5)
+        ttk.Label(effectiveness_frame, text="(comma-separated: beast,undead,demon,dragon,elemental,construct)", 
+                 font=('Arial', 7, 'italic')).grid(row=0, column=1, columnspan=2, sticky='w', padx=5)
+        self.skill_fields['strong_vs'] = ttk.Entry(effectiveness_frame, width=50)
+        self.skill_fields['strong_vs'].grid(row=1, column=0, columnspan=3, padx=5, pady=3, sticky='ew')
+        
+        ttk.Label(effectiveness_frame, text="Weak vs Monster Types:", font=('Arial', 9, 'bold')).grid(row=2, column=0, sticky='w', padx=5, pady=5)
+        self.skill_fields['weak_vs'] = ttk.Entry(effectiveness_frame, width=50)
+        self.skill_fields['weak_vs'].grid(row=3, column=0, columnspan=3, padx=5, pady=3, sticky='ew')
+        
+        ttk.Label(effectiveness_frame, text="Effectiveness Scaling:", font=('Arial', 9, 'bold')).grid(row=4, column=0, sticky='w', padx=5, pady=5)
+        ttk.Label(effectiveness_frame, text="Strong = 1.5x damage | Weak = 0.75x damage", 
+                 font=('Arial', 7, 'italic')).grid(row=4, column=1, columnspan=2, sticky='w', padx=5)
+        
         # Stats frame
         stats_frame = ttk.LabelFrame(scrollable_frame, text="Skill Stats")
         stats_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
@@ -1555,6 +1655,17 @@ class AdminInterface:
         self.skill_fields['description'].insert(0, skill.get('description', ''))
         self.skill_fields['type'].set(skill.get('type', ''))
         self.skill_fields['element'].set(skill.get('element', ''))
+        if skill.get('image'):
+            self.skill_fields['image'].insert(0, skill['image'])
+        
+        # Load effectiveness
+        effectiveness = skill.get('effectiveness', {})
+        strong_vs = effectiveness.get('strong_vs', [])
+        weak_vs = effectiveness.get('weak_vs', [])
+        if strong_vs:
+            self.skill_fields['strong_vs'].insert(0, ','.join(strong_vs))
+        if weak_vs:
+            self.skill_fields['weak_vs'].insert(0, ','.join(weak_vs))
         
         # Load stats
         if skill.get('mana_cost') is not None:
@@ -1634,6 +1745,23 @@ class AdminInterface:
         
         if self.skill_fields['element'].get():
             skill['element'] = self.skill_fields['element'].get()
+        
+        if self.skill_fields['image'].get():
+            skill['image'] = self.skill_fields['image'].get()
+        
+        # Effectiveness
+        effectiveness = {}
+        strong_vs_text = self.skill_fields['strong_vs'].get().strip()
+        weak_vs_text = self.skill_fields['weak_vs'].get().strip()
+        if strong_vs_text:
+            effectiveness['strong_vs'] = [s.strip() for s in strong_vs_text.split(',') if s.strip()]
+        else:
+            effectiveness['strong_vs'] = []
+        if weak_vs_text:
+            effectiveness['weak_vs'] = [w.strip() for w in weak_vs_text.split(',') if w.strip()]
+        else:
+            effectiveness['weak_vs'] = []
+        skill['effectiveness'] = effectiveness
         
         # Stats
         if self.skill_fields['mana_cost'].get():
@@ -1825,20 +1953,6 @@ class AdminInterface:
         ttk.Label(music_frame, text="(e.g. forest_theme.mp3 - in assets/sounds/music/)", 
                  font=('Arial', 8)).grid(row=1, column=0, columnspan=2, sticky='w', padx=5, pady=3)
         
-        # Enemy Types
-        enemy_frame = ttk.LabelFrame(scrollable_frame, text="Enemy Types Allowed")
-        enemy_frame.grid(row=row, column=0, columnspan=2, sticky='ew', pady=10)
-        row += 1
-        
-        enemy_types = self.get_monster_categories()
-        self.zone_fields['enemy_types'] = {}
-        
-        for i, enemy_type in enumerate(enemy_types):
-            self.zone_fields['enemy_types'][enemy_type] = tk.BooleanVar()
-            ttk.Checkbutton(enemy_frame, text=enemy_type.capitalize(), 
-                          variable=self.zone_fields['enemy_types'][enemy_type]).grid(
-                              row=i // 2, column=i % 2, sticky='w', padx=10, pady=5)
-        
         # Save button
         ttk.Button(scrollable_frame, text="💾 Save Zone", command=self.save_zone,
                   style='Save.TButton').grid(row=row, column=0, columnspan=2, pady=20)
@@ -1879,19 +1993,11 @@ class AdminInterface:
         self.zone_fields['background_image'].insert(0, zone.get('background_image', ''))
         if zone.get('theme'):
             self.zone_fields['theme'].insert(0, zone.get('theme', ''))
-        
-        # Load enemy types
-        enemy_types = zone.get('enemy_types', {})
-        for enemy_type, var in self.zone_fields['enemy_types'].items():
-            var.set(enemy_types.get(enemy_type, False))
     
     def clear_zone_form(self):
         """Clear all zone form fields"""
         for key, field in self.zone_fields.items():
-            if key == 'enemy_types':
-                for var in field.values():
-                    var.set(False)
-            elif isinstance(field, (ttk.Entry, ttk.Combobox)):
+            if isinstance(field, (ttk.Entry, ttk.Combobox)):
                 field.delete(0, tk.END)
     
     def new_zone(self):
@@ -1934,20 +2040,12 @@ class AdminInterface:
             'name': self.zone_fields['name'].get(),
             'spawn_chance': spawn_chance,
             'min_wave': min_wave,
-            'background_image': self.zone_fields['background_image'].get(),
-            'enemy_types': {}
+            'background_image': self.zone_fields['background_image'].get()
         }
         
         # Add theme if specified
         if self.zone_fields['theme'].get():
             zone['theme'] = self.zone_fields['theme'].get()
-        
-        # Get enemy types (ensure all current categories are included)
-        for enemy_type in self.get_monster_categories():
-            if enemy_type in self.zone_fields['enemy_types']:
-                zone['enemy_types'][enemy_type] = self.zone_fields['enemy_types'][enemy_type].get()
-            else:
-                zone['enemy_types'][enemy_type] = False
         
         # Find if updating or creating new
         zone_id = zone['id']
@@ -1989,6 +2087,191 @@ class AdminInterface:
                 self.clear_zone_form()
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete zone: {e}")
+    
+    def setup_elements_tab(self):
+        """Setup the Elements tab for managing damage types"""
+        # Left side - Element list
+        left_frame = ttk.Frame(self.elements_frame)
+        left_frame.pack(side='left', fill='both', expand=False, padx=5, pady=5)
+        
+        ttk.Label(left_frame, text="Existing Elements:", font=('Arial', 10, 'bold')).pack()
+        
+        self.elements_listbox = tk.Listbox(left_frame, width=30, height=25)
+        self.elements_listbox.pack(fill='both', expand=True)
+        self.elements_listbox.bind('<<ListboxSelect>>', self.load_selected_element)
+        
+        btn_frame = ttk.Frame(left_frame)
+        btn_frame.pack(fill='x', pady=5)
+        ttk.Button(btn_frame, text="New Element", command=self.new_element).pack(side='left', padx=2)
+        ttk.Button(btn_frame, text="Delete", command=self.delete_element).pack(side='left', padx=2)
+        
+        # Right side - Element editor
+        right_frame = ttk.Frame(self.elements_frame)
+        right_frame.pack(side='right', fill='both', expand=True, padx=5, pady=5)
+        
+        ttk.Label(right_frame, text="Element Editor", font=('Arial', 12, 'bold')).pack(pady=10)
+        
+        # Element fields
+        self.element_fields = {}
+        form_frame = ttk.Frame(right_frame)
+        form_frame.pack(fill='both', expand=True, padx=10)
+        
+        row = 0
+        ttk.Label(form_frame, text="ID*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.element_fields['id'] = ttk.Entry(form_frame, width=40)
+        self.element_fields['id'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        ttk.Label(form_frame, text="Name*:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.element_fields['name'] = ttk.Entry(form_frame, width=40)
+        self.element_fields['name'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        ttk.Label(form_frame, text="Description:", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        self.element_fields['description'] = ttk.Entry(form_frame, width=40)
+        self.element_fields['description'].grid(row=row, column=1, pady=5)
+        row += 1
+        
+        ttk.Label(form_frame, text="Color (R,G,B):", font=('Arial', 9, 'bold')).grid(row=row, column=0, sticky='w', pady=5)
+        color_frame = ttk.Frame(form_frame)
+        color_frame.grid(row=row, column=1, sticky='w', pady=5)
+        
+        self.element_fields['color_r'] = ttk.Entry(color_frame, width=10)
+        self.element_fields['color_r'].pack(side='left', padx=2)
+        ttk.Label(color_frame, text=",").pack(side='left')
+        self.element_fields['color_g'] = ttk.Entry(color_frame, width=10)
+        self.element_fields['color_g'].pack(side='left', padx=2)
+        ttk.Label(color_frame, text=",").pack(side='left')
+        self.element_fields['color_b'] = ttk.Entry(color_frame, width=10)
+        self.element_fields['color_b'].pack(side='left', padx=2)
+        row += 1
+        
+        ttk.Label(form_frame, text="(0-255 for each)", font=('Arial', 7, 'italic')).grid(row=row, column=1, sticky='w')
+        row += 1
+        
+        ttk.Button(form_frame, text="💾 Save Element", command=self.save_element,
+                  style='Save.TButton').grid(row=row, column=0, columnspan=2, pady=20)
+        
+        self.load_elements_list()
+    
+    def load_elements_list(self):
+        """Load elements from elements.json into the listbox"""
+        self.elements_listbox.delete(0, tk.END)
+        try:
+            with open(self.data_path / 'elements.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.elements_data = data.get('elements', [])
+                for elem in self.elements_data:
+                    self.elements_listbox.insert(tk.END, f"{elem.get('id')} - {elem.get('name', '')}")
+        except FileNotFoundError:
+            self.elements_data = []
+            messagebox.showwarning("Warning", "elements.json not found")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load elements: {e}")
+    
+    def load_selected_element(self, event=None):
+        """Load selected element into editor"""
+        selection = self.elements_listbox.curselection()
+        if not selection:
+            return
+        
+        index = selection[0]
+        elem = self.elements_data[index]
+        
+        self.clear_element_form()
+        self.element_fields['id'].insert(0, elem.get('id', ''))
+        self.element_fields['name'].insert(0, elem.get('name', ''))
+        self.element_fields['description'].insert(0, elem.get('description', ''))
+        
+        color = elem.get('color', [200, 200, 200])
+        self.element_fields['color_r'].insert(0, str(color[0]))
+        self.element_fields['color_g'].insert(0, str(color[1]))
+        self.element_fields['color_b'].insert(0, str(color[2]))
+    
+    def clear_element_form(self):
+        """Clear all element form fields"""
+        for field in self.element_fields.values():
+            if isinstance(field, (ttk.Entry, ttk.Combobox)):
+                field.delete(0, tk.END)
+    
+    def new_element(self):
+        """Clear form for new element creation"""
+        self.clear_element_form()
+        self.elements_listbox.selection_clear(0, tk.END)
+    
+    def save_element(self):
+        """Save element to elements.json"""
+        if not self.element_fields['id'].get() or not self.element_fields['name'].get():
+            messagebox.showerror("Error", "ID and Name are required!")
+            return
+        
+        try:
+            elem = {
+                'id': self.element_fields['id'].get(),
+                'name': self.element_fields['name'].get(),
+                'description': self.element_fields['description'].get(),
+                'color': [
+                    int(self.element_fields['color_r'].get() or 200),
+                    int(self.element_fields['color_g'].get() or 200),
+                    int(self.element_fields['color_b'].get() or 200)
+                ]
+            }
+            
+            # Find if updating or creating new
+            elem_id = elem['id']
+            found = False
+            for i, existing in enumerate(self.elements_data):
+                if existing.get('id') == elem_id:
+                    self.elements_data[i] = elem
+                    found = True
+                    break
+            
+            if not found:
+                self.elements_data.append(elem)
+            
+            # Save to file
+            with open(self.data_path / 'elements.json', 'w', encoding='utf-8') as f:
+                json.dump({'elements': self.elements_data}, f, indent=2, ensure_ascii=False)
+            messagebox.showinfo("Success", f"Element '{elem['name']}' saved!")
+            self.load_elements_list()
+            
+            # Reload element dropdowns in skills tab
+            self.refresh_element_dropdowns()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save element: {e}")
+    
+    def delete_element(self):
+        """Delete selected element"""
+        selection = self.elements_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Warning", "No element selected")
+            return
+        
+        index = selection[0]
+        elem = self.elements_data[index]
+        
+        if messagebox.askyesno("Confirm Delete", f"Delete element '{elem.get('name')}'?"):
+            try:
+                self.elements_data.pop(index)
+                with open(self.data_path / 'elements.json', 'w', encoding='utf-8') as f:
+                    json.dump({'elements': self.elements_data}, f, indent=2, ensure_ascii=False)
+                self.load_elements_list()
+                self.clear_element_form()
+                messagebox.showinfo("Success", "Element deleted!")
+                self.refresh_element_dropdowns()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to delete element: {e}")
+    
+    def refresh_element_dropdowns(self):
+        """Refresh element dropdown in skills tab with current elements"""
+        try:
+            with open(self.data_path / 'elements.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                element_ids = [e['id'] for e in data.get('elements', [])]
+                if hasattr(self, 'skill_fields') and 'element' in self.skill_fields:
+                    self.skill_fields['element']['values'] = element_ids
+        except Exception:
+            pass
     
     def setup_recipes_tab(self):
         """Setup the Recipes tab with form fields"""

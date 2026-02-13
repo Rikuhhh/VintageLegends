@@ -282,6 +282,8 @@ class BattleSystem:
                 'time': time.time(),
                 'is_crit': bool(is_crit),
             })
+            # Record enemy hit time for visual effect
+            self.enemy_hit_time = time.time()
         except Exception:
             pass
         if is_crit:
@@ -396,9 +398,7 @@ class BattleSystem:
                     'amount': int(dmg_dealt),
                     'time': time.time(),
                     'is_crit': bool(is_crit),
-                })                # Record enemy hit time for visual effect
-                self.enemy_hit_time = time.time()                # Record enemy hit time for visual effect
-                self.enemy_hit_time = time.time()
+                })
                 # Record enemy hit time for visual effect
                 self.enemy_hit_time = time.time()
             except Exception:
@@ -535,6 +535,14 @@ class BattleSystem:
         # Mark that a skill was used this turn (prevents mana regen)
         self.skill_used_this_turn = True
         
+        # Check if skill added any damage events (for multi-hit) and update enemy_hit_time
+        # This ensures visual hit effects work for all skills
+        if self.damage_events:
+            for event in reversed(self.damage_events):
+                if event.get('target') == 'enemy' and not event.get('is_heal'):
+                    self.enemy_hit_time = time.time()
+                    break
+        
         # Log the skill usage
         if result:
             damage = result.get('damage', 0)
@@ -550,16 +558,20 @@ class BattleSystem:
                 self.add_log(f"Used {skill_name}: {damage} damage!", 'skill')
                 print(f"{self.player.name} used {skill_id} for {damage} damage!")
                 
-                # Register damage event for UI
-                try:
-                    self.damage_events.append({
-                        'target': 'enemy',
-                        'amount': int(damage),
-                        'time': time.time(),
-                        'is_crit': result.get('is_crit', False),
-                    })
-                except Exception:
-                    pass
+                # For multi-hit skills, damage events are already added by skill_manager
+                # For regular skills, add the damage event here
+                if not result.get('multi_hit', False):
+                    try:
+                        self.damage_events.append({
+                            'target': 'enemy',
+                            'amount': int(damage),
+                            'time': time.time(),
+                            'is_crit': result.get('is_crit', False),
+                        })
+                        # Record enemy hit time for visual effect
+                        self.enemy_hit_time = time.time()
+                    except Exception:
+                        pass
             
             if healing > 0:
                 self.add_log(f"Used {skill_name}: healed {healing}!", 'heal')
@@ -849,13 +861,12 @@ class BattleSystem:
         else:
             self.in_shop = random.random() < 0.10
         if not self.in_shop:
-            # Get allowed categories from current zone
-            allowed_categories = None
+            # Get current zone id for monster filtering
+            zone_id = None
             if self.current_zone:
-                enemy_types = self.current_zone.get('enemy_types', {})
-                allowed_categories = [cat for cat, allowed in enemy_types.items() if allowed]
+                zone_id = self.current_zone.get('id')
             
-            self.enemy = Enemy.random_enemy(self.wave, allowed_categories=allowed_categories)
+            self.enemy = Enemy.random_enemy(self.wave, current_zone_id=zone_id)
             # Reset enemy hit time so new enemy doesn't appear with red/shake effect
             self.enemy_hit_time = 0
             print(f"👹 Nouvelle vague : {self.enemy.name}")

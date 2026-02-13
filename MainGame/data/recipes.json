@@ -284,6 +284,10 @@
         {
           "item_id": "dragon_eye",
           "quantity": 2
+        },
+        {
+          "item_id": "legendary_fragment",
+          "quantity": 5
         }
       ]
     }

@@ -95,6 +95,12 @@ class SkillManager:
         multiplier = self.get_effectiveness_multiplier(skill, target)
         raw_damage = int(raw_damage * multiplier)
         
+        # Apply damage type bonus from equipment
+        skill_element = skill.get('element', 'physical')
+        damage_type_bonus = self.get_damage_type_bonus(caster, skill_element)
+        if damage_type_bonus > 0:
+            raw_damage = int(raw_damage * (1 + damage_type_bonus / 100.0))
+        
         # Check for critical hit (caster's crit chance with overcrit mechanic)
         is_crit = False
         is_overcrit = False
@@ -381,3 +387,51 @@ class SkillManager:
             'mana_used': skill.get('mana_cost', 0)
         }
         return result, "Success"
+    
+    def get_damage_type_bonus(self, caster, element):
+        """Calculate total damage type bonus from all equipment
+        
+        Args:
+            caster: Entity with equipment
+            element: Skill element (fire, ice, dark, etc.)
+        
+        Returns:
+            Total bonus percentage (e.g., 20 for +20%)
+        """
+        total_bonus = 0.0
+        
+        if not hasattr(caster, 'equipment'):
+            return total_bonus
+        
+        # Load item data helper
+        def load_item_data(item_id):
+            if not item_id:
+                return None
+            try:
+                import json
+                from pathlib import Path
+                base = Path(__file__).resolve().parents[1]
+                items_path = base / 'data' / 'items.json'
+                with open(items_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    for item in data.get('items', []):
+                        if item.get('id') == item_id:
+                            return item
+            except Exception:
+                pass
+            return None
+        
+        # Check all equipment slots
+        for slot_name, item_id in caster.equipment.items():
+            if not item_id:
+                continue
+            item_data = load_item_data(item_id)
+            if not item_data:
+                continue
+            
+            # Get damage type bonuses from this item
+            damage_bonuses = item_data.get('damage_type_bonuses', {})
+            if element in damage_bonuses:
+                total_bonus += float(damage_bonuses[element])
+        
+        return total_bonus

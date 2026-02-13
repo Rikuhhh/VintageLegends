@@ -256,13 +256,20 @@
       "type": "damage",
       "description": "Unleash true HELL",
       "element": "fire",
+      "effectiveness": {
+        "strong_vs": [],
+        "weak_vs": []
+      },
       "mana_cost": 150,
-      "power": 50,
+      "power": 100,
       "scaling_stat": "magic_power",
       "penetration": 15.0,
       "cooldown": 10,
       "target": "single",
-      "effectiveness": {},
+      "multi_hit": {
+        "hits": 3,
+        "damage_per_hit": 0.34
+      },
       "effects": []
     }
   ]
