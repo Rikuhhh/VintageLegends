@@ -74,6 +74,7 @@ class UIManager:
         self.inventory_selected = None
         self.inventory_page = 0
         self.inventory_filter = 'all'
+        self.inventory_hovered = None  # Track hovered item for tooltip
         self.stats_page = 0
         self.character_sheet_open_rect = None
         # Skills UI modal
@@ -175,12 +176,12 @@ class UIManager:
         # Bouton d'attaque (stocke la référence à la méthode du battle)
         self.buttons = [
             {
-                "rect": pygame.Rect(screen_width - 300, screen_height - 100, 200, 60),
+                "rect": pygame.Rect(screen_width - 250, screen_height - 100, 150, 50),
                 "label": "Attaquer",
                 "action": battle.player_attack,
             },
             {
-                "rect": pygame.Rect(screen_width - 520, screen_height - 100, 200, 60),
+                "rect": pygame.Rect(screen_width - 420, screen_height - 100, 150, 50),
                 "label": "Block",
                 "action": battle.player_block,
             },
@@ -214,6 +215,18 @@ class UIManager:
         # Toggle combat log with 'L' key
         if event.type == pygame.KEYDOWN and event.key == pygame.K_l:
             self.combat_log_open = not self.combat_log_open
+            return
+        
+        # Attack with Space key
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+            if hasattr(self, 'battle') and self.battle:
+                self.battle.player_attack()
+            return
+        
+        # Block with 'B' key
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_b:
+            if hasattr(self, 'battle') and self.battle:
+                self.battle.player_block()
             return
         
         # Skill hotkeys (1-5)
@@ -286,10 +299,30 @@ class UIManager:
                 if btn["rect"].collidepoint(event.pos):
                     btn["action"]()
                     return
+            
+            # Handle inventory cell clicks (toggle select/deselect)
             for cell in getattr(self, 'inventory_cells', []):
                 if cell['rect'].collidepoint(event.pos):
-                    # select this item
-                    self.inventory_selected = cell['item_id']
+                    # Toggle selection - if already selected, deselect
+                    if self.inventory_selected == cell['item_id']:
+                        self.inventory_selected = None
+                    else:
+                        self.inventory_selected = cell['item_id']
+                    return
+            
+            # Click outside inventory cells to deselect
+            if getattr(self, 'character_sheet_open', False) and getattr(self, 'character_sheet_tab', '') == 'inventory':
+                # Check if click is inside the modal but outside any cell
+                modal_w, modal_h = 800, 600
+                if self.character_sheet_pos is None:
+                    modal_x = (self.screen.get_width() - modal_w) // 2
+                    modal_y = (self.screen.get_height() - modal_h) // 2
+                else:
+                    modal_x, modal_y = self.character_sheet_pos
+                modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
+                if modal_rect.collidepoint(event.pos):
+                    # Clicked inside modal but not on any cell - deselect
+                    self.inventory_selected = None
                     return
 
             # character sheet open/close button on main panel
@@ -348,6 +381,7 @@ class UIManager:
     def update(self, player, battle):
         # Process battle damage events into floating texts
         try:
+            import random
             if battle and hasattr(battle, 'damage_events') and battle.damage_events:
                 # create a float for each event
                 for ev in battle.damage_events:
@@ -369,10 +403,17 @@ class UIManager:
                     screen_w, screen_h = self.screen.get_size()
                     if ev.get('target') == 'enemy' and getattr(battle, 'enemy', None):
                         # place above enemy UI area (approx center-right screen)
-                        pos = (screen_w // 2 + 100, screen_h // 2 - 80)
+                        base_x = screen_w // 2 + 100
+                        base_y = screen_h // 2 - 80
                     else:
                         # player damage/healing near player area (center-left, vertically centered)
-                        pos = (screen_w // 2 - 100, screen_h // 2)
+                        base_x = screen_w // 2 - 100
+                        base_y = screen_h // 2
+                    
+                    # Add random offset to prevent stacking (±40 pixels in a square area)
+                    offset_x = random.randint(-40, 40)
+                    offset_y = random.randint(-40, 40)
+                    pos = (base_x + offset_x, base_y + offset_y)
 
                     self.floats.append({
                         'text': text,
@@ -481,7 +522,7 @@ class UIManager:
             equipped = player.equipped_skills[:5]  # Max 5 skills
             skill_btn_w, skill_btn_h = 80, 40
             skill_start_x = screen_w - 740
-            skill_y = screen_h - 100
+            skill_y = screen_h - 150  # Moved higher
             
             for i, skill_id in enumerate(equipped):
                 skill_x = skill_start_x + i * (skill_btn_w + 10)
@@ -805,8 +846,8 @@ class UIManager:
         self.character_sheet_buttons = []
         self.inventory_cells = []
         if getattr(self, 'character_sheet_open', False) and player is not None:
-            # Large modal with tabs
-            modal_w, modal_h = 700, 500
+            # Large modal with tabs - increased size for better inventory display
+            modal_w, modal_h = 800, 600
             # Use stored position or default to center
             if self.character_sheet_pos is None:
                 modal_x = (self.screen.get_width() - modal_w) // 2
@@ -909,7 +950,7 @@ class UIManager:
             pass
     
     def _draw_equipment_tab(self, player, modal_x, content_y, modal_w, content_h):
-        """Draw equipped items with visual display"""
+        """Draw equipped items with visual display - improved layout with dividing lines"""
         equip_x = modal_x + 30
         equip_y = content_y + 10
         
@@ -925,15 +966,16 @@ class UIManager:
         for idx, (slot_key, slot_label) in enumerate(equipment_slots):
             row = idx // 2
             col = idx % 2
-            slot_x = equip_x + col * 320
-            slot_y = equip_y + row * 110
+            slot_x = equip_x + col * 360
+            slot_y = equip_y + row * 115
             
-            # Slot background
-            slot_rect = pygame.Rect(slot_x, slot_y, 300, 100)
+            # Slot background with border
+            slot_rect = pygame.Rect(slot_x, slot_y, 340, 105)
             pygame.draw.rect(self.screen, (50, 50, 70), slot_rect, border_radius=8)
+            pygame.draw.rect(self.screen, (80, 80, 120), slot_rect, 2, border_radius=8)
             
-            # Slot label
-            self._blit_text_outlined(self.screen, self.small_font, slot_label, (slot_x + 10, slot_y + 8), fg=(180,180,200), outline=(0,0,0), outline_width=1)
+            # Slot label with enhanced styling
+            self._blit_text_outlined(self.screen, self.small_font, slot_label, (slot_x + 10, slot_y + 8), fg=(220,200,120), outline=(0,0,0), outline_width=2)
             
             item_id = player.equipment.get(slot_key)
             if item_id:
@@ -941,18 +983,22 @@ class UIManager:
                 item_data = self.shop_loader.find_item(item_id) if getattr(self, 'shop_loader', None) else None
                 item_name = item_data.get('name') if item_data else item_id
                 
-                # Item icon
-                icon_rect = pygame.Rect(slot_x + 15, slot_y + 30, 55, 55)
+                # Item icon with border
+                icon_rect = pygame.Rect(slot_x + 15, slot_y + 35, 60, 60)
+                pygame.draw.rect(self.screen, (30, 30, 50), icon_rect, border_radius=6)
                 if self.assets_path and item_data:
                     icon_path = self.assets_path / 'images' / 'items' / f"{item_id}.png"
                     if icon_path.exists():
                         ico = pygame.image.load(str(icon_path)).convert_alpha()
-                        ico = pygame.transform.smoothscale(ico, (55, 55))
-                        self.screen.blit(ico, icon_rect)
+                        ico = pygame.transform.smoothscale(ico, (56, 56))
+                        self.screen.blit(ico, (icon_rect.x + 2, icon_rect.y + 2))
                     else:
                         pygame.draw.rect(self.screen, (100, 100, 140), icon_rect, border_radius=6)
                 else:
                     pygame.draw.rect(self.screen, (100, 100, 140), icon_rect, border_radius=6)
+                
+                # Vertical dividing line
+                pygame.draw.line(self.screen, (100, 100, 140), (slot_x + 85, slot_y + 32), (slot_x + 85, slot_y + 98), 2)
                 
                 # Item name and stats (use rarity color)
                 name_y = slot_y + 35
@@ -960,9 +1006,9 @@ class UIManager:
                 name_color = self.get_rarity_color(rarity)
                 outline_color = (255, 255, 255) if rarity == 'ancient' else (0, 0, 0)
                 outline_width = 2 if rarity == 'ancient' else 1
-                self._blit_text_outlined(self.screen, self.small_font, item_name[:20], (slot_x + 80, name_y), fg=name_color, outline=outline_color, outline_width=outline_width)
+                self._blit_text_outlined(self.screen, self.small_font, item_name[:22], (slot_x + 95, name_y), fg=name_color, outline=outline_color, outline_width=outline_width)
                 
-                # Show key stats
+                # Show ALL stats in compact format
                 stats_text = []
                 if item_data:
                     if item_data.get('attack'): stats_text.append(f"+{item_data['attack']} ATK")
@@ -972,22 +1018,33 @@ class UIManager:
                     if item_data.get('magic_power'): stats_text.append(f"+{item_data['magic_power']} MAG")
                     if item_data.get('magic_penetration'): stats_text.append(f"+{item_data['magic_penetration']:.0f} M.PEN")
                     if item_data.get('max_mana'): stats_text.append(f"+{item_data['max_mana']} MANA")
-                    if item_data.get('mana_regen'): stats_text.append(f"+{item_data['mana_regen']} M.REG")
+                    if item_data.get('mana_regen'): stats_text.append(f"+{item_data['mana_regen']} M.RG")
+                    if item_data.get('agility'): stats_text.append(f"+{item_data['agility']} AGI")
+                    if item_data.get('critchance'): stats_text.append(f"+{item_data['critchance']*100:.0f}% CRIT")
+                    if item_data.get('critdamage'): stats_text.append(f"+{item_data['critdamage']:.1f}x CD")
+                    if item_data.get('lifesteal'): stats_text.append(f"+{item_data['lifesteal']:.1f}% LS")
+                    if item_data.get('hp_regen'): stats_text.append(f"+{item_data['hp_regen']:.1f} HP/T")
+                    if item_data.get('dodge_chance'): stats_text.append(f"+{item_data['dodge_chance']*100:.0f}% DDG")
                 
-                for i, stat in enumerate(stats_text[:2]):  # Show max 2 stats
-                    self._blit_text_outlined(self.screen, self.small_font, stat, (slot_x + 80, name_y + 20 + i * 18), fg=(180,220,180), outline=(0,0,0), outline_width=1)
+                # Display stats in two columns
+                for i, stat in enumerate(stats_text[:3]):  # Show max 3 stats
+                    self._blit_text_outlined(self.screen, pygame.font.Font(None, 22), stat, (slot_x + 95, name_y + 20 + i * 16), fg=(180,220,180), outline=(0,0,0), outline_width=1)
                 
                 # Unequip button
-                unequip_rect = pygame.Rect(slot_x + 210, slot_y + 60, 80, 30)
+                unequip_rect = pygame.Rect(slot_x + 240, slot_y + 65, 85, 30)
                 pygame.draw.rect(self.screen, (180, 80, 80), unequip_rect, border_radius=6)
-                unequip_text = self.small_font.render("Unequip", True, (0, 0, 0))
+                pygame.draw.rect(self.screen, (220, 100, 100), unequip_rect, 2, border_radius=6)
+                unequip_text = self.small_font.render("Unequip", True, (255, 255, 255))
                 self.screen.blit(unequip_text, unequip_text.get_rect(center=unequip_rect.center))
                 self.character_sheet_buttons.append({'rect': unequip_rect, 'action': (lambda p=player, s=slot_key: p.unequip(s))})
             else:
-                # Empty slot
-                empty_rect = pygame.Rect(slot_x + 15, slot_y + 30, 55, 55)
+                # Empty slot with dashed border effect
+                empty_rect = pygame.Rect(slot_x + 15, slot_y + 35, 60, 60)
                 pygame.draw.rect(self.screen, (40, 40, 60), empty_rect, border_radius=6)
-                self._blit_text_outlined(self.screen, self.small_font, "Empty", (slot_x + 80, slot_y + 50), fg=(120,120,120), outline=(0,0,0), outline_width=1)
+                pygame.draw.rect(self.screen, (80, 80, 100), empty_rect, 2, border_radius=6)
+                # Vertical line even for empty slots
+                pygame.draw.line(self.screen, (70, 70, 100), (slot_x + 85, slot_y + 32), (slot_x + 85, slot_y + 98), 1)
+                self._blit_text_outlined(self.screen, self.small_font, "Empty Slot", (slot_x + 95, slot_y + 55), fg=(120,120,120), outline=(0,0,0), outline_width=1)
     
     def _draw_inventory_tab(self, player, battle, modal_x, content_y, modal_w, content_h):
         """Draw inventory grid with pagination"""
@@ -1056,9 +1113,16 @@ class UIManager:
             item_def = self.shop_loader.find_item(iid) if getattr(self, 'shop_loader', None) else None
             if matches_filter(item_def):
                 items.append((iid, cnt))
-        items_per_page = 18  # 3 rows x 6 cols
+        
+        # List view - one line per item
+        items_per_page = 7  # Show 7 items per page to leave room for detail panel
         total_pages = max(1, (len(items) + items_per_page - 1) // items_per_page)
         page = getattr(self, 'inventory_page', 0)
+        
+        # Clamp page to valid range
+        if page >= total_pages:
+            page = max(0, total_pages - 1)
+            self.inventory_page = page
         
         # Pagination controls
         if page > 0:
@@ -1079,85 +1143,171 @@ class UIManager:
         page_text = self.small_font.render(f"Page {page + 1}/{total_pages}", True, (200, 200, 200))
         self.screen.blit(page_text, (modal_x + modal_w // 2 - 30, content_y + content_h - 32))
         
-        # Grid
-        cols = 6
-        cell_w = 90
-        cell_h = 90
-        pad = 10
+        # List view setup - LEFT SIDE for list, RIGHT SIDE for detail panel
+        list_width = 420  # Left side width for item list
+        detail_width = modal_w - list_width - 70  # Right side width for details
+        
         start_x = modal_x + 30
         start_y = content_y + 45
+        line_h = 50  # Height per item line
+        list_w = list_width
         
         start_idx = page * items_per_page
         end_idx = min(start_idx + items_per_page, len(items))
         page_items = items[start_idx:end_idx]
         
+        # Draw items as list (one per line)
         for idx, (iid, cnt) in enumerate(page_items):
-            cx = start_x + (idx % cols) * (cell_w + pad)
-            cy = start_y + (idx // cols) * (cell_h + pad)
-            rect = pygame.Rect(cx, cy, cell_w, cell_h)
-            pygame.draw.rect(self.screen, (60, 60, 90), rect, border_radius=6)
+            ly = start_y + idx * line_h
+            rect = pygame.Rect(start_x, ly, list_w, line_h - 4)
             
-            if self.inventory_selected == iid:
-                pygame.draw.rect(self.screen, (140, 120, 60), rect, width=3, border_radius=6)
+            # Check if selected or hovered
+            mouse_pos = pygame.mouse.get_pos()
+            is_hovered = rect.collidepoint(mouse_pos)
+            is_selected = (self.inventory_selected == iid)
             
+            # Background
+            if is_selected:
+                pygame.draw.rect(self.screen, (80, 80, 120), rect, border_radius=6)
+                pygame.draw.rect(self.screen, (140, 120, 220), rect, 3, border_radius=6)
+            elif is_hovered:
+                self.inventory_hovered = iid
+                pygame.draw.rect(self.screen, (70, 70, 100), rect, border_radius=6)
+            else:
+                pygame.draw.rect(self.screen, (55, 55, 80), rect, border_radius=6)
+            
+            # Horizontal dividing line
+            if idx > 0:
+                pygame.draw.line(self.screen, (80, 80, 120), (start_x, ly), (start_x + list_w, ly), 1)
             # Load item data
             item_def = self.shop_loader.find_item(iid) if getattr(self, 'shop_loader', None) else None
             name = item_def.get('name') if item_def else iid
+            rarity = item_def.get('rarity', 'common') if item_def else 'common'
             
-            # Icon - check if item has an image field
-            ico_rect = pygame.Rect(cx + 8, cy + 8, cell_w - 16, cell_h - 30)
+            # Icon (40x40)
+            icon_size = 40
+            icon_rect = pygame.Rect(start_x + 5, ly + 3, icon_size, icon_size)
             image_filename = item_def.get('image') if item_def else None
             
             if image_filename and self.assets_path:
-                # Try to load custom item image
                 icon_path = self.assets_path / 'images' / 'items' / image_filename
                 if icon_path.exists():
                     try:
                         ico = pygame.image.load(str(icon_path)).convert_alpha()
-                        ico = pygame.transform.smoothscale(ico, (ico_rect.w, ico_rect.h))
-                        self.screen.blit(ico, ico_rect)
+                        ico = pygame.transform.smoothscale(ico, (icon_size, icon_size))
+                        self.screen.blit(ico, icon_rect)
                     except Exception:
-                        # If loading fails, draw placeholder
-                        pygame.draw.rect(self.screen, (100, 100, 140), ico_rect, border_radius=4)
+                        pygame.draw.rect(self.screen, (100, 100, 140), icon_rect, border_radius=4)
                 else:
-                    # Image file doesn't exist, draw placeholder
-                    pygame.draw.rect(self.screen, (100, 100, 140), ico_rect, border_radius=4)
+                    pygame.draw.rect(self.screen, (100, 100, 140), icon_rect, border_radius=4)
             else:
-                # No image specified, draw placeholder
-                pygame.draw.rect(self.screen, (100, 100, 140), ico_rect, border_radius=4)
+                pygame.draw.rect(self.screen, (100, 100, 140), icon_rect, border_radius=4)
+            
+            # Item name with rarity color
+            name_x = start_x + 52
+            name_color = self.get_rarity_color(rarity)
+            outline_color = (255, 255, 255) if rarity == 'ancient' else (0, 0, 0)
+            outline_width = 2 if rarity == 'ancient' else 1
+            self._blit_text_outlined(self.screen, self.small_font, name[:35], (name_x, ly + 5), fg=name_color, outline=outline_color, outline_width=outline_width)
             
             # Count badge
-            badge_rect = pygame.Rect(cx + cell_w - 24, cy + 6, 18, 14)
-            pygame.draw.rect(self.screen, (10, 10, 10), badge_rect, border_radius=3)
-            self._blit_text_outlined(self.screen, self.small_font, str(cnt), badge_rect.center, fg=(255,255,255), outline=(0,0,0), outline_width=1, center=True)
+            count_text = f"x{cnt}"
+            self._blit_text_outlined(self.screen, pygame.font.Font(None, 22), count_text, (name_x, ly + 27), fg=(200, 200, 200), outline=(0, 0, 0), outline_width=1)
             
-            # Item name at bottom of cell, scaled to fit (use rarity color)
-            if name:
-                name_text = name[:15]  # Truncate if too long
-                # Calculate font size to fit within cell width
-                max_width = cell_w - 8
-                test_surf = self.small_font.render(name_text, True, (255, 255, 255))
+            # Quick stats display (inline) - reduced to save space
+            if item_def:
+                stats_text = []
+                if item_def.get('attack'): stats_text.append(f"+{item_def['attack']} ATK")
+                if item_def.get('defense'): stats_text.append(f"+{item_def['defense']} DEF")
+                if item_def.get('max_hp'): stats_text.append(f"+{item_def['max_hp']} HP")
                 
-                # If text is too wide, try progressively smaller text or truncate
-                if test_surf.get_width() > max_width:
-                    # Truncate with ellipsis
-                    while name_text and self.small_font.render(name_text + '...', True, (255, 255, 255)).get_width() > max_width:
-                        name_text = name_text[:-1]
-                    if name_text:
-                        name_text = name_text + '...'
-                
-                # Draw name at bottom of cell with rarity color
-                name_y = cy + cell_h - 18
-                rarity = item_def.get('rarity', 'common') if item_def else 'common'
-                name_color = self.get_rarity_color(rarity)
-                outline_color = (255, 255, 255) if rarity == 'ancient' else (0, 0, 0)
-                outline_width = 2 if rarity == 'ancient' else 1
-                self._blit_text_outlined(self.screen, self.small_font, name_text, (cx + 4, name_y), fg=name_color, outline=outline_color, outline_width=outline_width)
+                stats_str = "  |  ".join(stats_text[:2])  # Show first 2 stats only
+                if stats_str:
+                    self._blit_text_outlined(self.screen, pygame.font.Font(None, 18), stats_str, (name_x + 150, ly + 20), fg=(150, 220, 150), outline=(0, 0, 0), outline_width=1)
             
             # Register for clicks
             self.inventory_cells.append({'rect': rect, 'item_id': iid, 'count': cnt, 'def': item_def})
         
-        # Selected item details
+        # Draw hover tooltip if hovering over an item
+        if self.inventory_hovered:
+            hovered_def = None
+            hovered_cnt = 0
+            for c in self.inventory_cells:
+                if c['item_id'] == self.inventory_hovered:
+                    hovered_def = c.get('def')
+                    hovered_cnt = c.get('count', 0)
+                    break
+            
+            if hovered_def:
+                # Create tooltip
+                mouse_pos = pygame.mouse.get_pos()
+                tooltip_w = 280
+                tooltip_h = 200
+                tooltip_x = min(mouse_pos[0] + 15, self.screen.get_width() - tooltip_w - 10)
+                tooltip_y = min(mouse_pos[1] + 15, self.screen.get_height() - tooltip_h - 10)
+                
+                # Tooltip background
+                tooltip_surf = pygame.Surface((tooltip_w, tooltip_h), pygame.SRCALPHA)
+                tooltip_surf.fill((20, 20, 30, 240))
+                self.screen.blit(tooltip_surf, (tooltip_x, tooltip_y))
+                pygame.draw.rect(self.screen, (100, 100, 140), (tooltip_x, tooltip_y, tooltip_w, tooltip_h), 2, border_radius=6)
+                
+                # Item name with rarity
+                ty = tooltip_y + 8
+                item_name = hovered_def.get('name', 'Unknown')
+                rarity = hovered_def.get('rarity', 'common')
+                name_color = self.get_rarity_color(rarity)
+                outline_color = (255, 255, 255) if rarity == 'ancient' else (0, 0, 0)
+                outline_width = 2 if rarity == 'ancient' else 1
+                self._blit_text_outlined(self.screen, self.small_font, item_name[:30], (tooltip_x + 10, ty), fg=name_color, outline=outline_color, outline_width=outline_width)
+                ty += 24
+                
+                # Type and count
+                item_type = hovered_def.get('type', 'misc')
+                self._blit_text_outlined(self.screen, pygame.font.Font(None, 20), f"Type: {item_type.capitalize()}  |  x{hovered_cnt}", (tooltip_x + 10, ty), fg=(180,180,180), outline=(0,0,0), outline_width=1)
+                ty += 20
+                
+                # Dividing line
+                pygame.draw.line(self.screen, (100, 100, 140), (tooltip_x + 10, ty), (tooltip_x + tooltip_w - 10, ty), 1)
+                ty += 8
+                
+                # Stats
+                stats_list = []
+                if hovered_def.get('attack'): stats_list.append(f"Attack: +{hovered_def['attack']}")
+                if hovered_def.get('defense'): stats_list.append(f"Defense: +{hovered_def['defense']}")
+                if hovered_def.get('max_hp'): stats_list.append(f"Max HP: +{hovered_def['max_hp']}")
+                if hovered_def.get('penetration'): stats_list.append(f"Pen: +{hovered_def['penetration']:.0f}")
+                if hovered_def.get('magic_power'): stats_list.append(f"Mag Pow: +{hovered_def['magic_power']}")
+                if hovered_def.get('max_mana'): stats_list.append(f"Max Mana: +{hovered_def['max_mana']}")
+                if hovered_def.get('mana_regen'): stats_list.append(f"Mana Regen: +{hovered_def['mana_regen']}")
+                if hovered_def.get('agility'): stats_list.append(f"Agility: +{hovered_def['agility']}")
+                if hovered_def.get('critchance'): stats_list.append(f"Crit: +{hovered_def['critchance']*100:.0f}%")
+                if hovered_def.get('lifesteal'): stats_list.append(f"Lifesteal: +{hovered_def['lifesteal']:.0f}%")
+                
+                # Draw stats in two columns
+                col_w = 135
+                for i, stat in enumerate(stats_list[:10]):
+                    col = i % 2
+                    row = i // 2
+                    stat_x = tooltip_x + 10 + col * col_w
+                    stat_y = ty + row * 16
+                    self._blit_text_outlined(self.screen, pygame.font.Font(None, 18), stat, (stat_x, stat_y), fg=(150,220,150), outline=(0,0,0), outline_width=1)
+                
+                # Description at bottom
+                desc_y = ty + ((len(stats_list) + 1) // 2) * 16 + 8
+                desc = hovered_def.get('description', '')
+                if desc and desc_y < tooltip_y + tooltip_h - 25:
+                    pygame.draw.line(self.screen, (100, 100, 140), (tooltip_x + 10, desc_y), (tooltip_x + tooltip_w - 10, desc_y), 1)
+                    desc_y += 6
+                    # Truncate description to fit
+                    max_desc_len = 50
+                    desc_text = desc[:max_desc_len] + '...' if len(desc) > max_desc_len else desc
+                    self._blit_text_outlined(self.screen, pygame.font.Font(None, 16), desc_text, (tooltip_x + 10, desc_y), fg=(200,200,200), outline=(0,0,0), outline_width=1)
+        
+        # Reset hovered state for next frame
+        self.inventory_hovered = None
+        
+        # Selected item detail panel (RIGHT SIDE PANEL)
         if self.inventory_selected:
             if self.inventory_selected not in [iid for iid, _ in items]:
                 self.inventory_selected = None
@@ -1170,25 +1320,94 @@ class UIManager:
                     break
             
             if sel:
-                detail_y = start_y + 3 * (cell_h + pad) + 20
-                detail_rect = pygame.Rect(modal_x + 30, detail_y, modal_w - 60, 120)
-                pygame.draw.rect(self.screen, (40, 40, 60), detail_rect, border_radius=6)
+                # Detail panel on RIGHT SIDE
+                detail_x = start_x + list_width + 20
+                detail_y = start_y
+                detail_h = content_h - 60
+                detail_rect = pygame.Rect(detail_x, detail_y, detail_width, detail_h)
+                pygame.draw.rect(self.screen, (45, 45, 65), detail_rect, border_radius=8)
+                pygame.draw.rect(self.screen, (120, 120, 180), detail_rect, 3, border_radius=8)
                 
-                # Item name with rarity color at top of details panel
+                # Header bar
+                header_rect = pygame.Rect(detail_x, detail_y, detail_width, 35)
+                pygame.draw.rect(self.screen, (60, 60, 90), header_rect, border_radius=8)
+                self._blit_text_outlined(self.screen, self.small_font, "ITEM DETAILS", (detail_x + detail_width // 2 - 50, detail_y + 8), fg=(200, 200, 255), outline=(0, 0, 0), outline_width=2)
+                
+                # Item icon (larger in detail panel)
+                icon_y = detail_y + 45
+                icon_size = 60
+                icon_x = detail_x + (detail_width - icon_size) // 2
+                icon_rect = pygame.Rect(icon_x, icon_y, icon_size, icon_size)
+                
+                item_def = sel.get('def')
+                image_filename = item_def.get('image') if item_def else None
+                if image_filename and self.assets_path:
+                    icon_path = self.assets_path / 'images' / 'items' / image_filename
+                    if icon_path.exists():
+                        try:
+                            ico = pygame.image.load(str(icon_path)).convert_alpha()
+                            ico = pygame.transform.smoothscale(ico, (icon_size, icon_size))
+                            self.screen.blit(ico, icon_rect)
+                        except Exception:
+                            pygame.draw.rect(self.screen, (100, 100, 140), icon_rect, border_radius=6)
+                    else:
+                        pygame.draw.rect(self.screen, (100, 100, 140), icon_rect, border_radius=6)
+                else:
+                    pygame.draw.rect(self.screen, (100, 100, 140), icon_rect, border_radius=6)
+                
+                # Item name with rarity color (centered below icon)
+                name_y = icon_y + icon_size + 10
                 item_name = sel['def'].get('name', sel['item_id']) if sel.get('def') else sel['item_id']
                 rarity = sel['def'].get('rarity', 'common') if sel.get('def') else 'common'
                 name_color = self.get_rarity_color(rarity)
                 outline_color = (255, 255, 255) if rarity == 'ancient' else (0, 0, 0)
                 outline_width = 2 if rarity == 'ancient' else 1
-                self._blit_text_outlined(self.screen, self.small_font, item_name[:35], (detail_rect.x + 10, detail_rect.y + 5), fg=name_color, outline=outline_color, outline_width=outline_width)
+                
+                # Center the name
+                name_surf = self.small_font.render(item_name[:25], True, name_color)
+                name_x = detail_x + (detail_width - name_surf.get_width()) // 2
+                self._blit_text_outlined(self.screen, self.small_font, item_name[:25], (name_x, name_y), fg=name_color, outline=outline_color, outline_width=outline_width)
+                
+                # Count and type
+                info_y = name_y + 25
+                item_type = item_def.get('type', 'misc') if item_def else 'misc'
+                count_text = f"x{sel['count']}  |  {item_type.capitalize()}"
+                self._blit_text_outlined(self.screen, pygame.font.Font(None, 20), count_text, (detail_x + 10, info_y), fg=(180, 180, 200), outline=(0, 0, 0), outline_width=1)
+                
+                # Divider line
+                line_y = info_y + 22
+                pygame.draw.line(self.screen, (100, 100, 140), (detail_x + 10, line_y), (detail_x + detail_width - 10, line_y), 2)
                 
                 # Description
+                desc_y = line_y + 10
                 desc = sel['def'].get('description', 'No description') if sel.get('def') else 'No description'
-                self._blit_text_outlined(self.screen, pygame.font.Font(None, 22), desc[:80], (detail_rect.x + 10, detail_rect.y + 28), fg=(180,180,180), outline=(0,0,0), outline_width=1)
+                # Word wrap description
+                words = desc.split()
+                lines = []
+                current_line = []
+                for word in words:
+                    test_line = ' '.join(current_line + [word])
+                    if pygame.font.Font(None, 18).render(test_line, True, (255,255,255)).get_width() < detail_width - 20:
+                        current_line.append(word)
+                    else:
+                        if current_line:
+                            lines.append(' '.join(current_line))
+                        current_line = [word]
+                if current_line:
+                    lines.append(' '.join(current_line))
+                
+                for i, line in enumerate(lines[:3]):  # Max 3 lines
+                    self._blit_text_outlined(self.screen, pygame.font.Font(None, 18), line, (detail_x + 10, desc_y + i * 18), fg=(200, 200, 200), outline=(0, 0, 0), outline_width=1)
                 
                 # Stats display
                 if sel.get('def'):
-                    stats_y = detail_rect.y + 50
+                    stats_y = desc_y + len(lines[:3]) * 18 + 15
+                    
+                    # Stats header
+                    pygame.draw.line(self.screen, (100, 100, 140), (detail_x + 10, stats_y - 5), (detail_x + detail_width - 10, stats_y - 5), 2)
+                    self._blit_text_outlined(self.screen, pygame.font.Font(None, 22), "STATS", (detail_x + 10, stats_y + 2), fg=(200, 200, 255), outline=(0, 0, 0), outline_width=1)
+                    stats_y += 25
+                    
                     stats = []
                     item_def = sel['def']
                     if item_def.get('attack'): stats.append(f"+{item_def['attack']} Attack")
@@ -1199,20 +1418,24 @@ class UIManager:
                     if item_def.get('magic_penetration'): stats.append(f"+{item_def['magic_penetration']:.0f} Magic Pen")
                     if item_def.get('max_mana'): stats.append(f"+{item_def['max_mana']} Max Mana")
                     if item_def.get('mana_regen'): stats.append(f"+{item_def['mana_regen']} Mana Regen")
+                    if item_def.get('agility'): stats.append(f"+{item_def['agility']} Agility")
+                    if item_def.get('critchance'): stats.append(f"+{item_def['critchance']*100:.1f}% Crit Chance")
+                    if item_def.get('critdamage'): stats.append(f"+{item_def['critdamage']:.1f}x Crit Dmg")
+                    if item_def.get('lifesteal'): stats.append(f"+{item_def['lifesteal']:.1f}% Lifesteal")
+                    if item_def.get('hp_regen'): stats.append(f"+{item_def['hp_regen']:.1f} HP Regen")
+                    if item_def.get('dodge_chance'): stats.append(f"+{item_def['dodge_chance']*100:.1f}% Dodge")
                     
-                    for i, stat in enumerate(stats[:4]):  # Show up to 4 stats
-                        col = i % 2
-                        row = i // 2
-                        stat_x = detail_rect.x + 10 + col * 200
-                        stat_y = stats_y + row * 20
-                        self._blit_text_outlined(self.screen, self.small_font, stat, (stat_x, stat_y), fg=(150,220,150), outline=(0,0,0), outline_width=1)
+                    for i, stat in enumerate(stats):
+                        stat_y = stats_y + i * 18
+                        self._blit_text_outlined(self.screen, pygame.font.Font(None, 20), stat, (detail_x + 15, stat_y), fg=(150, 220, 150), outline=(0, 0, 0), outline_width=1)
                 
-                # Action buttons
-                btn_y = detail_rect.y + 85
+                # Action buttons at bottom of detail panel
+                btn_y = detail_y + detail_h - 45
                 if sel.get('def') and sel['def'].get('type') in ('weapon', 'armor', 'offhand', 'relic'):
-                    equip_rect = pygame.Rect(detail_rect.x + detail_rect.w - 110, btn_y, 100, 30)
-                    pygame.draw.rect(self.screen, (100, 180, 100), equip_rect, border_radius=6)
-                    equip_text = self.small_font.render('Equip', True, (0, 0, 0))
+                    equip_rect = pygame.Rect(detail_x + (detail_width - 140) // 2, btn_y, 140, 35)
+                    pygame.draw.rect(self.screen, (100, 180, 100), equip_rect, border_radius=8)
+                    pygame.draw.rect(self.screen, (150, 230, 150), equip_rect, 2, border_radius=8)
+                    equip_text = self.title_font.render('EQUIP', True, (255, 255, 255))
                     self.screen.blit(equip_text, equip_text.get_rect(center=equip_rect.center))
                     def make_equip(iid=sel['item_id']):
                         def act():
@@ -1226,7 +1449,7 @@ class UIManager:
                     current_qty = sel.get('count', 1)
                     btn_width = 50
                     btn_spacing = 5
-                    start_x = detail_rect.x + detail_rect.w - (btn_width * 5 + btn_spacing * 4)
+                    start_btn_x = detail_rect.x + detail_rect.w - (btn_width * 5 + btn_spacing * 4)
                     
                     use_amounts = [1, 5, 10, 100, current_qty]  # Last one is "All"
                     use_labels = ['x1', 'x5', 'x10', 'x100', 'All']
@@ -1236,7 +1459,7 @@ class UIManager:
                             continue  # Skip if not enough items
                         
                         actual_amount = min(amount, current_qty) if label != 'All' else current_qty
-                        btn_x = start_x + i * (btn_width + btn_spacing)
+                        btn_x = start_btn_x + i * (btn_width + btn_spacing)
                         use_rect = pygame.Rect(btn_x, btn_y, btn_width, 30)
                         
                         # Color gradient based on amount
@@ -1247,7 +1470,7 @@ class UIManager:
                             color = (intensity, 120, 60)
                         
                         pygame.draw.rect(self.screen, color, use_rect, border_radius=6)
-                        use_text = self.small_font.render(label, True, (0, 0, 0))
+                        use_text = self.small_font.render(label, True, (255, 255, 255))
                         self.screen.blit(use_text, use_text.get_rect(center=use_rect.center))
                         
                         def make_use(iid=sel['item_id'], qty=actual_amount):
@@ -1291,7 +1514,7 @@ class UIManager:
                     current_qty = sel.get('count', 1)
                     btn_width = 50
                     btn_spacing = 5
-                    start_x = detail_rect.x + detail_rect.w - (btn_width * 5 + btn_spacing * 4)
+                    start_btn_x = detail_rect.x + detail_rect.w - (btn_width * 5 + btn_spacing * 4)
                     
                     open_amounts = [1, 5, 10, 100, current_qty]  # Last one is "All"
                     open_labels = ['x1', 'x5', 'x10', 'x100', 'All']
@@ -1301,7 +1524,7 @@ class UIManager:
                             continue  # Skip if not enough items
                         
                         actual_amount = min(amount, current_qty) if label != 'All' else current_qty
-                        btn_x = start_x + i * (btn_width + btn_spacing)
+                        btn_x = start_btn_x + i * (btn_width + btn_spacing)
                         open_rect = pygame.Rect(btn_x, btn_y, btn_width, 30)
                         
                         # Color gradient based on amount
@@ -1312,7 +1535,7 @@ class UIManager:
                             color = (intensity, 140 + i * 10, 60)
                         
                         pygame.draw.rect(self.screen, color, open_rect, border_radius=6)
-                        open_text = self.small_font.render(label, True, (0, 0, 0))
+                        open_text = self.small_font.render(label, True, (255, 255, 255))
                         self.screen.blit(open_text, open_text.get_rect(center=open_rect.center))
                         
                         def make_open(iid=sel['item_id'], idef=sel.get('def'), qty=actual_amount):
@@ -1348,45 +1571,68 @@ class UIManager:
                                 self.inventory_selected = None
                             return act
                         self.character_sheet_buttons.append({'rect': open_rect, 'action': make_open()})
+
     
     def _draw_stats_tab(self, player, modal_x, content_y, modal_w, content_h):
-        """Draw player stats with pagination"""
+        """Draw player stats with pagination - showing ALL relevant stats"""
         def_pct = player.get_effective_defense_percent() if hasattr(player, 'get_effective_defense_percent') else 0
         pen_pct = player.get_effective_penetration_percent() if hasattr(player, 'get_effective_penetration_percent') else 0
+        magic_pen_pct = 0
+        if hasattr(player, 'magic_penetration') and player.magic_penetration > 0:
+            magic_pen_pct = (player.magic_penetration / (player.magic_penetration + 100)) * 100
         
         # Calculate next level XP requirement
         next_level_xp = int((player.level ** 1.5) * 100)
         
-        # All stat lines (can be extended easily)
+        # All stat lines (comprehensive list)
         all_stat_lines = [
-            ("Basic Info", None),
-            (f"  Name: {getattr(player, 'name', 'Player')}", None),
-            (f"  Level: {getattr(player, 'level', 1)}", None),
-            (f"  XP: {getattr(player, 'xp', 0)} / {next_level_xp}", None),
+            ("═══ BASIC INFO ═══", (255, 220, 100)),
+            (f"  Name: {getattr(player, 'name', 'Player')}", (200, 200, 200)),
+            (f"  Level: {getattr(player, 'level', 1)}", (200, 200, 200)),
+            (f"  XP: {getattr(player, 'xp', 0)} / {next_level_xp}", (100, 255, 100)),
+            (f"  XP Bonus: {getattr(player, 'xp_bonus', 0.0) * 100:.1f}%", (150, 255, 150)),
+            (f"  Unspent Points: {getattr(player, 'unspent_points', 0)}", (255, 220, 180)),
             (f"  Gold: {player.gold}g", (255, 215, 0)),
+            (f"  Gold Bonus: {getattr(player, 'gold_bonus', 0.0) * 100:.1f}%", (255, 230, 100)),
             (f"  Game Seed: {getattr(player, 'game_seed', 'N/A')}", (180, 180, 255)),
             ("", None),
-            ("Combat Stats", None),
+            ("═══ COMBAT STATS ═══", (255, 100, 100)),
             (f"  HP: {player.hp} / {player.max_hp}", (100, 255, 100)),
             (f"  Attack: {player.atk}", (255, 150, 100)),
             (f"  Defense: {player.defense} ({def_pct:.1f}% reduction)", (150, 200, 255)),
             (f"  Penetration: {getattr(player, 'penetration', 0):.1f} ({pen_pct:.1f}%)", (255, 180, 255)),
             ("", None),
-            ("Magic Stats", None),
+            ("═══ MAGIC STATS ═══", (200, 150, 255)),
             (f"  Mana: {getattr(player, 'current_mana', 0)} / {getattr(player, 'max_mana', 0)}", (100, 200, 255)),
             (f"  Mana Regen: {getattr(player, 'mana_regen', 0)}/turn", (150, 220, 255)),
             (f"  Magic Power: {getattr(player, 'magic_power', 0)}", (200, 150, 255)),
-            (f"  Magic Penetration: {getattr(player, 'magic_penetration', 0)}", (220, 170, 255)),
+            (f"  Magic Penetration: {getattr(player, 'magic_penetration', 0):.1f} ({magic_pen_pct:.1f}%)", (220, 170, 255)),
             ("", None),
-            ("Critical Stats", None),
-            (f"  Crit Chance: {int(getattr(player, 'critchance', 0.0) * 100)}%", (255, 100, 100)),
-            (f"  Crit Damage: {round(getattr(player, 'critdamage', 1.5), 2)}x", (255, 100, 100)),
+            ("═══ CRITICAL STATS ═══", (255, 100, 150)),
+            (f"  Crit Chance: {getattr(player, 'critchance', 0.0) * 100:.1f}%", (255, 120, 120)),
+            (f"  Crit Damage: {getattr(player, 'critdamage', 1.5):.2f}x", (255, 100, 100)),
             ("", None),
-            ("Agility Stats", None),
+            ("═══ AGILITY & EVASION ═══", (100, 255, 200)),
             (f"  Agility: {getattr(player, 'agility', 0)}", (100, 255, 200)),
             (f"  Dodge Chance: {getattr(player, 'dodge_chance', 0.0) * 100:.1f}%", (100, 255, 200)),
             ("", None),
-            ("Challenge Progress", None),
+            ("═══ SUSTAIN STATS ═══", (150, 255, 150)),
+            (f"  Lifesteal: {getattr(player, 'lifesteal', 0.0):.1f}%", (180, 255, 180)),
+            (f"  HP Regen: {getattr(player, 'hp_regen', 0.0):.1f}/turn", (150, 255, 150)),
+            ("", None),
+            ("═══ EQUIPMENT SLOTS ═══", (200, 200, 100)),
+            (f"  Weapon: {player.equipment.get('weapon', 'None')}", (220, 220, 220)),
+            (f"  Armor: {player.equipment.get('armor', 'None')}", (220, 220, 220)),
+            (f"  Offhand: {player.equipment.get('offhand', 'None')}", (220, 220, 220)),
+            (f"  Relic 1: {player.equipment.get('relic1', 'None')}", (220, 220, 220)),
+            (f"  Relic 2: {player.equipment.get('relic2', 'None')}", (220, 220, 220)),
+            (f"  Relic 3: {player.equipment.get('relic3', 'None')}", (220, 220, 220)),
+            ("", None),
+            ("═══ SKILLS ═══", (255, 200, 100)),
+            (f"  Unlocked Skills: {len(getattr(player, 'skills', []))}", (200, 220, 255)),
+            (f"  Equipped Skills: {len(getattr(player, 'equipped_skills', []))}/5", (200, 220, 255)),
+            ("", None),
+            ("═══ CHALLENGE PROGRESS ═══", (255, 180, 50)),
             (f"  Challenge Coins: {getattr(player, 'challenge_coins', 0)}", (255, 200, 100)),
             (f"  Highest Wave: {getattr(player, 'highest_wave', 0)}", (200, 200, 255)),
         ]

@@ -76,19 +76,19 @@
       "type": "counter",
       "element": "dark",
       "mana_cost": 30,
-      "power": 10,
+      "power": 20,
       "scaling_stat": "atk",
       "target": "self",
       "effectiveness": {},
       "effects": [
         {
           "type": "counter",
-          "damage_percent": 0.5,
+          "damage_percent": 1.0,
           "duration": 2
         }
       ],
       "cooldown": 0,
-      "description": "Mode contre-attaque: esquive le prochain coup et riposte avec 50% des dégâts."
+      "description": "Counter stance: Take enemy's hit, then strike back next turn with skill damage + 100% of damage taken."
     },
     {
       "id": "skill_fireball_advanced",

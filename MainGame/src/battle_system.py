@@ -691,6 +691,11 @@ class BattleSystem:
                     # apply damage and capture the actual damage taken after defense
                     dmg_taken = self.player.take_damage(dmg, enemy_pen, self.effect_manager)
                     
+                    # Store damage in counter effect if active (turn 1 only)
+                    if hasattr(self, 'effect_manager') and self.effect_manager:
+                        if self.effect_manager.store_counter_damage(self.player, dmg_taken):
+                            self.add_log(f"Counter stance absorbing {dmg_taken} damage!", 'buff')
+                    
                     # Play player hit sound
                     self.play_sound('player_hit')
                     
@@ -716,12 +721,73 @@ class BattleSystem:
                         print(f"{self.player.name} est vaincu... 💀")
                     # Do not auto-respawn here; main loop will handle game over
 
+                # Check if player has counter ready to strike (turn 2)
+                counter_ready = None
+                if hasattr(self, 'effect_manager') and self.effect_manager:
+                    # Increment counter turn at start of player turn
+                    self.effect_manager.increment_counter_turn(self.player)
+                    counter_ready = self.effect_manager.get_counter_strike_ready(self.player)
+                
                 self.turn = "player"
                 self.turn_processed = False  # Reset for next player turn
                 self.enemy_turn_processed = False
+                
+                # Execute automatic counter strike if ready (turn 2)
+                if counter_ready:
+                    self._execute_counter_strike(counter_ready)
+                
                 # Slight pause after enemy turn before player can act
                 self.player_action_cooldown_until = time.time() + 0.2
 
+    def _execute_counter_strike(self, counter_effect):
+        """Execute automatic counter strike with skill scaling + stored damage"""
+        # Get skill data from counter effect
+        skill_power = counter_effect.get('skill_power', 0)
+        scaling_stat_name = counter_effect.get('skill_scaling_stat', 'atk')
+        damage_stored = counter_effect.get('damage_stored', 0)
+        skill_name = counter_effect.get('source', 'Counter Strike')
+        
+        # Calculate scaling damage
+        scaling_stat = getattr(self.player, scaling_stat_name, 0)
+        scaling_damage = int(skill_power + scaling_stat * 0.5)  # 50% scaling
+        
+        # Total damage = skill scaling + damage taken on turn 1
+        total_damage = scaling_damage + damage_stored
+        
+        # Apply damage to enemy
+        actual_damage = self.enemy.take_damage(total_damage, getattr(self.player, 'magic_penetration', 0), self.effect_manager)
+        
+        # Log and display
+        self.add_log(f"{skill_name} strikes back for {actual_damage} damage! (Skill: {scaling_damage} + Stored: {damage_stored})", 'skill')
+        print(f"Counter Strike! {actual_damage} damage (Scaling: {scaling_damage}, Stored: {damage_stored})")
+        
+        # Play skill sound
+        self.play_sound('skill')
+        
+        # Add damage event
+        try:
+            self.damage_events.append({
+                'target': 'enemy',
+                'amount': int(actual_damage),
+                'time': time.time(),
+                'is_crit': False,
+            })
+        except Exception:
+            pass
+        
+        # Check if enemy died from counter
+        if self.enemy.is_dead():
+            self.play_sound('monster_kill')
+            gold_gained = int(self.enemy.gold * getattr(self.player, 'gold_modifier', 1.0))
+            self.add_log(f"{self.enemy.name} defeated by counter! +{gold_gained}g", 'info')
+            self.player.gold += gold_gained
+            self.player.gain_xp(self.enemy.xp)
+            if self.enemy.is_boss:
+                self._try_boss_skill_unlock()
+            self._process_drops(self.enemy)
+            self.next_wave()
+            self.player_action_cooldown_until = time.time() + 0.3
+    
     def next_wave(self):
         self.wave += 1
         # Award challenge coins with scaling: +1 every 10 waves, +1 extra every 20 waves

@@ -134,25 +134,44 @@ class EffectManager:
                 return effect
         return None
     
-    def trigger_counter(self, entity, attacker, incoming_damage):
-        """Trigger counter effect when entity is attacked
+    def store_counter_damage(self, entity, incoming_damage):
+        """Store damage taken during counter stance for turn 2 retaliation
         
-        Returns counter damage dealt to attacker (or None if no counter)
+        Returns True if damage was stored, False otherwise
+        """
+        counter = self.has_counter_effect(entity)
+        if not counter:
+            return False
+        
+        # Only store damage on turn 1 (turn_count == 0)
+        if counter.get('turn_count', 0) == 0:
+            damage_percent = counter.get('damage_percent', 1.0)
+            damage_to_store = int(incoming_damage * damage_percent)
+            counter['damage_stored'] = counter.get('damage_stored', 0) + damage_to_store
+            return True
+        
+        return False
+    
+    def get_counter_strike_ready(self, entity):
+        """Check if counter is ready to strike back (turn 2)
+        
+        Returns counter effect data if ready, None otherwise
         """
         counter = self.has_counter_effect(entity)
         if not counter:
             return None
         
-        damage_percent = counter.get('damage_percent', 0.5)
-        counter_damage = int(incoming_damage * damage_percent)
+        # Counter strikes on turn 2 (turn_count == 1)
+        if counter.get('turn_count', 0) == 1:
+            return counter
         
-        # Apply counter damage to attacker
-        attacker.hp = max(0, attacker.hp - counter_damage)
-        
-        # Remove counter effect after triggering (one-time use)
-        self.remove_effect(entity, counter.get('_id'))
-        
-        return counter_damage
+        return None
+    
+    def increment_counter_turn(self, entity):
+        """Increment counter turn counter (called at start of player turn)"""
+        counter = self.has_counter_effect(entity)
+        if counter:
+            counter['turn_count'] = counter.get('turn_count', 0) + 1
     
     def clear_entity_effects(self, entity):
         """Remove all effects from an entity (e.g., on death)"""

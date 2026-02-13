@@ -96,8 +96,8 @@
       "atk_base": 10,
       "def_base": 10,
       "magic_def_base": 15,
-      "xp_base": 250,
-      "gold_base": 200,
+      "xp_base": 150,
+      "gold_base": 100,
       "min_wave": 10,
       "spawn_on_wave_multiple_of": 10,
       "drops": [
@@ -518,14 +518,15 @@
       "name": "Lich",
       "classification": "miniboss",
       "category": "undead",
-      "min_wave": 35,
       "hp_base": 100,
       "atk_base": 28,
       "def_base": 5,
-      "magic_def_base": 20,
       "pen_base": 10.0,
+      "magic_def_base": 20,
       "xp_base": 120,
       "gold_base": 70,
+      "min_wave": 35,
+      "image": "lich.png",
       "drops": [
         {
           "item_id": "undead_essence",

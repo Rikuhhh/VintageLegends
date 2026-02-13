@@ -222,12 +222,17 @@ class SkillManager:
                 results.append(('debuff', effect.get('stat'), effect.get('value'), target))
             
             elif effect_type == 'counter':
-                # Apply counter stance to caster
+                # Apply counter stance to caster - stores the skill info for turn 2
                 effect_manager.add_effect(caster, {
                     'type': 'counter',
-                    'damage_percent': effect.get('damage_percent', 0.5),
-                    'duration': effect.get('duration'),
-                    'source': skill.get('name', skill.get('id'))
+                    'damage_percent': effect.get('damage_percent', 1.0),  # 100% of damage taken added to counter
+                    'duration': 2,  # Always 2 turns
+                    'source': skill.get('name', skill.get('id')),
+                    'skill_id': skill.get('id'),
+                    'skill_power': skill.get('power', 0),
+                    'skill_scaling_stat': skill.get('scaling_stat', 'atk'),
+                    'damage_stored': 0,  # Will store damage taken during counter stance
+                    'turn_count': 0  # Track which turn of counter we're on
                 })
                 results.append(('counter', effect.get('damage_percent'), caster))
             
