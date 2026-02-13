@@ -771,22 +771,46 @@ class UIManager:
             
             # Calculate positions for enemy sprite and HP bar
             if self.current_enemy_image:
+                # Check if enemy was recently hit for visual effect
+                import time
+                import random
+                hit_effect_duration = 0.3  # seconds
+                time_since_hit = time.time() - battle.enemy_hit_time
+                is_hit = time_since_hit < hit_effect_duration
+                
+                # Apply red tint if hit
+                enemy_sprite = self.current_enemy_image
+                if is_hit:
+                    # Create red overlay
+                    enemy_sprite = self.current_enemy_image.copy()
+                    red_overlay = pygame.Surface(enemy_sprite.get_size(), pygame.SRCALPHA)
+                    red_overlay.fill((255, 50, 50, 128))
+                    enemy_sprite.blit(red_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                
                 # Position at top-center of screen
-                enemy_img_x = screen_w // 2 - self.current_enemy_image.get_width() // 2
+                enemy_img_x = screen_w // 2 - enemy_sprite.get_width() // 2
                 enemy_img_y = 60  # Top of screen with some padding
+                
+                # Apply shake effect if hit
+                if is_hit:
+                    shake_intensity = 6
+                    shake_x = random.randint(-shake_intensity, shake_intensity)
+                    shake_y = random.randint(-shake_intensity, shake_intensity)
+                    enemy_img_x += shake_x
+                    enemy_img_y += shake_y
                 
                 # Draw a semi-transparent black backdrop
                 backdrop_padding = 15
-                backdrop = pygame.Surface((self.current_enemy_image.get_width() + backdrop_padding * 2, 
-                                          self.current_enemy_image.get_height() + backdrop_padding * 2), pygame.SRCALPHA)
+                backdrop = pygame.Surface((enemy_sprite.get_width() + backdrop_padding * 2, 
+                                          enemy_sprite.get_height() + backdrop_padding * 2), pygame.SRCALPHA)
                 backdrop.fill((0, 0, 0, 120))
                 self.screen.blit(backdrop, (enemy_img_x - backdrop_padding, enemy_img_y - backdrop_padding))
                 
                 # Draw the enemy image
-                self.screen.blit(self.current_enemy_image, (enemy_img_x, enemy_img_y))
+                self.screen.blit(enemy_sprite, (enemy_img_x, enemy_img_y))
                 
-                # HP bar below the sprite
-                bar_y = enemy_img_y + self.current_enemy_image.get_height() + 10
+                # HP bar below the sprite (use original image height for consistent position)
+                bar_y = enemy_img_y + enemy_sprite.get_height() + 10
             else:
                 # No sprite, so position HP bar at top-center
                 bar_y = 80
@@ -1590,10 +1614,10 @@ class UIManager:
             (f"  Name: {getattr(player, 'name', 'Player')}", (200, 200, 200)),
             (f"  Level: {getattr(player, 'level', 1)}", (200, 200, 200)),
             (f"  XP: {getattr(player, 'xp', 0)} / {next_level_xp}", (100, 255, 100)),
-            (f"  XP Bonus: {getattr(player, 'xp_bonus', 0.0) * 100:.1f}%", (150, 255, 150)),
+            (f"  XP Bonus: {(getattr(player, 'exp_modifier', 1.0) - 1.0) * 100:.1f}%", (150, 255, 150)),
             (f"  Unspent Points: {getattr(player, 'unspent_points', 0)}", (255, 220, 180)),
             (f"  Gold: {player.gold}g", (255, 215, 0)),
-            (f"  Gold Bonus: {getattr(player, 'gold_bonus', 0.0) * 100:.1f}%", (255, 230, 100)),
+            (f"  Gold Bonus: {(getattr(player, 'gold_modifier', 1.0) - 1.0) * 100:.1f}%", (255, 230, 100)),
             (f"  Game Seed: {getattr(player, 'game_seed', 'N/A')}", (180, 180, 255)),
             ("", None),
             ("═══ COMBAT STATS ═══", (255, 100, 100)),

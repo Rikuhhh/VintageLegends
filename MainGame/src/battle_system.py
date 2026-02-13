@@ -31,6 +31,9 @@ class BattleSystem:
         self.in_shop = False
         # Queue of recent damage events for UI (list of dicts: target, amount, time, is_crit)
         self.damage_events = []
+        # Hit effect tracking (for visual feedback)
+        self.player_hit_time = 0
+        self.enemy_hit_time = 0
         # Combat log messages (list of strings)
         self.combat_log = []
         # Blocking state: temporary defense bonus for next enemy turn
@@ -393,7 +396,11 @@ class BattleSystem:
                     'amount': int(dmg_dealt),
                     'time': time.time(),
                     'is_crit': bool(is_crit),
-                })
+                })                # Record enemy hit time for visual effect
+                self.enemy_hit_time = time.time()                # Record enemy hit time for visual effect
+                self.enemy_hit_time = time.time()
+                # Record enemy hit time for visual effect
+                self.enemy_hit_time = time.time()
             except Exception:
                 pass
         
@@ -445,8 +452,8 @@ class BattleSystem:
         else:
             self.turn = "enemy"
             self.last_action_time = time.time()
-            # Longer delay for multi-hit to let all damage numbers display
-            self.action_delay = 1.2 + (num_hits * 0.15)  # Scale with hit count
+            # Standard action delay
+            self.action_delay = 0.9
             self.enemy_turn_processed = False
     
     def player_block(self):
@@ -712,6 +719,8 @@ class BattleSystem:
                             'time': time.time(),
                             'is_crit': False,
                         })
+                        # Record player hit time for visual effect
+                        self.player_hit_time = time.time()
                     except Exception:
                         pass
                     print(f"{self.enemy.name} inflige {dmg_taken} à {self.player.name} !")
@@ -847,6 +856,8 @@ class BattleSystem:
                 allowed_categories = [cat for cat, allowed in enemy_types.items() if allowed]
             
             self.enemy = Enemy.random_enemy(self.wave, allowed_categories=allowed_categories)
+            # Reset enemy hit time so new enemy doesn't appear with red/shake effect
+            self.enemy_hit_time = 0
             print(f"👹 Nouvelle vague : {self.enemy.name}")
             self.turn = "player"
             self.turn_processed = False  # Reset for new wave

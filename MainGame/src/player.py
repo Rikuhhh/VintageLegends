@@ -801,6 +801,10 @@ class Player:
                     self.gold_modifier += float(equipped_item.get('gold_gain', 0.0)) / 100.0
                 except Exception:
                     pass
+        
+        # Add HP regen scaling based on max HP (+1 HP regen per 50 max HP)
+        hp_regen_from_max_hp = self.max_hp // 50
+        self.hp_regen += hp_regen_from_max_hp
 
         # Apply permanent upgrades (data-driven) to derived stats only.
         # This avoids mutating the canonical base_* attributes repeatedly when _recalc_stats is called.

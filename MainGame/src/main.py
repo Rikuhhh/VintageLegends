@@ -4,6 +4,7 @@ import threading
 import time
 import sys
 import json
+import random
 from pathlib import Path
 
 try:
@@ -1123,6 +1124,8 @@ def main():
                 enemy_types = battle.current_zone.get('enemy_types', {})
                 allowed_categories = [cat for cat, allowed in enemy_types.items() if allowed]
             battle.enemy = Enemy.random_enemy(battle.wave, allowed_categories=allowed_categories)
+            # Reset enemy hit time so new enemy doesn't appear with red/shake effect
+            battle.enemy_hit_time = 0
             battle.turn = 'player'
 
         # --- AFFICHAGE ---
@@ -1155,9 +1158,30 @@ def main():
             scaled_height = int(player_sprite.get_height() * 0.3)
             scaled_sprite = pygame.transform.smoothscale(player_sprite, (scaled_width, scaled_height))
             
+            # Check if player was recently hit for visual effect
+            hit_effect_duration = 0.3  # seconds
+            time_since_hit = time.time() - battle.player_hit_time
+            is_hit = time_since_hit < hit_effect_duration
+            
+            # Apply red tint if hit
+            if is_hit:
+                # Create red overlay
+                red_overlay = scaled_sprite.copy()
+                red_overlay.fill((255, 50, 50, 128), special_flags=pygame.BLEND_RGBA_MULT)
+                scaled_sprite.blit(red_overlay, (0, 0))
+            
             # Center the player sprite horizontally, keep it at bottom
             sprite_x = (width - scaled_width) // 2
             sprite_y = height - scaled_height - 50
+            
+            # Apply shake effect if hit
+            if is_hit:
+                shake_intensity = 5
+                shake_x = random.randint(-shake_intensity, shake_intensity)
+                shake_y = random.randint(-shake_intensity, shake_intensity)
+                sprite_x += shake_x
+                sprite_y += shake_y
+            
             screen.blit(scaled_sprite, (sprite_x, sprite_y))
             
             # Draw player health bar above sprite
