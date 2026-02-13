@@ -88,6 +88,9 @@ class UIManager:
         self.crafting_ui_buttons = []
         self.crafting_selected_recipe = None
         self.crafting_ui_rect = None
+        self.crafting_tab = 'craft'  # 'craft' or 'scrap'
+        self.scrap_selected_rarity = 'common'
+        self.scrap_selected_item = None
         # Combat Log UI
         self.combat_log_open = True  # Start open by default
         self.combat_log_dragging = False
@@ -251,17 +254,34 @@ class UIManager:
                 return
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            # Check skill buttons
+            # Priority 1: Modal buttons (if modals are open, they should capture clicks first)
+            
+            # crafting UI modal buttons (only if crafting UI is open)
+            if getattr(self, 'crafting_ui_open', False):
+                for btn in getattr(self, 'crafting_ui_buttons', []):
+                    if btn['rect'].collidepoint(event.pos):
+                        btn['action']()
+                        return
+            
+            # skills UI modal buttons (only if skills UI is open)
+            if getattr(self, 'skills_ui_open', False):
+                for btn in getattr(self, 'skills_ui_buttons', []):
+                    if btn['rect'].collidepoint(event.pos):
+                        btn['action']()
+                        return
+            
+            # Priority 2: Check skill buttons
             for btn in getattr(self, 'skill_buttons', []):
                 if btn["rect"].collidepoint(event.pos):
                     btn["action"]()
                     return
             
-            # Check character sheet buttons first (close, tabs, etc.) before dragging
-            for btn in getattr(self, 'character_sheet_buttons', []):
-                if btn["rect"].collidepoint(event.pos):
-                    btn["action"]()
-                    return
+            # Check character sheet buttons (only if character sheet is open)
+            if getattr(self, 'character_sheet_open', False):
+                for btn in getattr(self, 'character_sheet_buttons', []):
+                    if btn["rect"].collidepoint(event.pos):
+                        btn["action"]()
+                        return
             
             # Check if dragging combat log title bar
             if getattr(self, 'combat_log_open', False) and hasattr(self, 'combat_log_title_bar'):
@@ -347,18 +367,6 @@ class UIManager:
             if getattr(self, 'combat_log_toggle_rect', None) and self.combat_log_toggle_rect.collidepoint(event.pos):
                 self.combat_log_open = not self.combat_log_open
                 return
-            
-            # skills UI modal buttons
-            for btn in getattr(self, 'skills_ui_buttons', []):
-                if btn['rect'].collidepoint(event.pos):
-                    btn['action']()
-                    return
-            
-            # crafting UI modal buttons
-            for btn in getattr(self, 'crafting_ui_buttons', []):
-                if btn['rect'].collidepoint(event.pos):
-                    btn['action']()
-                    return
         
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.character_sheet_dragging = False
@@ -1986,6 +1994,9 @@ class UIManager:
         modal_x = (self.screen.get_width() - modal_w) // 2
         modal_y = (self.screen.get_height() - modal_h) // 2
         
+        # Store modal rect (for potential future use)
+        self.crafting_modal_rect = pygame.Rect(modal_x, modal_y, modal_w, modal_h)
+        
         # Reset buttons list
         self.crafting_ui_buttons = []
         
@@ -1994,10 +2005,13 @@ class UIManager:
         modal_surf.fill((30, 30, 40))
         self.screen.blit(modal_surf, (modal_x, modal_y))
         
+        # Border around modal
+        pygame.draw.rect(self.screen, (100, 100, 120), (modal_x, modal_y, modal_w, modal_h), 3, border_radius=10)
+        
         # Title bar
         title_bar = pygame.Rect(modal_x, modal_y, modal_w, 45)
         pygame.draw.rect(self.screen, (40, 40, 60), title_bar)
-        self._blit_text_outlined(self.screen, self.title_font, "Crafting", (modal_x + 20, modal_y + 12), fg=(255,255,255), outline=(0,0,0), outline_width=2)
+        self._blit_text_outlined(self.screen, self.title_font, "Crafting & Scrapping", (modal_x + 20, modal_y + 12), fg=(255,255,255), outline=(0,0,0), outline_width=2)
         
         # Close button
         close_rect = pygame.Rect(modal_x + modal_w - 90, modal_y + 10, 80, 30)
@@ -2005,6 +2019,44 @@ class UIManager:
         ct = self.small_font.render('Close', True, (0, 0, 0))
         self.screen.blit(ct, ct.get_rect(center=close_rect.center))
         self.crafting_ui_buttons.append({'rect': close_rect, 'action': lambda: setattr(self, 'crafting_ui_open', False)})
+        
+        # Tab buttons
+        tab_y = modal_y + 50
+        tab_w = 150
+        tab_h = 35
+        
+        craft_tab_rect = pygame.Rect(modal_x + 20, tab_y, tab_w, tab_h)
+        scrap_tab_rect = pygame.Rect(modal_x + 20 + tab_w + 10, tab_y, tab_w, tab_h)
+        
+        # Draw Craft tab
+        craft_color = (80, 120, 160) if self.crafting_tab == 'craft' else (60, 60, 80)
+        pygame.draw.rect(self.screen, craft_color, craft_tab_rect, border_radius=8)
+        if self.crafting_tab == 'craft':
+            pygame.draw.rect(self.screen, (120, 160, 200), craft_tab_rect, 2, border_radius=8)
+        craft_text = self.small_font.render("⚒️ Craft", True, (255, 255, 255))
+        self.screen.blit(craft_text, craft_text.get_rect(center=craft_tab_rect.center))
+        self.crafting_ui_buttons.append({'rect': craft_tab_rect, 'action': lambda: setattr(self, 'crafting_tab', 'craft')})
+        
+        # Draw Scrap tab
+        scrap_color = (120, 80, 80) if self.crafting_tab == 'scrap' else (60, 60, 80)
+        pygame.draw.rect(self.screen, scrap_color, scrap_tab_rect, border_radius=8)
+        if self.crafting_tab == 'scrap':
+            pygame.draw.rect(self.screen, (200, 120, 120), scrap_tab_rect, 2, border_radius=8)
+        scrap_text = self.small_font.render("♻️ Scrap", True, (255, 255, 255))
+        self.screen.blit(scrap_text, scrap_text.get_rect(center=scrap_tab_rect.center))
+        self.crafting_ui_buttons.append({'rect': scrap_tab_rect, 'action': lambda: setattr(self, 'crafting_tab', 'scrap')})
+        
+        # Draw content based on active tab
+        content_y = tab_y + tab_h + 15
+        content_h = modal_h - (content_y - modal_y) - 20
+        
+        if self.crafting_tab == 'craft':
+            self._draw_craft_content(player, battle, modal_x, content_y, modal_w, content_h)
+        else:  # scrap tab
+            self._draw_scrap_content(player, battle, modal_x, content_y, modal_w, content_h)
+    
+    def _draw_craft_content(self, player, battle, modal_x, content_y, modal_w, content_h):
+        """Draw the crafting content"""
         
         # Get crafting system from battle
         crafting_system = getattr(battle, 'crafting_system', None) if battle else None
@@ -2041,9 +2093,9 @@ class UIManager:
         
         # Left panel - Recipe list
         list_x = modal_x + 20
-        list_y = modal_y + 60
+        list_y = content_y
         list_w = 350
-        list_h = modal_h - 120  # Leave space for pagination buttons
+        list_h = content_h - 60  # Leave space for pagination buttons
         
         # Draw recipe list background
         pygame.draw.rect(self.screen, (40, 40, 55), (list_x, list_y, list_w, list_h), border_radius=8)
@@ -2107,7 +2159,7 @@ class UIManager:
         
         # Pagination buttons
         if total_pages > 1:
-            btn_y = modal_y + modal_h - 50
+            btn_y = content_y + content_h - 45
             prev_btn = pygame.Rect(list_x + 10, btn_y, 100, 35)
             next_btn = pygame.Rect(list_x + list_w - 110, btn_y, 100, 35)
             
@@ -2121,13 +2173,14 @@ class UIManager:
                 self.crafting_ui_buttons.append({'rect': prev_btn, 'action': lambda: setattr(self, 'crafting_page', max(0, self.crafting_page - 1))})
             
             # Next button
-            next_enabled = self.crafting_page < total_pages - 1
+            max_page = total_pages - 1
+            next_enabled = self.crafting_page < max_page
             next_color = (80, 120, 200) if next_enabled else (60, 60, 80)
             pygame.draw.rect(self.screen, next_color, next_btn, border_radius=6)
             next_text = self.small_font.render("Next >", True, (255, 255, 255) if next_enabled else (120, 120, 120))
             self.screen.blit(next_text, next_text.get_rect(center=next_btn.center))
             if next_enabled:
-                self.crafting_ui_buttons.append({'rect': next_btn, 'action': lambda: setattr(self, 'crafting_page', min(total_pages - 1, self.crafting_page + 1))})
+                self.crafting_ui_buttons.append({'rect': next_btn, 'action': lambda mp=max_page: setattr(self, 'crafting_page', min(mp, self.crafting_page + 1))})
             
             # Page indicator
             page_text = self.small_font.render(f"Page {self.crafting_page + 1}/{total_pages}", True, (200, 200, 220))
@@ -2138,9 +2191,9 @@ class UIManager:
             selected_recipe = crafting_system.get_recipe_by_id(self.crafting_selected_recipe)
             if selected_recipe:
                 detail_x = list_x + list_w + 20
-                detail_y = modal_y + 60
+                detail_y = content_y
                 detail_w = modal_w - (detail_x - modal_x) - 20
-                detail_h = modal_h - 80
+                detail_h = content_h
                 
                 # Draw detail background
                 pygame.draw.rect(self.screen, (40, 40, 55), (detail_x, detail_y, detail_w, detail_h), border_radius=8)
@@ -2244,6 +2297,170 @@ class UIManager:
                 if not can_craft:
                     reason_y = craft_btn_y - 25
                     self._blit_text_outlined(self.screen, self.small_font, reason, (detail_x + detail_w // 2, reason_y), fg=(255, 150, 100), outline=(0,0,0), outline_width=1, center=True)
+    
+    def _draw_scrap_content(self, player, battle, modal_x, content_y, modal_w, content_h):
+        """Draw the scrapping content"""
+        player_inventory = getattr(player, 'inventory', {})
+        
+        # Rarity selector
+        rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical', 'ancient']
+        
+        # Left panel - Rarity selection
+        list_x = modal_x + 20
+        list_y = content_y
+        list_w = 200
+        list_h = content_h
+        
+        pygame.draw.rect(self.screen, (40, 40, 55), (list_x, list_y, list_w, list_h), border_radius=8)
+        self._blit_text_outlined(self.screen, self.small_font, "Select Rarity", (list_x + 10, list_y + 5), fg=(255, 220, 100), outline=(0,0,0), outline_width=2)
+        
+        # Draw rarity buttons
+        rarity_y = list_y + 40
+        rarity_h = 45
+        rarity_pad = 8
+        
+        for rarity in rarities:
+            is_selected = (self.scrap_selected_rarity == rarity)
+            rarity_color = self.get_rarity_color(rarity)
+            
+            # Make it darker for background
+            bg_r = min(255, int(rarity_color[0] * 0.3))
+            bg_g = min(255, int(rarity_color[1] * 0.3))
+            bg_b = min(255, int(rarity_color[2] * 0.3))
+            bg_color = (bg_r, bg_g, bg_b)
+            
+            if is_selected:
+                bg_color = (min(255, bg_r + 40), min(255, bg_g + 40), min(255, bg_b + 40))
+            
+            rarity_rect = pygame.Rect(list_x + 10, rarity_y, list_w - 20, rarity_h)
+            pygame.draw.rect(self.screen, bg_color, rarity_rect, border_radius=6)
+            
+            if is_selected:
+                pygame.draw.rect(self.screen, rarity_color, rarity_rect, 3, border_radius=6)
+            
+            rarity_text = rarity.capitalize()
+            self._blit_text_outlined(self.screen, self.small_font, rarity_text, rarity_rect.center, fg=rarity_color, outline=(0,0,0), outline_width=2, center=True)
+            
+            self.crafting_ui_buttons.append({'rect': rarity_rect, 'action': lambda r=rarity: self._select_scrap_rarity(r)})
+            
+            rarity_y += rarity_h + rarity_pad
+        
+        # Right panel - Item list for selected rarity
+        item_list_x = list_x + list_w + 20
+        item_list_y = content_y
+        item_list_w = modal_w - (item_list_x - modal_x) - 20
+        item_list_h = content_h
+        
+        pygame.draw.rect(self.screen, (40, 40, 55), (item_list_x, item_list_y, item_list_w, item_list_h), border_radius=8)
+        
+        # Get equippable items of selected rarity
+        equippable_types = ['weapon', 'armor', 'offhand', 'relic']
+        scrappable_items = []
+        
+        if self.shop_loader:
+            for item_id, qty in player_inventory.items():
+                if qty > 0:
+                    item_def = self.shop_loader.find_item(item_id)
+                    if item_def and item_def.get('type') in equippable_types:
+                        item_rarity = item_def.get('rarity', 'common')
+                        if item_rarity == self.scrap_selected_rarity:
+                            scrappable_items.append((item_id, item_def, qty))
+        
+        # Title
+        rarity_name = self.scrap_selected_rarity.capitalize()
+        title_text = f"{rarity_name} Equipment ({len(scrappable_items)} types)"
+        self._blit_text_outlined(self.screen, self.small_font, title_text, (item_list_x + 10, item_list_y + 5), fg=(255, 220, 100), outline=(0,0,0), outline_width=2)
+        
+        if not scrappable_items:
+            no_items_text = "No items available to scrap"
+            self._blit_text_outlined(self.screen, self.small_font, no_items_text, (item_list_x + item_list_w // 2, item_list_y + item_list_h // 2), fg=(180, 180, 180), outline=(0,0,0), outline_width=1, center=True)
+        else:
+            # Draw item entries
+            entry_y = item_list_y + 40
+            entry_h = 60
+            entry_pad = 5
+            max_visible = 7
+            
+            for i, (item_id, item_def, qty) in enumerate(scrappable_items[:max_visible]):
+                item_name = item_def.get('name', item_id)
+                item_type = item_def.get('type', 'item')
+                
+                is_selected = (self.scrap_selected_item == item_id)
+                bg_color = (80, 100, 120) if is_selected else (50, 50, 65)
+                
+                entry_rect = pygame.Rect(item_list_x + 10, entry_y, item_list_w - 20, entry_h)
+                pygame.draw.rect(self.screen, bg_color, entry_rect, border_radius=6)
+                
+                if is_selected:
+                    rarity_color = self.get_rarity_color(self.scrap_selected_rarity)
+                    pygame.draw.rect(self.screen, rarity_color, entry_rect, 3, border_radius=6)
+                
+                # Item name
+                self._blit_text_outlined(self.screen, self.small_font, item_name[:30], (entry_rect.x + 8, entry_rect.y + 8), fg=(255, 255, 255), outline=(0,0,0), outline_width=1)
+                
+                # Type and quantity
+                type_text = f"{item_type.upper()} | Owned: {qty}"
+                self._blit_text_outlined(self.screen, self.small_font, type_text, (entry_rect.x + 8, entry_rect.y + 32), fg=(200, 200, 200), outline=(0,0,0), outline_width=1)
+                
+                # Click to select
+                self.crafting_ui_buttons.append({'rect': entry_rect, 'action': lambda iid=item_id: setattr(self, 'scrap_selected_item', iid)})
+                
+                entry_y += entry_h + entry_pad
+            
+            # Scrap button at bottom
+            if self.scrap_selected_item:
+                scrap_btn_w = 250
+                scrap_btn_h = 50
+                scrap_btn_x = item_list_x + (item_list_w - scrap_btn_w) // 2
+                scrap_btn_y = item_list_y + item_list_h - scrap_btn_h - 15
+                
+                scrap_rect = pygame.Rect(scrap_btn_x, scrap_btn_y, scrap_btn_w, scrap_btn_h)
+                
+                # Check if player has the selected item
+                selected_qty = player_inventory.get(self.scrap_selected_item, 0)
+                can_scrap = selected_qty > 0
+                
+                if can_scrap:
+                    pygame.draw.rect(self.screen, (180, 80, 80), scrap_rect, border_radius=8)
+                    fragment_id = f"{self.scrap_selected_rarity}_fragment"
+                    
+                    def scrap_action():
+                        if hasattr(player, 'inventory') and self.scrap_selected_item in player.inventory:
+                            if player.inventory[self.scrap_selected_item] > 0:
+                                # Remove one item
+                                player.inventory[self.scrap_selected_item] -= 1
+                                if player.inventory[self.scrap_selected_item] == 0:
+                                    del player.inventory[self.scrap_selected_item]
+                                    self.scrap_selected_item = None
+                                
+                                # Add fragment
+                                fragment_id = f"{self.scrap_selected_rarity}_fragment"
+                                player.inventory[fragment_id] = player.inventory.get(fragment_id, 0) + 1
+                                
+                                if battle:
+                                    battle.add_log(f"Scrapped item for {fragment_id}", 'info')
+                    
+                    self.crafting_ui_buttons.append({'rect': scrap_rect, 'action': scrap_action})
+                    scrap_text = f"♻️ SCRAP FOR FRAGMENT"
+                    text_color = (0, 0, 0)
+                else:
+                    pygame.draw.rect(self.screen, (80, 80, 80), scrap_rect, border_radius=8)
+                    scrap_text = "NO ITEMS TO SCRAP"
+                    text_color = (150, 150, 150)
+                
+                self._blit_text_outlined(self.screen, self.small_font, scrap_text, scrap_rect.center, fg=text_color, outline=(0,0,0) if can_scrap else (50,50,50), outline_width=2, center=True)
+                
+                # Show what you'll get
+                if can_scrap:
+                    fragment_id = f"{self.scrap_selected_rarity}_fragment"
+                    reward_text = f"Receive: 1x {fragment_id.replace('_', ' ').title()}"
+                    reward_y = scrap_btn_y - 25
+                    self._blit_text_outlined(self.screen, self.small_font, reward_text, (item_list_x + item_list_w // 2, reward_y), fg=(100, 255, 150), outline=(0,0,0), outline_width=1, center=True)
+    
+    def _select_scrap_rarity(self, rarity):
+        """Select a rarity for scrapping"""
+        self.scrap_selected_rarity = rarity
+        self.scrap_selected_item = None  # Reset item selection when changing rarity
     
     def _draw_combat_log(self, battle):
         """Draw draggable combat log window"""

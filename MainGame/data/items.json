@@ -52,14 +52,53 @@
       "rarity": "epic"
     },
     {
-      "id": "legendary_fragment",
-      "name": "Fragment légendaire",
+      "id": "common_fragment",
+      "name": "Common Fragment",
       "type": "material",
-      "droppable": true,
-      "dropped_by": "dragon",
-      "drop_chance": 0.03,
-      "description": "Un fragment très rare.",
-      "rarity": "legendary"
+      "description": "A fragment obtained from scrapping common equipment.",
+      "rarity": "common"
+    },
+    {
+      "id": "uncommon_fragment",
+      "name": "Uncommon Fragment",
+      "type": "material",
+      "description": "A fragment obtained from scrapping uncommon equipment.",
+      "rarity": "uncommon"
+    },
+    {
+      "id": "rare_fragment",
+      "name": "Rare Fragment",
+      "type": "material",
+      "description": "A fragment obtained from scrapping rare equipment.",
+      "rarity": "rare"
+    },
+    {
+      "id": "epic_fragment",
+      "name": "Epic Fragment",
+      "type": "material",
+      "description": "A fragment obtained from scrapping epic equipment.",
+      "rarity": "epic"
+    },
+    {
+      "id": "legendary_fragment",
+      "name": "Legendary Fragment",
+      "type": "material",
+      "rarity": "legendary",
+      "description": "Un fragment très rare."
+    },
+    {
+      "id": "mythical_fragment",
+      "name": "Mythical Fragment",
+      "type": "material",
+      "description": "A fragment obtained from scrapping mythical equipment.",
+      "rarity": "mythical"
+    },
+    {
+      "id": "ancient_fragment",
+      "name": "Ancient Fragment",
+      "type": "material",
+      "description": "A fragment obtained from scrapping ancient equipment.",
+      "rarity": "ancient"
     },
     {
       "id": "legendary_staff",

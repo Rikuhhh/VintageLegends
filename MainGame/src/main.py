@@ -166,10 +166,12 @@ user_settings = load_json("usersettings.json", {"volume": 0.8, "language": "fr"}
 
 # Validate and sanitize settings
 try:
-    width = max(640, min(3840, int(user_settings.get("width", 1600))))
-    height = max(480, min(2160, int(user_settings.get("height", 900))))
+    # Try to get resolution from nested dict first, then fall back to old format
+    resolution = user_settings.get("resolution", {})
+    width = max(640, min(3840, int(resolution.get("width", user_settings.get("width", 1280)))))
+    height = max(480, min(2160, int(resolution.get("height", user_settings.get("height", 720)))))
 except (ValueError, TypeError):
-    width, height = 1600, 900
+    width, height = 1280, 720
 
 title = str(game_settings.get("title", "Vintage Legends"))
 

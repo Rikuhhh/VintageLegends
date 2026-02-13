@@ -1,8 +1,8 @@
 {
     "fullscreen": false,
     "resolution": {
-        "width" : 1500,
-        "height": 1200
+        "width" : 1280,
+        "height": 720
     },
     "volume": {
         "music": 0.8,
